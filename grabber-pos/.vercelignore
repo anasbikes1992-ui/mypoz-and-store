@@ -1,0 +1,8 @@
+# Local tenant media and secrets — never ship with CLI deploys
+/data
+/public/uploads
+/.next
+/test-results
+/playwright-report
+/blob-report
+/coverage
