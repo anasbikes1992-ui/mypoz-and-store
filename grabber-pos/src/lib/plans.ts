@@ -67,6 +67,7 @@ export const STARTER_KEYS = [
   // plan can never lock the operator out of the licensing controls.
   "admin",
   "clients",
+  "backup",
   // In-app help must reach every client, whatever they pay.
   "help",
 ];

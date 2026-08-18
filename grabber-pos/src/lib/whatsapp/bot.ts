@@ -49,6 +49,7 @@ async function catalogCategories(
       id: p.id,
       name: p.name,
       salePrice: Number(p.salePrice) || 0,
+      stock: Number(p.quantity) || 0,
     });
     byCat.set(name, row);
   }

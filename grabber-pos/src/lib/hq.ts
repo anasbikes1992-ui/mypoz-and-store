@@ -66,6 +66,7 @@ export const HQ_NAV = [
   { href: "/hq/tickets", label: "Tickets", exact: false },
   { href: "/hq/whatsapp", label: "WhatsApp", exact: false },
   { href: "/hq/config", label: "Config", exact: false },
+  { href: "/hq/backups", label: "Backups", exact: false },
   { href: "/hq/docs", label: "Docs", exact: false },
 ] as const;
 

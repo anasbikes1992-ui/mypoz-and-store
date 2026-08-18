@@ -29,7 +29,9 @@ Inbound messages are routed by `metadata.phone_number_id` to the matching org (`
 
 Languages: English, Sinhala, Tamil (`src/lib/whatsapp/i18n.ts`). Shoppers can send `si` / `ta` / `en`.
 
-Checkout calls `whatsapp_create_order` → `create_sale_internal` with `source = WHATSAPP`. Stock is the same `branch_stock` as POS. If posting fails, a POS hold is created.
+Checkout calls `whatsapp_create_order` → `create_sale_internal` with `source = WHATSAPP`. Stock is the same `branch_stock` as POS. The **bot menu lists live inventory** (qty or out of stock) as WhatsApp text — this is **not** Meta Commerce Catalog / WhatsApp product cards. If posting fails, a POS hold is created.
+
+HQ `/hq/whatsapp` attaches each shop’s Cloud API number. Pitch-to-owners copy lives on that page; outbound HQ broadcasting waits until you add the Cloud API token.
 
 ## Code map
 

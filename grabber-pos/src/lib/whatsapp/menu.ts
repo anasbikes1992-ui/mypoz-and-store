@@ -19,6 +19,7 @@ export interface BotCatalogProduct {
   id: string;
   name: string;
   salePrice: number;
+  stock?: number;
 }
 
 export interface BotCatalogCategory {
@@ -70,10 +71,21 @@ function money(amount: number): string {
   return `Rs ${amount.toFixed(2)}`;
 }
 
+function formatProductLine(p: BotCatalogProduct, locale: Locale): string {
+  const price = money(p.salePrice);
+  if (typeof p.stock === "number" && p.stock <= 0) {
+    return `• ${p.name} — ${price} — ${t(locale, "outOfStock")}`;
+  }
+  if (typeof p.stock === "number") {
+    return `• ${p.name} — ${price} — ${p.stock} ${t(locale, "left")}`;
+  }
+  return `• ${p.name} — ${price}`;
+}
+
 function formatMenu(categories: BotCatalogCategory[], locale: Locale): string {
   const lines = categories.flatMap((c) => [
     `*${c.name}*`,
-    ...c.products.slice(0, 8).map((p) => `• ${p.name} — ${money(p.salePrice)}`),
+    ...c.products.slice(0, 8).map((p) => formatProductLine(p, locale)),
   ]);
   return lines.join("\n") || t(locale, "menuSoon");
 }
@@ -187,7 +199,7 @@ export function nextBotTurn(input: BotTurnInput): BotTurnResult {
       const cat = input.categories[catIndex];
       if (cat) {
         const items = cat.products
-          .map((p, i) => `${i + 1}. ${p.name} — ${money(p.salePrice)}`)
+          .map((p, i) => `${i + 1}. ${formatProductLine(p, locale).replace(/^• /, "")}`)
           .join("\n");
         return {
           reply: `${t(locale, "selectItem")}\n\n${items}\n\n${t(locale, "sendZero")}`,
@@ -207,6 +219,14 @@ export function nextBotTurn(input: BotTurnInput): BotTurnResult {
     const cat = input.categories.find((c) => c.name === payload.categoryName);
     const product = cat?.products[Number(text) - 1];
     if (product) {
+      if (typeof product.stock === "number" && product.stock <= 0) {
+        return {
+          reply: t(locale, "outOfStock"),
+          nextState: "ORDERING",
+          nextPayload: payload,
+          action: "none",
+        };
+      }
       const cart = [...payload.cart];
       const existing = cart.find((c) => c.productId === product.id);
       if (existing) existing.quantity += 1;

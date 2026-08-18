@@ -96,7 +96,7 @@ async function resolveOrgId(
 export async function listWhatsAppCatalog(
   tenant: WhatsAppTenant,
 ): Promise<BotCatalogCategory[]> {
-  const [{ data, error }, catsRes] = await Promise.all([
+  const [{ data, error }, catsRes, stockRes] = await Promise.all([
     tenant.db
       .from("products")
       .select("id, name, sale_price, category_id")
@@ -108,9 +108,17 @@ export async function listWhatsAppCatalog(
       .from("categories")
       .select("id, name")
       .eq("org_id", tenant.orgId),
+    tenant.db.from("branch_stock").select("product_id, quantity"),
   ]);
   if (error) throw new Error(error.message);
 
+  const qty = new Map<string, number>();
+  for (const row of stockRes.data ?? []) {
+    qty.set(
+      row.product_id,
+      (qty.get(row.product_id) ?? 0) + Number(row.quantity || 0),
+    );
+  }
   const catNames = new Map(
     (catsRes.data ?? []).map((c) => [c.id, c.name] as const),
   );
@@ -122,6 +130,7 @@ export async function listWhatsAppCatalog(
       id: row.id,
       name: row.name,
       salePrice: Number(row.sale_price) || 0,
+      stock: qty.get(row.id) ?? 0,
     });
     byCat.set(name, bucket);
   }

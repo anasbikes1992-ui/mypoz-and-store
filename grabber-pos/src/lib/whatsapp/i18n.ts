@@ -27,6 +27,8 @@ const dict = {
     listedCategory: "Choose a listed category number.",
     lookingUp: "Looking up that order…",
     placing: "Placing your order…",
+    outOfStock: "Out of stock",
+    left: "left",
   },
   si: {
     welcome: "ආයුබෝවන්",
@@ -54,6 +56,8 @@ const dict = {
     listedCategory: "ලැයිස්තුගත ප්‍රවර්ග අංකය තෝරන්න.",
     lookingUp: "ඇණවුම සොයමින්…",
     placing: "ඇණවුම තබමින්…",
+    outOfStock: "තොගයේ නැත",
+    left: "ඉතිරි",
   },
   ta: {
     welcome: "வணக்கம்",
@@ -81,6 +85,8 @@ const dict = {
     listedCategory: "பட்டியல் வகை எண்ணைத் தேர்ந்தெடுக்கவும்.",
     lookingUp: "ஆர்டரைத் தேடுகிறது…",
     placing: "ஆர்டர் இடப்படுகிறது…",
+    outOfStock: "கையிருப்பில் இல்லை",
+    left: "மீதம்",
   },
 } as const;
 

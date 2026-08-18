@@ -141,6 +141,10 @@ async function main() {
     const { data, error } = await db.auth.admin.updateUserById(user.id, {
       password: PASSWORD,
       email_confirm: true,
+      app_metadata: {
+        ...(user.app_metadata ?? {}),
+        role: "gms_admin",
+      },
     });
     if (error) throw error;
     user = data.user;
@@ -151,6 +155,7 @@ async function main() {
       email: EMAIL,
       password: PASSWORD,
       email_confirm: true,
+      app_metadata: { role: "gms_admin" },
     });
     if (error) throw error;
     user = data.user;

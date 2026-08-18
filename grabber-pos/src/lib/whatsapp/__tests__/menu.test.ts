@@ -30,6 +30,24 @@ describe("whatsapp greeting menu", () => {
     expect(text).toContain("6. Talk to staff");
   });
 
+  it("marks out of stock on the menu", () => {
+    const text = nextBotTurn({
+      orgName: "Apex Mart",
+      categories: [
+        {
+          name: "Rice",
+          products: [{ id: "p1", name: "Chicken rice", salePrice: 850, stock: 0 }],
+        },
+      ],
+      locationText: "",
+      offersText: "",
+      state: "GREETING",
+      payload: emptyBotPayload(),
+      text: "2",
+    }).reply;
+    expect(text).toContain("Out of stock");
+  });
+
   it("returns greeting on hi from any state", () => {
     const turn = nextBotTurn({
       ...base,

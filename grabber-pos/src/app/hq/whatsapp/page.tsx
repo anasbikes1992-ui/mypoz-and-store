@@ -84,6 +84,28 @@ export default function HqWhatsAppPage() {
         . Checkout stamps sales.source = WHATSAPP on that client&apos;s inventory.
       </p>
 
+      <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-5">
+        <h2 className="text-sm font-semibold text-text-strong">
+          Pitch shops (HQ → owners)
+        </h2>
+        <p className="mt-1 text-xs text-text-dim">
+          This is copy for you to send from your own WhatsApp until the Cloud
+          API key is connected. It is not an auto-broadcast.
+        </p>
+        <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-xs text-text-body">
+{`Hi — this is MyPoz.
+
+One POS + one online store + WhatsApp orders, same stock.
+
+I can onboard your shop this week:
+1) products & stock
+2) store theme
+3) WhatsApp menu for your customers (order / track / staff)
+
+Reply YES and I’ll send the login.`}
+        </pre>
+      </section>
+
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
       {msg && <p className="mt-4 text-sm text-accent">{msg}</p>}
 

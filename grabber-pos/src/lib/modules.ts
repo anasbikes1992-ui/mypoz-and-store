@@ -109,6 +109,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "settings", title: "Settings", subtitle: "Business & receipt", icon: "⚙️", href: "/settings", status: "active" },
       { key: "display", title: "Customer display", subtitle: "Second screen total", icon: "🖥️", href: "/display", status: "active" },
       { key: "privacy", title: "Privacy purge", subtitle: "PII retention", icon: "🧹", href: "/privacy", status: "active" },
+      { key: "backup", title: "Backup", subtitle: "Download tenant JSON", icon: "💾", href: "/api/backup", status: "active" },
       { key: "help", title: "Help & guides", subtitle: "Notes & videos", icon: "📣", href: "/help", status: "active" },
     ],
   },
