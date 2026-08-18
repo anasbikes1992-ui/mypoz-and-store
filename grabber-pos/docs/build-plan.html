@@ -1,0 +1,511 @@
+<title>GRABBER POS Studio — Build Plan</title>
+<style>
+  :root {
+    --ground: #f6f7f9;
+    --panel: #ffffff;
+    --panel-2: #f0f2f5;
+    --line: #e2e5ea;
+    --ink: #171a21;
+    --dim: #5b6472;
+    --faint: #8b94a3;
+    --accent: #059669;
+    --accent-soft: rgba(5, 150, 105, 0.1);
+    --built: #059669;
+    --built-bg: rgba(5, 150, 105, 0.12);
+    --partial: #b7791f;
+    --partial-bg: rgba(183, 121, 31, 0.13);
+    --planned: #6b7280;
+    --planned-bg: rgba(107, 114, 128, 0.12);
+    --shadow: 0 1px 2px rgba(20, 22, 28, 0.06), 0 8px 24px rgba(20, 22, 28, 0.05);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #101218;
+      --panel: #181b22;
+      --panel-2: #1f232c;
+      --line: #2a2f3a;
+      --ink: #eef1f5;
+      --dim: #99a2b2;
+      --faint: #6a7382;
+      --accent: #34d399;
+      --accent-soft: rgba(52, 211, 153, 0.12);
+      --built: #34d399;
+      --built-bg: rgba(52, 211, 153, 0.14);
+      --partial: #e6b450;
+      --partial-bg: rgba(230, 180, 80, 0.14);
+      --planned: #7c8698;
+      --planned-bg: rgba(124, 134, 152, 0.15);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.28);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f6f7f9; --panel: #ffffff; --panel-2: #f0f2f5; --line: #e2e5ea;
+    --ink: #171a21; --dim: #5b6472; --faint: #8b94a3;
+    --accent: #059669; --accent-soft: rgba(5,150,105,0.1);
+    --built: #059669; --built-bg: rgba(5,150,105,0.12);
+    --partial: #b7791f; --partial-bg: rgba(183,121,31,0.13);
+    --planned: #6b7280; --planned-bg: rgba(107,114,128,0.12);
+    --shadow: 0 1px 2px rgba(20,22,28,0.06), 0 8px 24px rgba(20,22,28,0.05);
+  }
+  :root[data-theme="dark"] {
+    --ground: #101218; --panel: #181b22; --panel-2: #1f232c; --line: #2a2f3a;
+    --ink: #eef1f5; --dim: #99a2b2; --faint: #6a7382;
+    --accent: #34d399; --accent-soft: rgba(52,211,153,0.12);
+    --built: #34d399; --built-bg: rgba(52,211,153,0.14);
+    --partial: #e6b450; --partial-bg: rgba(230,180,80,0.14);
+    --planned: #7c8698; --planned-bg: rgba(124,134,152,0.15);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 30px rgba(0,0,0,0.28);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 80px; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 56px 0 20px;
+  }
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  /* Header */
+  header { padding: 56px 0 8px; }
+  .wordmark {
+    font-size: clamp(30px, 5vw, 46px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 14px 0 6px;
+    text-wrap: balance;
+  }
+  .wordmark span { color: var(--accent); }
+  .lede { color: var(--dim); max-width: 60ch; margin: 0 0 4px; }
+  .by { font-family: var(--mono); font-size: 12.5px; color: var(--faint); letter-spacing: 0.04em; }
+
+  /* Summary bar */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 32px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .stat .n {
+    font-size: 34px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .stat .lbl {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-top: 8px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .dot.built { background: var(--built); }
+  .dot.partial { background: var(--partial); }
+  .dot.planned { background: var(--planned); }
+
+  .progress {
+    margin-top: 14px;
+    height: 10px;
+    border-radius: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    display: flex;
+  }
+  .progress i { display: block; height: 100%; }
+  .progress .b { background: var(--built); }
+  .progress .p { background: var(--partial); }
+  .progress-note { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 8px; letter-spacing: 0.03em; }
+
+  /* Tile grid */
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+    gap: 12px;
+  }
+  .tile {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 16px 16px 16px 20px;
+    overflow: hidden;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .tile:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .tile::before {
+    content: "";
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .tile.built::before { background: var(--built); }
+  .tile.partial::before { background: var(--partial); }
+  .tile.planned::before { background: var(--planned); }
+  .tile .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .tile .name { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  .tile .num { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+  .tile .note { color: var(--dim); font-size: 12.5px; margin-top: 7px; }
+  .pill {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .pill.built { color: var(--built); background: var(--built-bg); }
+  .pill.partial { color: var(--partial); background: var(--partial-bg); }
+  .pill.planned { color: var(--planned); background: var(--planned-bg); }
+
+  /* Roadmap */
+  .road { display: flex; flex-direction: column; gap: 2px; }
+  .phase {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 20px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+  }
+  .phase:first-child { border-top: none; }
+  .phase .tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    padding-top: 2px;
+  }
+  .phase h4 { margin: 0 0 4px; font-size: 15.5px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .phase p { margin: 0; color: var(--dim); font-size: 13.5px; }
+  .mini {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 999px; font-weight: 600;
+  }
+  .mini.built { color: var(--built); background: var(--built-bg); }
+  .mini.partial { color: var(--partial); background: var(--partial-bg); }
+  .mini.planned { color: var(--planned); background: var(--planned-bg); }
+
+  /* Table */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 13px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13.5px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  thead th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.09em;
+    text-transform: uppercase; color: var(--faint); font-weight: 600;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.c { text-align: center; font-variant-numeric: tabular-nums; }
+  .yes { color: var(--built); font-weight: 700; }
+  .no { color: var(--faint); }
+  .ent { font-weight: 600; }
+
+  /* Two-col lists */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 13px; padding: 20px 22px; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 14px; font-size: 15px; letter-spacing: -0.01em; }
+  .card ul { margin: 0; padding: 0; list-style: none; }
+  .card li {
+    padding: 7px 0; border-top: 1px solid var(--line);
+    color: var(--dim); font-size: 13.5px; display: flex; gap: 10px; align-items: baseline;
+  }
+  .card li:first-child { border-top: none; }
+  .card li b { color: var(--ink); font-weight: 600; }
+  .warn { color: var(--partial); font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; }
+
+  /* Callout */
+  .callout {
+    margin-top: 44px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 13px;
+    padding: 24px 26px;
+    box-shadow: var(--shadow);
+  }
+  .callout h3 { margin: 0 0 10px; font-size: 16px; }
+  .callout p { margin: 0 0 14px; color: var(--dim); font-size: 14px; max-width: 72ch; }
+  .callout ol { margin: 0; padding-left: 20px; color: var(--dim); font-size: 13.5px; }
+  .callout li { margin: 5px 0; }
+  .callout li::marker { color: var(--accent); font-family: var(--mono); }
+
+  footer {
+    margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-family: var(--mono); font-size: 11.5px; color: var(--faint);
+    letter-spacing: 0.04em; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+
+  @media (max-width: 720px) {
+    .summary { grid-template-columns: 1fr; }
+    .cols { grid-template-columns: 1fr; }
+    .phase { grid-template-columns: 1fr; gap: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Build Plan &middot; Legacy parity &amp; beyond</p>
+    <h1 class="wordmark">GRABBER <span>POS</span> Studio</h1>
+    <p class="lede">The full multi-vertical platform — <b>15 sale modes</b> and <b>~40 management modules</b> — built as GRABBER&nbsp;POS Studio, packaged for reselling to clients.</p>
+    <p class="by">Grabber Mobility Solutions (Pvt) Ltd &nbsp;·&nbsp; web + Flutter + Supabase &nbsp;·&nbsp; confirmed from live screens</p>
+
+    <div class="summary">
+      <div class="stat">
+        <div class="n" style="color:var(--built)">48</div>
+        <div class="lbl"><span class="dot built"></span> Shipped</div>
+      </div>
+      <div class="stat">
+        <div class="n" style="color:var(--partial)">1</div>
+        <div class="lbl"><span class="dot partial"></span> In progress</div>
+      </div>
+      <div class="stat">
+        <div class="n" style="color:var(--planned)">6</div>
+        <div class="lbl"><span class="dot planned"></span> Planned</div>
+      </div>
+    </div>
+    <div class="progress" role="img" aria-label="Overall progress: 48 shipped, 1 in progress, 6 planned">
+      <i class="b" style="width:87%"></i>
+      <i class="p" style="width:2%"></i>
+    </div>
+    <p class="progress-note">~55 modules total &nbsp;·&nbsp; ALL 15 sale modes + full back-office live · reselling layer + Supabase runtime wiring remain</p>
+  </header>
+
+  <div class="section-label">Sale modes — one billing engine, many verticals</div>
+  <div class="tiles" id="modes"></div>
+
+  <div class="section-label">Management modules</div>
+  <div class="tiles" id="tiles"></div>
+
+  <div class="section-label">Delivery roadmap</div>
+  <div class="road" id="road"></div>
+
+  <div class="section-label">CRUD coverage</div>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Entity</th><th class="c">C</th><th class="c">R</th><th class="c">U</th><th class="c">D</th><th>Status</th></tr>
+      </thead>
+      <tbody id="crud"></tbody>
+    </table>
+  </div>
+
+  <div class="section-label">Settings &amp; reports</div>
+  <div class="cols">
+    <div class="card">
+      <h3>Settings screens</h3>
+      <ul>
+        <li><b>Business profile</b> — name, logo, VAT/registration no.</li>
+        <li><b>Localization</b> — LKR, Asia/Colombo, date format</li>
+        <li><b>Tax</b> — VAT rates, inclusive/exclusive <span class="warn">verify</span></li>
+        <li><b>Receipt template</b> — 80/58mm, header, footer, QR</li>
+        <li><b>Printers</b> — receipt, KOT &amp; BOT IPs, drawer kick</li>
+        <li><b>Barcode labels</b> — size, fields, quantity</li>
+        <li><b>Units &amp; payment methods</b> — pcs/kg/L, card, wallets</li>
+        <li><b>Discounts &amp; loyalty</b> — policy, points <span class="warn">verify</span></li>
+        <li><b>Roles &amp; permissions</b> — per-module access</li>
+        <li><b>Notifications &amp; backup</b> — thresholds, export</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Report catalog</h3>
+      <ul>
+        <li><b>Sales</b> — by day, cashier, branch, payment, hourly</li>
+        <li><b>Profit</b> — gross profit by product / category / period</li>
+        <li><b>Products</b> — best / worst sellers, dead stock</li>
+        <li><b>Inventory</b> — valuation, ledger, low-stock, <b>expiry</b></li>
+        <li><b>Purchases</b> — by supplier, purchase vs sales</li>
+        <li><b>Expenses</b> — by category, profit &amp; loss</li>
+        <li><b>Cash register</b> — shift Z-report, expected vs counted</li>
+        <li><b>Customer</b> — dues, statements, loyalty <span class="warn">verify</span></li>
+        <li><b>Tax</b> — VAT collected <span class="warn">verify</span></li>
+        <li><b>Audit</b> — activity log by user / entity</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h3>Confirmed from the live system — decisions to steer the build</h3>
+    <p>The full module set is now mapped from the real screens (home launcher, business menu, products list, billing engine). To sequence a ~55-module build, I need a few calls:</p>
+    <ol>
+      <li><b>Reselling model</b> — one shared multi-tenant cloud (each client an org), a per-client white-label deploy, or both.</li>
+      <li><b>Priority verticals</b> — which sale modes to build first (retail is done-ish; restaurant, delivery, repair, rooms, reloads…).</li>
+      <li><b>UI direction</b> — keep the familiar tile launcher, modernised, or a modern sidebar app.</li>
+    </ol>
+    <p style="margin-top:14px;margin-bottom:0">Optional refinements: the Admins/roles and Settings screens, one report layout, and a receipt sample.</p>
+  </div>
+
+  <footer>
+    <span>GRABBER POS Studio — Feature &amp; Build Plan</span>
+    <span>Source of truth: grabber-pos/docs/FEATURE-PLAN.md</span>
+  </footer>
+</div>
+
+<script>
+  const label = { built: "Shipped", partial: "In progress", planned: "Planned" };
+  const tile = ([n, name, st, note]) => `
+    <div class="tile ${st}">
+      <div class="top">
+        <div><div class="num">${n}</div><div class="name">${name}</div></div>
+        <span class="pill ${st}">${label[st]}</span>
+      </div>
+      <div class="note">${note}</div>
+    </div>`;
+
+  const modes = [
+    ["","Retail","built","barcode retail billing ✓"],
+    ["","Sale","built","generic quick sale ✓"],
+    ["","Offline","built","offline queue + sync (mobile) ✓"],
+    ["","Category","built","category grid sale ✓"],
+    ["","Restaurant","built","tables · order · KOT/BOT · settle ✓"],
+    ["","Delivery","built","orders · driver · status ✓"],
+    ["","Repair","built","parts + labour → collect ✓"],
+    ["","Vehicle service","built","parts + labour jobs ✓"],
+    ["","Reloads","built","mobile top-ups ✓"],
+    ["","Room management","built","nights × rate + extras ✓"],
+    ["","Rent","built","days × rate + deposit ✓"],
+    ["","Hire purchase","built","installment ledger ✓"],
+    ["","Play area","built","time in/out billing ✓"],
+    ["","Register / other","planned","misc sale mode"],
+    ["","Digital","planned","digital-goods sale"],
+  ];
+  document.getElementById("modes").innerHTML = modes.map(tile).join("");
+
+  const modules = [
+    ["","Products","built","CRUD + Excel + images ✓"],
+    ["","Categories","built","full CRUD ✓"],
+    ["","Brands","built","full CRUD ✓"],
+    ["","Suppliers","built","full CRUD ✓"],
+    ["","GRN","built","receive stock + movements ✓"],
+    ["","Purchase orders","built","raise → receive → GRN ✓"],
+    ["","Damages","built","write-off + stock ✓"],
+    ["","Returns","built","restock returns ✓"],
+    ["","Packages","planned","product bundles"],
+    ["","Barcode labels","built","CODE128 label printing ✓"],
+    ["","Receipt printing","built","thermal receipt (ESC/POS) ✓"],
+    ["","Invoices + WhatsApp","built","PDF invoice + WhatsApp send ✓"],
+    ["","Sales bills","built","list + line detail ✓"],
+    ["","Reports","built","KPIs · 7-day · top products ✓"],
+    ["","Expenses","built","full CRUD ✓"],
+    ["","Quotations","built","quote records ✓"],
+    ["","Gift vouchers","built","issue + redeem ✓"],
+    ["","Points / loyalty","built","earn + redeem at POS ✓"],
+    ["","Manual payments","built","off-system payments ✓"],
+    ["","Customers","built","CRUD · credit · loyalty ✓"],
+    ["","Appointments","built","bookings ✓"],
+    ["","SMS templates","built","message templates ✓"],
+    ["","Employees","built","staff records ✓"],
+    ["","Attendance","built","clock in/out ✓"],
+    ["","Salary","built","payroll ✓"],
+    ["","Users & admins","built","logins, roles + RLS ✓"],
+    ["","Add jobs","built","employee jobs ✓"],
+    ["","Accounts / income","built","income tracking ✓"],
+    ["","Cash in / out","built","drawer movements ✓"],
+    ["","Currency rates","built","exchange rates ✓"],
+    ["","Tables","built","floor definitions ✓"],
+    ["","Rooms","planned","hotel inventory"],
+    ["","Delivery drivers","built","fleet ✓"],
+    ["","Dashboard","partial","KPIs ✓ · charts next"],
+    ["","Alerts","built","low-stock / expiry center ✓"],
+    ["","Settings","built","business · tax · receipt · printers ✓"],
+    ["","Updates & videos","planned","in-app help + changelog"],
+    ["","Agreement / license","planned","plan tier + expiry"],
+    ["","Audit log","built","written by every RPC ✓"],
+  ];
+  document.getElementById("tiles").innerHTML = modules.map(tile).join("");
+
+  const phases = [
+    ["P0","Foundation","built","Multi-tenant schema, atomic sales, RLS, web POS + inventory + sales + dashboard, Flutter offline-first POS, tests & docs."],
+    ["P1","Billing parity","partial","Upgrade the billing engine to the confirmed spec — service charge, final discount Rs/%, customer capture, employee, wholesale toggle, none-stock items, F-key shortcuts — plus full Products CRUD (add/edit/delete, Excel, barcode & label print, brands, packages)."],
+    ["P2","Commerce core","planned","Customers, points/loyalty, gift vouchers, returns, damages, quotations, GRN + purchase orders, suppliers CRUD."],
+    ["P3","Money & HR","planned","Expenses, accounts/income, cash in/out, currency rates; employees, attendance, salary, admins/roles UI."],
+    ["P4","Reports & dashboard","planned","Full report catalog + charts + exports."],
+    ["P5","Verticals","planned","Restaurant (tables/KOT), delivery, repair & vehicle service, rooms/hotel, reloads, rent, hire purchase, play area, category mode."],
+    ["P6","Reselling","planned","White-label branding, licensing + feature flags, super-admin console, onboarding wizard, Agreement."],
+    ["P7","Settings & comms","planned","Settings, notifications/alerts, SMS, in-app help videos, updates."],
+    ["P8","Hardening & launch","planned","CI, e2e, backups/PITR, move into Jarvis 2 as apps/pos, deploy, client rollout + training."],
+  ];
+  document.getElementById("road").innerHTML = phases.map(([tag, title, st, body]) => `
+    <div class="phase">
+      <div class="tag">${tag}</div>
+      <div>
+        <h4>${title} <span class="mini ${st}">${label[st]}</span></h4>
+        <p>${body}</p>
+      </div>
+    </div>`).join("");
+
+  const crud = [
+    ["Product","1","1","1","soft","partial"],
+    ["Product barcode","1","1","1","1","partial"],
+    ["Category","1","1","1","1","partial"],
+    ["Brand","1","1","1","1","planned"],
+    ["Unit","1","1","1","1","planned"],
+    ["Supplier","1","1","1","1","partial"],
+    ["Customer","1","1","1","1","planned"],
+    ["Purchase / GRN","1","1","1","void","partial"],
+    ["Stock adjustment","1","1","—","—","partial"],
+    ["Stock transfer","1","1","—","—","planned"],
+    ["Sale / Invoice","1","1","void","void","built"],
+    ["Sale return","1","1","—","—","planned"],
+    ["Expense","1","1","1","1","planned"],
+    ["Register / Shift","1","1","1","—","partial"],
+    ["Branch","1","1","1","soft","partial"],
+    ["User / Staff","1","1","1","soft","partial"],
+    ["Setting","—","1","1","—","planned"],
+  ];
+  const cell = v => v === "1" ? '<span class="yes">✓</span>' : `<span class="no">${v}</span>`;
+  document.getElementById("crud").innerHTML = crud.map(r => `
+    <tr>
+      <td class="ent">${r[0]}</td>
+      <td class="c">${cell(r[1])}</td>
+      <td class="c">${cell(r[2])}</td>
+      <td class="c">${cell(r[3])}</td>
+      <td class="c">${cell(r[4])}</td>
+      <td><span class="pill ${r[5]}">${label[r[5]]}</span></td>
+    </tr>`).join("");
+</script>

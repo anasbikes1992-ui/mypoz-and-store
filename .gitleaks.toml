@@ -1,0 +1,3 @@
+title = "Grabber gitleaks"
+[extend]
+useDefault = true

@@ -1,0 +1,2 @@
+#!/usr/bin/env sh
+gitleaks protect --staged --verbose

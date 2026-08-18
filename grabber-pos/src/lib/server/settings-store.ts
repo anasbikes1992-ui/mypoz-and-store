@@ -1,0 +1,24 @@
+import "server-only";
+import { settingsSchema, DEFAULT_SETTINGS, type Settings } from "@/lib/settings";
+import { docStore } from "./persistence/doc-store";
+
+/**
+ * Single-record business settings. Local backend: data/settings.json.
+ * Durable backend: app_documents where key = 'settings' (RLS per organization).
+ */
+const store = docStore<Partial<Settings>>({ key: "settings", file: "settings.json" });
+
+export async function readSettings(): Promise<Settings> {
+  const raw = await store.read(DEFAULT_SETTINGS);
+  try {
+    return settingsSchema.parse({ ...DEFAULT_SETTINGS, ...raw });
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
+export async function writeSettings(input: unknown): Promise<Settings> {
+  const settings = settingsSchema.parse(input);
+  await store.write(settings);
+  return settings;
+}
