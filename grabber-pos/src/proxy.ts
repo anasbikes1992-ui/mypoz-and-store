@@ -20,14 +20,28 @@ const PUBLIC_PATHS = [
   "/api/whatsapp/webhook",
 ];
 
+function withStorefrontContext(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-mypoz-host", req.headers.get("host") ?? "");
+  const match = req.nextUrl.pathname.match(/^\/store\/([^/]+)/);
+  if (match?.[1]) {
+    requestHeaders.set("x-mypoz-slug", decodeURIComponent(match[1]));
+  }
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+}
+
 /**
  * Optimistic auth guard. Demo cookie must be HMAC-valid when Supabase is off.
  * Once Supabase is configured the demo cookie is ignored.
+ * Also stamps storefront host/slug so anonymous shoppers load that tenant's
+ * published commerce/website documents.
  */
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    return NextResponse.next();
+    return withStorefrontContext(req);
   }
 
   // Supabase may chunk cookies as `sb-<ref>-auth-token.0`, `.1`, …
@@ -56,7 +70,7 @@ export function proxy(req: NextRequest) {
     }
     return NextResponse.redirect(url);
   }
-  return NextResponse.next();
+  return withStorefrontContext(req);
 }
 
 export const config = {

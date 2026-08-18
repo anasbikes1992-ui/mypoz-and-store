@@ -118,7 +118,7 @@ Live tracker for the master roadmap implementation.
 | Channel split on `/reports`, `/commerce`, `/commerce/analytics` | ✅ `sales.source` |
 | SEO: robots host, sitemap collections, JSON-LD escape | ✅ |
 | Empty catalogue CTA | ✅ |
-| Public storefront chrome by slug/host | ✅ `0017` `storefront_documents` + middleware |
+| Public storefront chrome by slug/host | ✅ `0017` `storefront_documents` + proxy headers |
 | Shopping Station tenant | ✅ Org `shopping-station`, owner `stationshopping11@gmail.com` |
 
 ---
