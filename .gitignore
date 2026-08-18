@@ -30,5 +30,8 @@ dist/
 # Local runtime data (do not ignore app seed dirs like grabber-pos/src/data/)
 /data/
 grabber-pos/data/
+grabber-pos/test-results/
+grabber-pos/playwright-report/
+grabber-pos/blob-report/
 
 .vercel

@@ -135,6 +135,17 @@ export interface Database {
         Partial<ProductRow> & { org_id: string; sku: string; name: string }
       >;
       sales: Table<SaleRow>;
+      sale_lines: Table<{
+        id: string;
+        sale_id: string;
+        product_id: string;
+        variant_id: string | null;
+        name: string;
+        unit_price: number;
+        quantity: number;
+        discount: number;
+        line_total: number;
+      }>;
       app_collections: Table<
         AppCollectionRow,
         { collection: string; entity_id: string; data: Json; org_id?: string }

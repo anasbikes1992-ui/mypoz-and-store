@@ -8,6 +8,7 @@ import { storePath, type StoreConfig } from "@/lib/commerce/schema";
 import { THEMES } from "@/lib/commerce/themes";
 import { storeCopy } from "@/lib/commerce/i18n";
 import { findVariantByOptions, groupVariantOptions } from "@/lib/commerce/line-ids";
+import { isProductBlockOn, productTemplateBlocks } from "@/lib/commerce/blocks";
 import { ProductCard } from "./HomeSections";
 import { AddToCartButton, useCart } from "@/app/store/[slug]/cart";
 
@@ -160,6 +161,8 @@ export function ProductView({
   const inStock = stock > 0;
   const displayName = selected ? `${product.name} — ${selected.title}` : product.name;
   const waText = `Hi, I want to order ${displayName}\n${typeof window === "undefined" ? "" : window.location.href}`;
+  const blocks = productTemplateBlocks(store);
+  const show = (type: string) => isProductBlockOn(blocks, type);
 
   return (
     <div className="mx-auto w-full px-4 py-8 lg:px-8" style={{ maxWidth: "var(--mp-max)" }}>
@@ -175,6 +178,7 @@ export function ProductView({
         <span className="text-text-strong">{product.name}</span>
       </nav>
       <div className="grid gap-8 lg:grid-cols-2">
+        {show("product_gallery") ? (
         <div className="overflow-hidden bg-surface-2" style={{ borderRadius: "var(--mp-radius)" }}>
           {image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -185,23 +189,28 @@ export function ProductView({
             </div>
           )}
         </div>
+        ) : <div />}
         <div>
           {product.brand ? (
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-text-dim">
               {product.brand}
             </p>
           ) : null}
+          {show("product_title") ? (
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-text-strong">
             {product.name}
           </h1>
+          ) : null}
           {product.nameLocal ? (
             <p className="mt-1 text-sm text-text-dim">{product.nameLocal}</p>
           ) : null}
           <div className="mt-4 flex items-baseline gap-3">
+            {show("product_price") ? (
             <p className="text-2xl font-semibold tabular-nums text-text-strong">
               {formatMoney(price)}
             </p>
-            {compareAt && compareAt > price ? (
+            ) : null}
+            {show("compare_at_price") && compareAt && compareAt > price ? (
               <p className="text-sm text-text-dim line-through">{formatMoney(compareAt)}</p>
             ) : null}
           </div>
@@ -209,23 +218,30 @@ export function ProductView({
             {inStock ? `${t.inStock} · ${stock}` : t.outOfStock}
           </p>
 
-          {options.option1.length > 0 ? (
+          {show("variant_selector") && options.option1.length > 0 ? (
             <OptionRow label="Option" values={options.option1} value={opt1} onChange={setOpt1} />
           ) : null}
-          {options.option2.length > 0 ? (
+          {show("variant_selector") && options.option2.length > 0 ? (
             <OptionRow label="Option" values={options.option2} value={opt2} onChange={setOpt2} />
           ) : null}
-          {options.option3.length > 0 ? (
+          {show("variant_selector") && options.option3.length > 0 ? (
             <OptionRow label="Option" values={options.option3} value={opt3} onChange={setOpt3} />
           ) : null}
           {variants.length > 0 && !selected ? (
             <p className="mt-2 text-sm text-danger">This combination is not available.</p>
           ) : null}
 
-          {product.description ? (
+          {show("product_description") && product.description ? (
             <p className="mt-4 text-sm leading-relaxed text-text-dim">{product.description}</p>
           ) : null}
+          {show("shipping_info") ? (
+            <p className="mt-3 text-sm text-text-dim">Delivery fees are calculated at checkout from the same MyPoz zones as the counter.</p>
+          ) : null}
+          {show("trust_badges") ? (
+            <p className="mt-2 text-xs text-text-dim">Live POS stock · Pickup or delivery · Cash on delivery available</p>
+          ) : null}
           <div className="mt-6 flex flex-wrap gap-2">
+            {show("add_to_cart") ? (
             <AddToCartButton
               productId={product.id}
               name={displayName}
@@ -233,7 +249,8 @@ export function ProductView({
               inStock={inStock && (variants.length === 0 || !!selected)}
               variantId={selected?.id ?? null}
             />
-            {inStock && (variants.length === 0 || selected) ? (
+            ) : null}
+            {show("buy_now") && inStock && (variants.length === 0 || selected) ? (
               <button
                 type="button"
                 onClick={() => {
@@ -263,7 +280,7 @@ export function ProductView({
           </div>
         </div>
       </div>
-      {related.length > 0 ? (
+      {show("related_products") && related.length > 0 ? (
         <section className="mt-14">
           <h2 className="mb-4 text-xl font-semibold text-text-strong">{t.related}</h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

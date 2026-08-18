@@ -43,11 +43,11 @@ export const PRODUCT_PAGE_BLOCKS: {
   { type: "variant_selector", label: "Variant selector", defaultEnabled: true },
   { type: "quantity_selector", label: "Quantity", defaultEnabled: true },
   { type: "add_to_cart", label: "Add to cart", defaultEnabled: true },
-  { type: "buy_now", label: "Buy now", defaultEnabled: false },
+  { type: "buy_now", label: "Buy now", defaultEnabled: true },
   { type: "product_description", label: "Description", defaultEnabled: true },
   { type: "trust_badges", label: "Trust badges", defaultEnabled: true },
   { type: "shipping_info", label: "Shipping info", defaultEnabled: false },
-  { type: "related_products", label: "Related products", defaultEnabled: false },
+  { type: "related_products", label: "Related products", defaultEnabled: true },
   { type: "reviews", label: "Reviews", defaultEnabled: false },
   { type: "share_buttons", label: "Share buttons", defaultEnabled: false },
 ];
@@ -59,6 +59,20 @@ export function defaultProductBlocks(): StoreBlock[] {
     enabled: true,
     settings: {},
   }));
+}
+
+export function productTemplateBlocks(store: {
+  pages: { type: string; blocks?: StoreBlock[] }[];
+}): StoreBlock[] {
+  const page = store.pages.find((p) => p.type === "product");
+  if (page?.blocks && page.blocks.length > 0) return page.blocks;
+  return defaultProductBlocks();
+}
+
+export function isProductBlockOn(blocks: StoreBlock[], type: string): boolean {
+  const match = blocks.find((b) => b.type === type);
+  if (match) return match.enabled;
+  return PRODUCT_PAGE_BLOCKS.find((b) => b.type === type)?.defaultEnabled ?? false;
 }
 
 export const BLOCK_LABELS: Record<string, string> = Object.fromEntries([

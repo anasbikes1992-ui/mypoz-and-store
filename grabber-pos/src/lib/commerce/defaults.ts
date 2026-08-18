@@ -5,6 +5,7 @@ import {
   type StorePage,
   type StoreSection,
 } from "./schema";
+import { defaultProductBlocks } from "./blocks";
 
 function section(type: StoreSection["type"], settings: Record<string, unknown>): StoreSection {
   return { id: newId("sec"), type, enabled: true, settings };
@@ -137,6 +138,10 @@ export function defaultStoreConfig(partial: Partial<StoreConfig> = {}): StoreCon
       home,
       page("products", "Products", "products"),
       page("collections", "Collections", "collections"),
+      {
+        ...page("product", "Product", "product"),
+        blocks: defaultProductBlocks(),
+      },
       page("about", "About", "about", [
         section("rich_text", {
           heading: `About ${name}`,

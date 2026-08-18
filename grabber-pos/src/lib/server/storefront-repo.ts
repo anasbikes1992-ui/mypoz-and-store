@@ -280,6 +280,7 @@ export interface StoreOrderInput {
   deliveryZoneId?: string | null;
   clientUuid: string;
   lines: { productId: string; quantity: number; variantId?: string | null }[];
+  discountCode?: string | null;
 }
 
 export async function placeStorefrontOrder(
@@ -368,6 +369,24 @@ export async function placeStorefrontOrder(
     paymentMethod: input.paymentMethod,
   });
 
+  let finalDiscount = 0;
+  let discountCodeId: string | undefined;
+  if (input.discountCode) {
+    const { validateDiscountCode, consumeDiscountCode } = await import(
+      "@/lib/server/discount-codes"
+    );
+    const applied = await validateDiscountCode(input.discountCode, lineTotal);
+    if (!applied.ok) {
+      throw new Error(`ORDER: ${applied.error}`);
+    }
+    finalDiscount = applied.discount;
+    discountCodeId = applied.id;
+    if (!isCardPending) {
+      await consumeDiscountCode(discountCodeId);
+    }
+  }
+  const payable = Math.max(0, quote.total - finalDiscount);
+
   let saleId: string;
   let receiptNo: string;
   let total: number;
@@ -376,7 +395,7 @@ export async function placeStorefrontOrder(
     const { randomUUID } = await import("crypto");
     receiptNo = `WEB-${randomUUID().slice(0, 8).toUpperCase()}`;
     saleId = receiptNo;
-    total = quote.total;
+    total = payable;
   } else {
     const sale = await repo.createSale({
       paymentMethod: salePayment,
@@ -392,7 +411,7 @@ export async function placeStorefrontOrder(
       customerName: input.customerName,
       customerMobile: input.customerMobile,
       clientUuid: input.clientUuid,
-      cashReceived: quote.total,
+      cashReceived: payable,
       status: "completed",
       source: "ONLINE_STORE",
       channel: "storefront",
@@ -402,6 +421,7 @@ export async function placeStorefrontOrder(
       deliveryFee: quote.deliveryFee,
       codFee: quote.codFee,
       serviceCharge: quote.deliveryFee + quote.codFee,
+      finalDiscount,
     });
     const s = sale as unknown as Record<string, unknown>;
     receiptNo =
@@ -486,6 +506,7 @@ export async function placeStorefrontOrder(
     total,
     deliveryFee: quote.deliveryFee,
     codFee: quote.codFee,
+    finalDiscount,
     source: "ONLINE_STORE",
     fulfillmentStatus: input.fulfilment === "pickup" ? "ready" : "pending",
     boardId,

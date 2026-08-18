@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { SETTINGS_SECTIONS } from "@/lib/settings";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { PrinterTestPanel } from "@/components/settings/PrinterTestPanel";
+import { AiKeyPanel } from "@/components/settings/AiKeyPanel";
 import { Button } from "@/components/ui/Button";
 import { SkeletonRows } from "@/components/ui/EmptyState";
 
@@ -144,6 +145,7 @@ export default function SettingsPage() {
           </motion.section>
         ))}
         <PrinterTestPanel />
+        <AiKeyPanel />
         <section className="rounded-2xl border border-line bg-surface-1 p-5">
           <h2 className="mb-2 text-sm font-semibold text-text-strong">
             Fiscal / e-invoice

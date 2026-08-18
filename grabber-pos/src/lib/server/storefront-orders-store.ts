@@ -30,6 +30,7 @@ export interface StorefrontWebOrder {
   total: number;
   deliveryFee?: number;
   codFee?: number;
+  finalDiscount?: number;
   source?: string;
   fulfillmentStatus?: string;
   boardId: string | null;

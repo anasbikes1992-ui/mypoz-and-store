@@ -22,6 +22,7 @@ const orderSchema = z.object({
   fulfilment: z.enum(FULFILMENT_MODES),
   deliveryZoneId: z.string().trim().max(64).optional(),
   clientUuid: z.string().trim().min(8).max(64),
+  discountCode: z.string().trim().max(40).optional(),
   lines: z
     .array(
       z.object({
@@ -115,6 +116,7 @@ export async function POST(
         address: data.address,
         pickupNote: data.pickupNote,
         paymentReference: data.paymentReference,
+        discountCode: data.discountCode,
       },
     );
     return NextResponse.json({ success: true, data: order, error: null });

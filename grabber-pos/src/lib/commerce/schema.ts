@@ -254,6 +254,7 @@ export const storeConfigSchema = z.object({
       requireConfirmation: false,
     }),
   customDomain: z.string().max(200).default(""),
+  domainVerifiedAt: z.string().max(40).default(""),
   subdomain: z.string().max(80).default(""),
 });
 export type StoreConfig = z.infer<typeof storeConfigSchema>;

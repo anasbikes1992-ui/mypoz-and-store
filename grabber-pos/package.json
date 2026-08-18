@@ -12,6 +12,7 @@
     "db:push": "supabase db push",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "prepare": "node -e \"process.exit(0)\""
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
+    "@playwright/test": "^1.55.0",
     "husky": "^9.1.7",
     "postgres": "^3.4.9",
     "tailwindcss": "^4",

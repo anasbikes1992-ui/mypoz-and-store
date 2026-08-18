@@ -5,6 +5,7 @@ import { readPublishedStore } from "@/lib/server/commerce-store";
 import { CatalogView } from "@/components/commerce/storefront/CatalogViews";
 import { CommerceTracker } from "@/components/commerce/storefront/CommerceTracker";
 import { slugify } from "@/lib/storefront";
+import { filterCollectionProducts } from "@/lib/commerce/collections-engine";
 
 export default async function CollectionPage({
   params,
@@ -25,12 +26,15 @@ export default async function CollectionPage({
   );
   const title = defined?.title || category?.name;
   if (!title) notFound();
-  const products =
-    defined?.sourceCategory && defined.sourceCategory !== "all"
-      ? catalog.items.filter((p) => p.category === defined.sourceCategory)
-      : category
-        ? catalog.items.filter((p) => slugify(p.category || "") === collectionSlug)
-        : catalog.items;
+  const products = defined
+    ? (filterCollectionProducts(
+        catalog.items,
+        defined.collectionType === "automated" ? defined.rules : [],
+        defined.sourceCategory || "all",
+      ) as typeof catalog.items)
+    : category
+      ? catalog.items.filter((p) => slugify(p.category || "") === collectionSlug)
+      : catalog.items;
   return (
     <>
       <CommerceTracker

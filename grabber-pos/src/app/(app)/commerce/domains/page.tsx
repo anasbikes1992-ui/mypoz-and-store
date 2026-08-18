@@ -1,5 +1,6 @@
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { CommerceNav } from "@/components/commerce/admin/CommerceNav";
+import { DomainForm } from "@/components/commerce/admin/DomainForm";
 import { readDraftStore } from "@/lib/server/commerce-store";
 
 export default async function CommerceDomainsPage() {
@@ -19,14 +20,7 @@ export default async function CommerceDomainsPage() {
           Preview path on this app: <span className="font-mono">/store/{store.slug}</span>
         </p>
       </section>
-      <section className="mt-4 rounded-3xl border border-line bg-surface-1 p-5">
-        <h2 className="text-sm font-semibold">Custom domain</h2>
-        <p className="mt-2 text-sm text-text-dim">
-          {store.customDomain
-            ? `${store.customDomain} — pending DNS verification. It will not be marked active until verification succeeds.`
-            : "No custom domain yet. Add a CNAME to your MyPoz subdomain, then verify. SSL is provisioned after DNS succeeds."}
-        </p>
-      </section>
+      <DomainForm initial={store} />
     </div>
   );
 }

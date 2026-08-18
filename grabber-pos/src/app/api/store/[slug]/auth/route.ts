@@ -55,6 +55,19 @@ function fail(error: string, status = 400) {
   return NextResponse.json({ success: false, data: null, error }, { status });
 }
 
+async function linkPosCustomer(customer: {
+  name: string;
+  email?: string | null;
+  mobile?: string | null;
+}) {
+  try {
+    const { upsertPosCustomer } = await import("@/lib/server/pos-customer-link");
+    await upsertPosCustomer(customer);
+  } catch {
+    // Best-effort — never block storefront auth.
+  }
+}
+
 function setDemoSession(
   res: NextResponse,
   slug: string,
@@ -209,6 +222,7 @@ export async function POST(
         session: authData.session,
       });
       setDemoSession(res, slug, customer);
+      await linkPosCustomer(customer);
       return res;
     } catch (err) {
       return fail(err instanceof Error ? err.message : "Registration failed", 500);
@@ -241,6 +255,7 @@ export async function POST(
         session: authData.session,
       });
       setDemoSession(res, slug, customer);
+      await linkPosCustomer(customer);
       return res;
     } catch (err) {
       return fail(err instanceof Error ? err.message : "Login failed", 500);
@@ -260,6 +275,7 @@ export async function POST(
       const pub = publicCustomer(customer);
       const res = ok({ customer: pub, mode: "demo" });
       setDemoSession(res, slug, pub);
+      await linkPosCustomer(pub);
       return res;
     }
 
@@ -272,6 +288,7 @@ export async function POST(
     const pub = publicCustomer(customer);
     const res = ok({ customer: pub, mode: "demo" });
     setDemoSession(res, slug, pub);
+    await linkPosCustomer(pub);
     return res;
   } catch (err) {
     return fail(err instanceof Error ? err.message : "Auth failed", 422);

@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { useBrand } from "@/components/brand/BrandProvider";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { springSoft } from "@/lib/motion";
 
 const QUICK_LINKS = [
@@ -115,6 +116,7 @@ export function TopBar() {
         >
           Help
         </Link>
+        <ThemeToggle />
         <button
           type="button"
           onClick={logout}

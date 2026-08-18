@@ -2,7 +2,7 @@
 
 Live tracker for the master roadmap implementation.
 
-**Last updated:** 2026-08-18 (POS ticket UI, HQ config CRUD, Shopify-like store chrome, migrations 0014–0015)
+**Last updated:** 2026-08-19 (remaining product pass: Jarvis tools, collections admin, discount codes, domain DNS verify, media library, PDP blocks, customer upsert)
 
 ---
 
@@ -61,8 +61,8 @@ Live tracker for the master roadmap implementation.
 |------|--------|
 | `store_collections` smart rules | ✅ Migration `0012` |
 | Collections engine (TS) | ✅ `collections-engine.ts` |
-| Smart collection evaluation | ✅ |
-| Collection admin UI | 🔲 Basic via builder — dedicated admin still next |
+| Smart collection evaluation | ✅ Storefront `[collectionSlug]` uses `filterCollectionProducts` |
+| Collection admin UI | ✅ `/commerce/collections` CRUD on commerce JSON (same POS catalogue) |
 
 ---
 
@@ -85,6 +85,7 @@ Live tracker for the master roadmap implementation.
 | Block type registry | ✅ `blocks.ts` |
 | Product page blocks schema | ✅ |
 | Section block nesting | ✅ Schema support |
+| PDP reads enabled blocks | ✅ `ProductView` + builder toggles / reorder |
 
 ---
 
@@ -96,7 +97,7 @@ Live tracker for the master roadmap implementation.
 | Undo/redo | ✅ Existing |
 | Navigation builder component | ✅ |
 | Drag reorder sections | ✅ Existing |
-| Block editor in builder | 🔲 Partial |
+| Block editor in builder | ✅ Product page block enable / reorder in `/commerce/builder` |
 
 ---
 
@@ -105,13 +106,14 @@ Live tracker for the master roadmap implementation.
 | Task | Status |
 |------|--------|
 | Dedicated `/cart` page | ✅ |
-| Dedicated `/checkout` page | ✅ |
+| Dedicated `/checkout` page | ✅ Coupon field → `final_discount` on `create_sale` |
 | Delivery fee engine | ✅ `delivery.ts` |
 | COD fee / min / max enforcement | ✅ |
 | Order list with status filters | ✅ |
 | Order detail view | ✅ |
 | Fulfillment transitions | ✅ `update_sale_fulfillment` + order actions |
 | Variant stock on `create_sale` | ✅ Migration `0013` |
+| Discount codes | ✅ `discount_codes` collection + POS **Discount code** + checkout Apply |
 
 ---
 
@@ -122,7 +124,9 @@ Live tracker for the master roadmap implementation.
 | Merchant onboarding wizard | ✅ `/commerce/onboarding` |
 | One-click store launch flow | ✅ In onboarding |
 | Realtime / live online-order alerts | ✅ POS toast + poll; Supabase Realtime when configured |
-| Domain verification workflow | 🔲 UI exists, verify job pending |
+| Domain verification workflow | ✅ `/commerce/domains` + `POST /api/commerce/domains/verify` — Connected only after CNAME matches Vercel |
+| Media library | ✅ `/commerce/media` + `/api/media` (local `public/uploads`; ephemeral on Vercel) |
+| Storefront → POS customer upsert | ✅ Register/login writes `customers` collection by email/mobile |
 | Theme marketplace | 🔲 Future |
 | SaaS billing | 🔲 Future |
 
@@ -151,6 +155,22 @@ Live tracker for the master roadmap implementation.
 | Command center storefront / WA / licence notes | ✅ |
 | Tenant-facing chrome rebrand to MyPoz HQ | ✅ GMS ops docs unchanged |
 | Provisioning empty-state note | ✅ HQ command center, tenants, onboard — run documented `upsert-admin.mjs`; no invented credentials |
+| Full JSON backups (secrets redacted) | ✅ `/hq/backups`, `/api/hq/backup`, `/api/backup` |
+| Light / dark theme cookie | ✅ `mypoz_theme` + TopBar toggle (not public storefront) |
+
+---
+
+## Jarvis (2026-08-19)
+
+| Task | Status |
+|------|--------|
+| Owner tools: inventory, sales, low stock | ✅ |
+| Period sales + channel split | ✅ `period_sales` (7/30/90d, optional source) |
+| Top / slow SKUs | ✅ `top_products`, `slow_movers` from `sale_lines` |
+| Demand hint | ✅ 28-day average × 7, labelled estimate |
+| HQ quiet shops | ✅ `quiet_shops` + `tenant_health` sales totals |
+| Tool arguments parsed | ✅ `runTool(name, plane, args)` |
+| BYOK | ✅ Vercel `OPENAI_API_KEY` or org `app_documents` key `ai` |
 
 ---
 
@@ -178,25 +198,23 @@ Ported domain logic from Whats App Auto into `grabber-pos` only (no nested tree,
 
 Webhook env (names only): `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, optional `WHATSAPP_API_VERSION`. Applied `0014_whatsapp_orders.sql` and `0015_platform_settings.sql` on Anaz `vtawrxmkahpgwgydibox`.
 
+Parked: Meta Live, Cloud API token, numeric Phone number ID (not a `+94…` display number).
+
 ---
 
 ## Verification
 
 | Check | Status |
 |-------|--------|
-| TypeScript typecheck | Not run this pass (focused vitest) |
-| Vitest | ✅ 88 passed (14 files), including WhatsApp phone / menu / signature |
+| TypeScript typecheck | Run this pass before push |
+| Vitest | Run this pass before push |
 
 ---
 
-## Next phases (not in this pass)
+## Next phases (out of this remaining-build pass)
 
-1. **Collections admin** — dedicated CRUD on `store_collections` beyond the builder.
-2. **Discount codes / promotions** — first-class codes on POS + storefront, not only bill discounts.
-3. **Media library** — Supabase Storage browser for product/theme images.
-4. **Domain DNS verify** — never show Connected until the verify job succeeds.
-5. **SaaS billing** — plans, invoices, dunning.
-6. **Customer identity** — unify POS loyalty + storefront accounts.
-7. **Block editor** — finish nested block editing in the visual builder.
-8. **Theme marketplace** — third-party packs after the live theme loop stays green.
-10. **Org attachment** — if login works but the tenant has no org, run `scripts/upsert-admin.mjs` as documented in `grabber-pos/docs/ADMIN_PROVISIONING_GUIDE.md`.
+1. **SaaS billing** — plans, invoices, dunning.
+2. **Theme marketplace** — third-party packs after the live theme loop stays green.
+3. **WhatsApp Live / Cloud API token** — `WHATSAPP_TOKEN` + numeric `WHATSAPP_PHONE_NUMBER_ID` on Vercel.
+4. **Durable media** — Supabase Storage when local `public/uploads` is not enough (Vercel disk is ephemeral).
+5. **Org attachment** — if login works but the tenant has no org, run `scripts/upsert-admin.mjs` as documented in `grabber-pos/docs/ADMIN_PROVISIONING_GUIDE.md`.

@@ -46,6 +46,8 @@ export function CheckoutPage({
     store.delivery.zones[0]?.id ?? "",
   );
   const [paymentReference, setPaymentReference] = useState("");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discount, setDiscount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function CheckoutPage({
   const deliveryFee = isPickup || freeApplied ? 0 : (zone?.fee ?? 0);
   const codFee =
     paymentMethod === "cash" && store.cod.enabled ? store.cod.fee : 0;
-  const orderTotal = subtotal + deliveryFee + codFee;
+  const orderTotal = Math.max(0, subtotal + deliveryFee + codFee - discount);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,6 +85,7 @@ export function CheckoutPage({
           fulfilment,
           deliveryZoneId: isPickup ? undefined : deliveryZoneId || undefined,
           clientUuid: crypto.randomUUID(),
+          discountCode: discount > 0 ? discountCode : undefined,
           lines: lines.map((l) => ({
             productId: l.productId,
             quantity: l.quantity,
@@ -299,6 +302,40 @@ export function CheckoutPage({
           />
         )}
 
+        <div className="flex gap-2">
+          <input
+            value={discountCode}
+            onChange={(e) => {
+              setDiscountCode(e.target.value);
+              setDiscount(0);
+            }}
+            placeholder="Discount code"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+          />
+          <button
+            type="button"
+            className="rounded-xl border border-line px-3 text-sm font-semibold"
+            onClick={async () => {
+              setError(null);
+              try {
+                const res = await fetch("/api/commerce/discounts/validate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ code: discountCode, subtotal }),
+                });
+                const json = await res.json();
+                if (!json.success) throw new Error(json.error || "Invalid code");
+                setDiscount(Number(json.data.discount) || 0);
+              } catch (e) {
+                setDiscount(0);
+                setError(e instanceof Error ? e.message : "Invalid code");
+              }
+            }}
+          >
+            Apply
+          </button>
+        </div>
+
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <button
@@ -335,6 +372,12 @@ export function CheckoutPage({
           )}
           {freeApplied && (
             <p className="text-xs text-[var(--tint-green)]">Free delivery applied</p>
+          )}
+          {discount > 0 && (
+            <div className="flex justify-between">
+              <dt className="text-text-dim">Discount</dt>
+              <dd className="tabular-nums">-{formatMoney(discount)}</dd>
+            </div>
           )}
           {codFee > 0 && (
             <div className="flex justify-between">

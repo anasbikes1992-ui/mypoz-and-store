@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { HQ_NAV } from "@/lib/hq";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 export function HqShell({
   children,
@@ -50,6 +51,7 @@ export function HqShell({
             <span className="hidden text-xs text-text-dim sm:inline">
               {identityLabel}
             </span>
+            <ThemeToggle />
             <Link
               href="/"
               className="rounded-xl px-3 py-1.5 text-sm text-text-dim transition hover:bg-surface-2 hover:text-text-strong"

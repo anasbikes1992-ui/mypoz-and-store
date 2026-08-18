@@ -60,6 +60,10 @@ export const STARTER_KEYS = [
   "commerce-themes",
   "commerce-orders",
   "commerce-analytics",
+  "commerce-collections",
+  "commerce-discounts",
+  "commerce-media",
+  "commerce-domains",
   "alerts",
   // Cashier ops available on every paid plan.
   "register",
@@ -68,6 +72,7 @@ export const STARTER_KEYS = [
   "admin",
   "clients",
   "backup",
+  "assistant",
   // In-app help must reach every client, whatever they pay.
   "help",
 ];

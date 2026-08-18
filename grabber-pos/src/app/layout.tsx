@@ -33,9 +33,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
+      data-theme="dark"
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=document.cookie.match(/(?:^|; )mypoz_theme=([^;]*)/);var v=m?decodeURIComponent(m[1]):localStorage.getItem("mypoz_theme");if(v==="light"||v==="dark")document.documentElement.setAttribute("data-theme",v);}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col font-sans bg-surface-0 text-text-body">
+        {children}
+      </body>
     </html>
   );
 }

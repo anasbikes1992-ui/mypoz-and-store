@@ -241,6 +241,29 @@ export function BillPanel() {
     }
   }
 
+  async function applyDiscountCode() {
+    const code = window.prompt("Discount code");
+    if (!code?.trim()) return;
+    try {
+      const subtotal = totals.subtotal - totals.lineDiscount;
+      const res = await fetch("/api/commerce/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code.trim(), subtotal, consume: true }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.error || "Invalid code");
+        return;
+      }
+      const amount = Number(json.data?.discount) || 0;
+      store.setFinalDiscount(store.finalDiscount + amount);
+      setError(null);
+    } catch {
+      setError("Could not apply discount code");
+    }
+  }
+
   async function checkVoucher() {
     const code = window.prompt("Voucher / gift card code");
     if (!code?.trim()) return;
@@ -903,6 +926,13 @@ export function BillPanel() {
                 className="rounded border border-line px-2 py-1 text-[11px] text-text-dim hover:text-accent"
               >
                 Check voucher
+              </button>
+              <button
+                type="button"
+                onClick={() => void applyDiscountCode()}
+                className="rounded border border-line px-2 py-1 text-[11px] text-text-dim hover:text-accent"
+              >
+                Discount code
               </button>
               <button
                 type="button"

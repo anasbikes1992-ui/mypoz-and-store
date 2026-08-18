@@ -11,7 +11,9 @@ import {
   type StoreConfig,
   type StoreSection,
   type SectionType,
+  type StoreBlock,
 } from "@/lib/commerce/schema";
+import { PRODUCT_PAGE_BLOCKS, defaultProductBlocks } from "@/lib/commerce/blocks";
 import { THEMES } from "@/lib/commerce/themes";
 import { themeClass } from "@/lib/commerce/themes";
 import { HomeSections } from "@/components/commerce/storefront/HomeSections";
@@ -76,6 +78,11 @@ export function StoreBuilder({
   const home = store.pages[homeIndex] ?? store.pages[0];
   const sections = home?.sections ?? [];
   const selected = sections.find((s) => s.id === selectedId) ?? null;
+  const productPage = store.pages.find((p) => p.type === "product");
+  const productBlocks =
+    productPage?.blocks && productPage.blocks.length > 0
+      ? productPage.blocks
+      : defaultProductBlocks();
 
   const commit = useCallback(
     (next: StoreConfig) => {
@@ -92,6 +99,26 @@ export function StoreBuilder({
 
   function patchStore(partial: Partial<StoreConfig>) {
     commit({ ...store, ...partial });
+  }
+
+  function patchProductBlocks(next: StoreBlock[]) {
+    const pages = store.pages.some((p) => p.type === "product")
+      ? store.pages.map((p) => (p.type === "product" ? { ...p, blocks: next } : p))
+      : [
+          ...store.pages,
+          {
+            id: newId("pg"),
+            type: "product" as const,
+            title: "Product",
+            slug: "product",
+            visible: true,
+            seoTitle: "",
+            seoDescription: "",
+            sections: [],
+            blocks: next,
+          },
+        ];
+    commit({ ...store, pages });
   }
 
   function patchSections(nextSections: StoreSection[]) {
@@ -330,6 +357,58 @@ export function StoreBuilder({
               </option>
             ))}
           </select>
+          <p className="mt-5 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+            Product page blocks
+          </p>
+          <ul className="mt-2 space-y-1">
+            {PRODUCT_PAGE_BLOCKS.map((def, i) => {
+              const current = productBlocks.find((b) => b.type === def.type);
+              const enabled = current?.enabled ?? def.defaultEnabled;
+              return (
+                <li key={def.type} className="flex items-center gap-1">
+                  <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={(e) => {
+                        const next = PRODUCT_PAGE_BLOCKS.map((d) => {
+                          const existing = productBlocks.find((b) => b.type === d.type);
+                          const on =
+                            d.type === def.type
+                              ? e.target.checked
+                              : (existing?.enabled ?? d.defaultEnabled);
+                          return {
+                            id: existing?.id ?? `blk_${d.type}`,
+                            type: d.type,
+                            enabled: on,
+                            settings: existing?.settings ?? {},
+                          };
+                        });
+                        patchProductBlocks(next);
+                      }}
+                    />
+                    <span className="truncate">{def.label}</span>
+                  </label>
+                  <button
+                    type="button"
+                    aria-label="Move up"
+                    disabled={i === 0}
+                    onClick={() => {
+                      const ordered = [...productBlocks];
+                      if (ordered.length === 0) return;
+                      const idx = ordered.findIndex((b) => b.type === def.type);
+                      if (idx <= 0) return;
+                      [ordered[idx - 1], ordered[idx]] = [ordered[idx]!, ordered[idx - 1]!];
+                      patchProductBlocks(ordered);
+                    }}
+                    className="h-7 w-7 rounded text-xs text-text-dim disabled:opacity-30"
+                  >
+                    ↑
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </aside>
 
         <div className="min-h-0 overflow-auto bg-surface-2 p-4">

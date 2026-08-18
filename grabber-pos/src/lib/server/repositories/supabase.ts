@@ -67,7 +67,7 @@ export class SupabaseRepository implements PosRepository {
     const { data, error } = await this.db
       .from("sales")
       .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
+        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -143,7 +143,7 @@ export class SupabaseRepository implements PosRepository {
       } as Record<string, unknown>)
       .eq("id", id)
       .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
+        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
       )
       .maybeSingle();
     if (error) {
@@ -175,6 +175,7 @@ interface SaleRpcRow {
   status?: string | null;
   void_reason?: string | null;
   voided_at?: string | null;
+  source?: string | null;
   lines?: RawLine[];
   sale_lines?: RawLine[];
 }
@@ -208,6 +209,7 @@ function mapSaleRow(row: SaleRpcRow): Sale {
     status: (row.status as Sale["status"]) ?? "completed",
     voidReason: row.void_reason ?? null,
     voidedAt: row.voided_at ?? null,
+    source: (row.source as Sale["source"]) ?? "POS",
     lines: rawLines.map((l) => ({
       productId: l.product_id ?? "",
       name: l.name,

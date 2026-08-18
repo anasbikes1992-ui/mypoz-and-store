@@ -47,6 +47,11 @@ next-env.d.ts
 
 .vercel
 
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+
 # supabase CLI scratch state (project ref, versions)
 supabase/.temp/
 
