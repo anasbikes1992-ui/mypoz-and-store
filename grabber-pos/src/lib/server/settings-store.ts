@@ -1,6 +1,7 @@
 import "server-only";
 import { settingsSchema, DEFAULT_SETTINGS, type Settings } from "@/lib/settings";
 import { docStore } from "./persistence/doc-store";
+import { readPublicStorefrontBundle } from "./storefront-public-docs";
 
 /**
  * Single-record business settings. Local backend: data/settings.json.
@@ -9,6 +10,15 @@ import { docStore } from "./persistence/doc-store";
 const store = docStore<Partial<Settings>>({ key: "settings", file: "settings.json" });
 
 export async function readSettings(): Promise<Settings> {
+  const publicBundle = await readPublicStorefrontBundle();
+  if (publicBundle && Object.keys(publicBundle.settings).length > 0) {
+    try {
+      return settingsSchema.parse({ ...DEFAULT_SETTINGS, ...publicBundle.settings });
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  }
+
   const raw = await store.read(DEFAULT_SETTINGS);
   try {
     return settingsSchema.parse({ ...DEFAULT_SETTINGS, ...raw });

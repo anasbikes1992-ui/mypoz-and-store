@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { Product, Sale } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
+import { salesByChannel } from "@/lib/commerce/channel-report";
 
 export default function ReportsPage() {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -75,7 +76,17 @@ export default function ReportsPage() {
                     }))}
                   />
                 </Panel>
-                <Panel title="Top products">
+                <Panel title="By channel (same sales ledger)">
+                  <BarList
+                    rows={report.byChannel.map((m) => ({
+                      label: m.source,
+                      value: m.revenue,
+                      display: `${formatMoney(m.revenue)} · ${m.count}`,
+                    }))}
+                  />
+                </Panel>
+              </div>
+              <Panel title="Top products">
                   <BarList
                     rows={report.topProducts.map((p) => ({
                       label: p.name,
@@ -84,7 +95,6 @@ export default function ReportsPage() {
                     }))}
                   />
                 </Panel>
-              </div>
             </>
           )}
 
@@ -236,6 +246,7 @@ function buildReport(sales: Sale[]) {
       ...v,
     })),
     byDay: days.map((d) => ({ label: d.label, total: dayMap.get(d.key) ?? 0 })),
+    byChannel: salesByChannel(sales),
     topProducts: [...productMap.entries()]
       .map(([name, qty]) => ({ name, qty }))
       .sort((a, b) => b.qty - a.qty)

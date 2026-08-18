@@ -4,18 +4,20 @@ import { readDraftStore, readPublishedStore, readCommerce } from "@/lib/server/c
 import { listStorefrontWebOrders } from "@/lib/server/storefront-orders-store";
 import { listCommerceEvents, summarizeFunnel } from "@/lib/server/commerce-analytics-store";
 import { getStorefrontCatalog } from "@/lib/server/storefront-repo";
+import { periodSales } from "@/lib/server/ai-insights";
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
 import { THEMES } from "@/lib/commerce/themes";
 import { storePath } from "@/lib/commerce/schema";
 
 export default async function CommerceOverviewPage() {
-  const [draft, published, doc, orders, events] = await Promise.all([
+  const [draft, published, doc, orders, events, channels] = await Promise.all([
     readDraftStore(),
     readPublishedStore(),
     readCommerce(),
     listStorefrontWebOrders(),
     listCommerceEvents(),
+    periodSales(30),
   ]);
   const slug = published.slug || draft.slug || "main-store";
   const catalog = await getStorefrontCatalog({ host: null, slug }, { size: 24 });
@@ -52,6 +54,15 @@ export default async function CommerceOverviewPage() {
       <div className="mt-4">
         <CommerceNav />
       </div>
+
+      {catalog.total === 0 ? (
+        <p className="mt-6 rounded-3xl border border-dashed border-line bg-surface-1 px-5 py-4 text-sm text-text-dim">
+          This shop catalogue is empty. Import products so POS, the online store, and WhatsApp share the same live stock.{" "}
+          <Link href="/products" className="font-semibold text-accent">
+            Open products
+          </Link>
+        </p>
+      ) : null}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Today's online sales" value={formatMoney(todaySales || funnel.todayRevenue)} />
@@ -116,7 +127,7 @@ export default async function CommerceOverviewPage() {
         </section>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <section className="rounded-3xl border border-line bg-surface-1 p-5">
           <h2 className="text-sm font-semibold text-text-strong">Funnel</h2>
           <ul className="mt-3 space-y-2 text-sm">
@@ -125,6 +136,25 @@ export default async function CommerceOverviewPage() {
             <li className="flex justify-between"><span>Add to cart</span><span>{funnel.addToCart}</span></li>
             <li className="flex justify-between"><span>Checkout</span><span>{funnel.checkoutStarted}</span></li>
             <li className="flex justify-between"><span>Purchase</span><span>{funnel.purchases}</span></li>
+          </ul>
+        </section>
+        <section className="rounded-3xl border border-line bg-surface-1 p-5">
+          <h2 className="text-sm font-semibold text-text-strong">30-day ledger by channel</h2>
+          <p className="mt-1 text-xs text-text-dim">From sales.source — not a second analytics database.</p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {Object.entries(channels.byChannel)
+              .filter(([, v]) => v.count > 0)
+              .map(([name, v]) => (
+                <li key={name} className="flex justify-between">
+                  <span>{name}</span>
+                  <span className="tabular-nums">
+                    {formatMoney(v.revenue)} · {v.count}
+                  </span>
+                </li>
+              ))}
+            {channels.count === 0 ? (
+              <li className="text-text-dim">No completed sales in 30 days.</li>
+            ) : null}
           </ul>
         </section>
         <section className="rounded-3xl border border-line bg-surface-1 p-5">

@@ -1,12 +1,14 @@
 import type { MetadataRoute } from "next";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://mypoz-and-store.vercel.app";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/store/",
-      disallow: ["/api/", "/admin", "/hq", "/pos", "/login"],
+      allow: ["/store/", "/welcome", "/privacy-policy", "/terms-of-service"],
+      disallow: ["/api/", "/admin", "/hq", "/pos", "/login", "/commerce"],
     },
-    sitemap: "https://grabber-pos.vercel.app/sitemap.xml",
+    sitemap: `${SITE.replace(/\/$/, "")}/sitemap.xml`,
   };
 }

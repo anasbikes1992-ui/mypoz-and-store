@@ -14,7 +14,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const urls: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "daily", priority: 1 },
     { url: `${base}/products`, lastModified: new Date(), changeFrequency: "daily", priority: 0.9 },
+    { url: `${base}/collections`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.7 },
   ];
+  for (const c of store.collections) {
+    urls.push({
+      url: `${base}/collections/${c.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    });
+  }
   for (const p of products.slice(0, 500)) {
     urls.push({
       url: `${base}/products/${p.slug}`,

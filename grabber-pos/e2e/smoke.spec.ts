@@ -28,4 +28,13 @@ test.describe("public critical path", () => {
     await expect(page.locator("input[type='password']")).toBeVisible();
     await expect(page.locator("form")).toBeVisible();
   });
+
+  test("robots and sitemap are crawlable", async ({ request }) => {
+    const robots = await request.get("/robots.txt");
+    expect(robots.ok()).toBeTruthy();
+    const robotsText = await robots.text();
+    expect(robotsText).toContain("sitemap");
+    const sitemap = await request.get("/sitemap.xml");
+    expect(sitemap.ok()).toBeTruthy();
+  });
 });

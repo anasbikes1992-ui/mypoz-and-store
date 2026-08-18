@@ -10,6 +10,8 @@ import {
 import { readPublishedStore } from "@/lib/server/commerce-store";
 import { ProductView } from "@/components/commerce/storefront/CatalogViews";
 import { CommerceTracker } from "@/components/commerce/storefront/CommerceTracker";
+import { jsonLd } from "@/lib/commerce/json-ld";
+import { storeBaseUrl } from "@/lib/server/storefront-url";
 
 interface Props {
   params: Promise<{ slug: string; productSlug: string }>;
@@ -20,13 +22,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const host = (await headers()).get("host");
   const product = await getStorefrontProduct({ host, slug }, productSlug);
   if (!product) return { title: "Product" };
+  const store = await readPublishedStore();
+  const title = product.seoTitle || product.name;
+  const description =
+    product.seoDescription ||
+    product.description ||
+    `${product.name} — live stock from ${store.name}`;
+  const canonical = `${await storeBaseUrl(slug)}/products/${product.slug}`;
   return {
-    title: product.name,
-    description: product.description || `${product.name} — ${product.price}`,
+    title,
+    description,
+    alternates: { canonical },
     openGraph: {
-      title: product.name,
-      description: product.description || undefined,
+      title,
+      description,
+      url: canonical,
       images: product.imageUrl ? [{ url: product.imageUrl }] : [],
+      type: "website",
     },
   };
 }
@@ -42,18 +54,22 @@ export default async function ProductPage({ params }: Props) {
     getStorefrontCatalog({ host, slug }, { size: 24 }),
   ]);
   if (!product) notFound();
+  const canonical = `${await storeBaseUrl(slug)}/products/${product.slug}`;
   const variants = await getStorefrontProductVariants({ host, slug }, product);
   const related = catalog.items
     .filter((p) => p.id !== product.id && p.category === product.category)
     .slice(0, 8);
-  const jsonLd = {
+  const jsonLdData = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
+    description: product.description || undefined,
     image: product.imageUrl || undefined,
-    brand: product.brand || store.name,
+    sku: product.barcode || product.id,
+    brand: { "@type": "Brand", name: product.brand || store.name },
     offers: {
       "@type": "Offer",
+      url: canonical,
       price: product.price,
       priceCurrency: store.currency || "LKR",
       availability:
@@ -66,7 +82,7 @@ export default async function ProductPage({ params }: Props) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(jsonLdData) }}
       />
       <CommerceTracker
         slug={slug}

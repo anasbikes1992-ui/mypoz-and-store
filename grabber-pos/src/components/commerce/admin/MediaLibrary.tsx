@@ -71,7 +71,7 @@ export function MediaLibrary() {
         />
       </label>
       <p className="text-sm text-text-dim">
-        Files land in this app&apos;s uploads folder. On Vercel the disk is ephemeral — keep a copy, or paste the URL onto a product immediately.
+        Uploads go to durable Supabase Storage when you are signed in to a tenant; otherwise they stay on this app&apos;s disk (ephemeral on Vercel). Paste the URL onto a product — this is not a second catalogue.
       </p>
       {(msg || error) && (
         <p className={`text-sm ${error ? "text-danger" : "text-accent"}`}>{error || msg}</p>

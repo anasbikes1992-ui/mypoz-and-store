@@ -153,9 +153,16 @@ async function completePendingSaleDurable(saleIdOrReceipt: string): Promise<Sale
       customerName: order.customerName,
       customerMobile: order.customerMobile,
       clientUuid: null,
+      address: order.address,
+      fulfilment: order.fulfilment,
+      paymentMethod: order.paymentMethod,
+      deliveryFee: order.deliveryFee ?? 0,
+      codFee: order.codFee ?? 0,
+      final_discount: order.finalDiscount ?? 0,
       lines: order.lines.map((l) => ({
         productId: l.productId,
         quantity: l.quantity,
+        variantId: l.variantId,
       })),
     },
   } as never);

@@ -2,6 +2,7 @@ import "server-only";
 import { docStore } from "./persistence/doc-store";
 import { readWebsite, writeWebsite } from "./website-store";
 import { readSettings } from "./settings-store";
+import { readPublicStorefrontBundle } from "./storefront-public-docs";
 import {
   commerceDocumentSchema,
   canonicalThemeId,
@@ -69,6 +70,27 @@ async function seedFromExisting(): Promise<StoreConfig> {
 }
 
 async function readRaw(): Promise<CommerceDocument> {
+  const publicBundle = await readPublicStorefrontBundle();
+  if (publicBundle && Object.keys(publicBundle.commerce).length > 0) {
+    const seed = defaultStoreConfig({
+      name: "MyPoz Store",
+      slug: publicBundle.slug || "main-store",
+    });
+    const raw = publicBundle.commerce as Partial<CommerceDocument>;
+    try {
+      return commerceDocumentSchema.parse({
+        draft: raw.draft ? storeConfigSchema.parse({ ...seed, ...raw.draft }) : seed,
+        published: raw.published
+          ? storeConfigSchema.parse({ ...seed, ...raw.published })
+          : null,
+        publishedAt: raw.publishedAt ?? null,
+        updatedAt: raw.updatedAt ?? new Date().toISOString(),
+      });
+    } catch {
+      return emptyDoc(seed);
+    }
+  }
+
   const seed = await seedFromExisting();
   const raw = await store.read({});
   try {

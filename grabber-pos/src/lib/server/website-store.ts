@@ -6,6 +6,7 @@ import {
 } from "@/lib/website";
 import { docStore } from "./persistence/doc-store";
 import { readSettings, writeSettings } from "./settings-store";
+import { readPublicStorefrontBundle } from "./storefront-public-docs";
 
 /**
  * Tenant website / storefront CMS config.
@@ -18,6 +19,18 @@ const store = docStore<Partial<WebsiteConfig>>({
 
 /** Merge CMS doc with settings storefront fields so Settings stays a fallback. */
 export async function readWebsite(): Promise<WebsiteConfig> {
+  const publicBundle = await readPublicStorefrontBundle();
+  if (publicBundle && Object.keys(publicBundle.website).length > 0) {
+    try {
+      return websiteSchema.parse({
+        ...DEFAULT_WEBSITE,
+        ...publicBundle.website,
+      });
+    } catch {
+      return DEFAULT_WEBSITE;
+    }
+  }
+
   const settings = await readSettings();
   const raw = await store.read({});
   const seeded: Partial<WebsiteConfig> = {

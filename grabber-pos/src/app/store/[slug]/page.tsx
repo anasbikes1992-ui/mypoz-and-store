@@ -6,6 +6,7 @@ import { readPublishedStore } from "@/lib/server/commerce-store";
 import { readSettings } from "@/lib/server/settings-store";
 import { HomeSections } from "@/components/commerce/storefront/HomeSections";
 import { CommerceTracker } from "@/components/commerce/storefront/CommerceTracker";
+import { jsonLd } from "@/lib/commerce/json-ld";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -45,19 +46,23 @@ export default async function TenantStorePage({
     readSettings(),
   ]);
 
-  const jsonLd = {
+  const jsonLdData = {
     "@context": "https://schema.org",
     "@type": "Store",
     name: store.name || info.businessName,
     description: store.seoDescription || settings.storeSlogan,
     telephone: store.contactPhone || settings.phone,
+    address: store.address
+      ? { "@type": "PostalAddress", streetAddress: store.address, addressCountry: "LK" }
+      : undefined,
+    currenciesAccepted: store.currency || "LKR",
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(jsonLdData) }}
       />
       <CommerceTracker slug={slug} type="page_view" path={`/store/${slug}`} />
       <HomeSections
