@@ -79,6 +79,10 @@ export function ProductCard({
             <span className="absolute left-3 top-3 rounded-full bg-surface-1/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-text-dim">
               {t.outOfStock}
             </span>
+          ) : product.compareAtPrice && product.compareAtPrice > product.price ? (
+            <span className="absolute left-3 top-3 bg-accent px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-accent-ink">
+              {t.sale}
+            </span>
           ) : null}
         </div>
       </Link>
@@ -95,9 +99,22 @@ export function ProductCard({
           {product.name}
         </Link>
         <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-          <p className={`font-semibold tabular-nums ${style === "luxury" ? "text-sm tracking-wide" : "text-sm"} text-text-strong`}>
-            {formatMoney(product.price)}
-          </p>
+          <div>
+            {product.compareAtPrice && product.compareAtPrice > product.price ? (
+              <p className="flex items-baseline gap-2">
+                <span className="font-semibold tabular-nums text-text-strong">
+                  {formatMoney(product.price)}
+                </span>
+                <span className="text-xs tabular-nums text-text-dim line-through">
+                  {formatMoney(product.compareAtPrice)}
+                </span>
+              </p>
+            ) : (
+              <p className={`font-semibold tabular-nums ${style === "luxury" ? "text-sm tracking-wide" : "text-sm"} text-text-strong`}>
+                {formatMoney(product.price)}
+              </p>
+            )}
+          </div>
           <AddToCartButton
             productId={product.id}
             name={product.name}
@@ -134,7 +151,7 @@ export function SectionView({
   switch (section.type) {
     case "announcement": {
       const message = str(s, "message", store.announcement);
-      if (!message) return null;
+      if (!message || message === store.announcement) return null;
       return (
         <div className="bg-accent px-4 py-2 text-center text-xs font-semibold tracking-wide text-accent-ink">
           {str(s, "link") ? (

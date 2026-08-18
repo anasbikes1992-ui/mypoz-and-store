@@ -48,13 +48,20 @@ export default async function CollectionsIndexPage({
             <li key={c.slug}>
               <Link
                 href={storePath(slug, `collections/${c.slug}`)}
-                className="block border border-line bg-surface-1 p-5 hover:border-accent"
+                className="group block overflow-hidden border border-line bg-surface-1 hover:border-accent"
                 style={{ borderRadius: "var(--mp-radius)" }}
               >
-                <p className="font-semibold text-text-strong">{c.title}</p>
-                {typeof c.count === "number" ? (
-                  <p className="mt-1 text-xs text-text-dim">{c.count} products</p>
-                ) : null}
+                <div className="flex aspect-[16/7] items-end bg-surface-2 p-5">
+                  <span className="text-4xl font-semibold text-text-dim/35 transition group-hover:text-accent/40">
+                    {c.title.slice(0, 1)}
+                  </span>
+                </div>
+                <div className="p-5">
+                  <p className="font-semibold text-text-strong">{c.title}</p>
+                  {typeof c.count === "number" ? (
+                    <p className="mt-1 text-xs text-text-dim">{c.count} products</p>
+                  ) : null}
+                </div>
               </Link>
             </li>
           ))}

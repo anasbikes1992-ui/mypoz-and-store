@@ -28,12 +28,13 @@ const putSchema = z.object({
       accentColor: z.string().max(32).optional(),
     })
     .optional(),
-  license: z
-    .object({
-      plan: z.enum(["starter", "business", "enterprise"]).optional(),
-      expiry: z.string().max(20).optional(),
-    })
-    .optional(),
+    license: z
+      .object({
+        plan: z.enum(["starter", "business", "enterprise"]).optional(),
+        expiry: z.string().max(20).optional(),
+        extras: z.array(z.string().regex(/^[a-z0-9-]{2,40}$/)).max(40).optional(),
+      })
+      .optional(),
   status: z.enum(["active", "suspended"]).optional(),
 });
 

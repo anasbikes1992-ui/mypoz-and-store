@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductGrid } from "@/components/pos/ProductGrid";
 import { BillPanel } from "@/components/pos/BillPanel";
-import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { Button } from "@/components/ui/Button";
 import { useCartStore } from "@/lib/store/cart-store";
 import { formatMoney } from "@/lib/format";
@@ -107,59 +106,57 @@ function PosWorkspace() {
       : null;
 
   return (
-    <div className="relative flex h-[calc(100vh-3.5rem)] flex-col px-5 py-4">
-      <ModuleHeader
-        title={
-          categoryMode
-            ? "Category sale"
-            : isWholesale
-              ? "Wholesale sale"
-              : "Retail sale"
-        }
-        subtitle={
-          categoryMode
-            ? "Browse by category — tap products to add"
-            : "Scan or search, build the bill, take payment"
-        }
-        actions={
-          <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-sm">
-            <span className={isWholesale ? "text-text-dim" : "text-accent"}>
-              Retail
-            </span>
-            <button
-              role="switch"
-              aria-checked={isWholesale}
-              aria-label="Toggle wholesale pricing"
-              onClick={() => setWholesale(!isWholesale)}
-              className={`relative h-5 w-9 rounded-full transition ${
-                isWholesale ? "bg-accent" : "bg-surface-3"
+    <div className="flex h-[calc(100vh-3.5rem)] min-h-0 flex-col overflow-hidden px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-text-strong">
+            {categoryMode
+              ? "Category sale"
+              : isWholesale
+                ? "Wholesale"
+                : "Retail"}
+          </h1>
+          <p className="text-[11px] text-text-dim">
+            Scan · tap · Take payment
+          </p>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-xs">
+          <span className={isWholesale ? "text-text-dim" : "text-accent"}>
+            Retail
+          </span>
+          <button
+            role="switch"
+            aria-checked={isWholesale}
+            aria-label="Toggle wholesale pricing"
+            onClick={() => setWholesale(!isWholesale)}
+            className={`relative h-5 w-9 rounded-full transition ${
+              isWholesale ? "bg-accent" : "bg-surface-3"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
+                isWholesale ? "left-[18px]" : "left-0.5"
               }`}
-            >
-              <span
-                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
-                  isWholesale ? "left-[18px]" : "left-0.5"
-                }`}
-              />
-            </button>
-            <span className={isWholesale ? "text-accent" : "text-text-dim"}>
-              Wholesale
-            </span>
-          </div>
-        }
-      />
+            />
+          </button>
+          <span className={isWholesale ? "text-accent" : "text-text-dim"}>
+            Wholesale
+          </span>
+        </div>
+      </div>
 
       {categoryMode && (
-        <div className="mt-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-2 text-sm text-accent">
-          Category mode — browse chips below; barcode scanning is secondary.
+        <div className="mt-2 rounded-lg border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs text-accent">
+          Category mode — barcode is secondary.
         </div>
       )}
 
-      <div className="mt-4 flex min-h-0 flex-1 flex-col gap-5 lg:flex-row">
-        <section className="min-h-0 min-w-0 flex-1" aria-label="Product catalog">
+      <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden lg:flex-row">
+        <section className="min-h-0 min-w-0 flex-1 overflow-hidden" aria-label="Product catalog">
           <ProductGrid onPick={handlePick} categoryMode={categoryMode} />
         </section>
         <section
-          className="flex min-h-[28rem] w-full shrink-0 flex-col lg:sticky lg:top-4 lg:h-auto lg:min-h-0 lg:w-[26rem] lg:self-stretch"
+          className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden lg:w-[24rem]"
           aria-label="Bill"
         >
           <BillPanel />
@@ -168,7 +165,7 @@ function PosWorkspace() {
 
       {variantPick && (
         <div
-          className="absolute inset-0 z-40 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Select variant"

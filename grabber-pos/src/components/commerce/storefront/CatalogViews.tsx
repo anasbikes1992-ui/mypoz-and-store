@@ -18,6 +18,7 @@ export function CatalogView({
   categories,
   title,
   empty,
+  initialSearch = "",
 }: {
   slug: string;
   store: StoreConfig;
@@ -25,11 +26,12 @@ export function CatalogView({
   categories: { name: string; count: number }[];
   title?: string;
   empty?: string;
+  initialSearch?: string;
 }) {
   const t = storeCopy(store.locale);
   const theme = THEMES[store.themeId];
   const card = store.tokens.cardStyle || theme.tokens.cardStyle;
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [cat, setCat] = useState("all");
   const [sort, setSort] = useState<"name" | "price-asc" | "price-desc">("name");
 

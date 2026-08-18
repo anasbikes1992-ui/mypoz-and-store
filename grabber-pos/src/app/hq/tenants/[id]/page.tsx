@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { COMMERCE_THEME_IDS } from "@/lib/commerce/schema";
 import type { HqTenant } from "@/lib/hq";
+import { HQ_EXTRA_KEYS, type HqTenantOps } from "@/lib/hq-config";
 import { PLAN_NAMES, type PlanTier } from "@/lib/plans";
 
 const INPUT =
@@ -21,6 +23,8 @@ export default function HqTenantDetailPage() {
   const [accentColor, setAccentColor] = useState("");
   const [plan, setPlan] = useState<PlanTier>("starter");
   const [expiry, setExpiry] = useState("");
+  const [extras, setExtras] = useState<string[]>([]);
+  const [ops, setOps] = useState<HqTenantOps | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -39,6 +43,12 @@ export default function HqTenantDetailPage() {
         setAccentColor(t.brand?.accentColor || "");
         setPlan((t.plan as PlanTier) || "starter");
         setExpiry(t.expiry || "");
+        setExtras(t.extras || []);
+        return fetch(`/api/hq/tenants/${encodeURIComponent(id)}/ops`);
+      })
+      .then((r) => (r && "json" in r ? r.json() : null))
+      .then((j) => {
+        if (j?.success) setOps(j.data as HqTenantOps);
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
@@ -56,7 +66,7 @@ export default function HqTenantDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           brand: { businessName, logoUrl, accentColor },
-          license: { plan, expiry },
+          license: { plan, expiry, extras },
         }),
       });
       const j = await res.json();
@@ -208,6 +218,162 @@ export default function HqTenantDetailPage() {
           </div>
         </section>
       </div>
+
+      <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim">
+          Module extras
+        </h2>
+        <p className="mt-1 text-xs text-text-dim">
+          Add-ons on top of the plan. WhatsApp and verticals stay off until you
+          enable them here (Enterprise already includes everything).
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {HQ_EXTRA_KEYS.map((key) => (
+            <label key={key} className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={extras.includes(key)}
+                onChange={(e) =>
+                  setExtras((cur) =>
+                    e.target.checked
+                      ? [...cur, key]
+                      : cur.filter((k) => k !== key),
+                  )
+                }
+              />
+              {key}
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {ops && (
+        <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim">
+            Store &amp; channel
+          </h2>
+          <p className="mt-1 text-xs text-text-dim">
+            Theme, announcement, and locale write through to this tenant&apos;s
+            published store when service-role is available.
+          </p>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-text-dim">Theme</span>
+              <select
+                className={INPUT}
+                value={ops.storeThemeId}
+                onChange={(e) =>
+                  setOps({
+                    ...ops,
+                    storeThemeId: e.target.value as HqTenantOps["storeThemeId"],
+                  })
+                }
+              >
+                {COMMERCE_THEME_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs text-text-dim">Locale</span>
+              <select
+                className={INPUT}
+                value={ops.locale}
+                onChange={(e) =>
+                  setOps({
+                    ...ops,
+                    locale: e.target.value as HqTenantOps["locale"],
+                  })
+                }
+              >
+                <option value="en">English</option>
+                <option value="si">Sinhala</option>
+                <option value="ta">Tamil</option>
+              </select>
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="mb-1.5 block text-xs text-text-dim">
+                Store announcement
+              </span>
+              <input
+                className={INPUT}
+                maxLength={200}
+                value={ops.announcement}
+                onChange={(e) => setOps({ ...ops, announcement: e.target.value })}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={ops.storeEnabled}
+                onChange={(e) =>
+                  setOps({ ...ops, storeEnabled: e.target.checked })
+                }
+              />
+              Store published
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={ops.whatsappEnabled}
+                onChange={(e) =>
+                  setOps({ ...ops, whatsappEnabled: e.target.checked })
+                }
+              />
+              WhatsApp bot
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={ops.wholesaleEnabled}
+                onChange={(e) =>
+                  setOps({ ...ops, wholesaleEnabled: e.target.checked })
+                }
+              />
+              Wholesale
+            </label>
+            <label className="block lg:col-span-2">
+              <span className="mb-1.5 block text-xs text-text-dim">
+                Internal note
+              </span>
+              <textarea
+                className={INPUT}
+                rows={3}
+                value={ops.supportNote}
+                onChange={(e) => setOps({ ...ops, supportNote: e.target.value })}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            className="mt-4 rounded-xl border border-line px-4 py-2 text-sm font-semibold text-text-strong hover:border-accent"
+            onClick={() => {
+              if (!ops) return;
+              setSaving(true);
+              fetch(`/api/hq/tenants/${encodeURIComponent(id)}/ops`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(ops),
+              })
+                .then((r) => r.json())
+                .then((j) => {
+                  if (!j.success) throw new Error(j.error || "Ops save failed");
+                  setOps(j.data);
+                  setMsg("Store & channel saved");
+                })
+                .catch((e) =>
+                  setError(e instanceof Error ? e.message : "Ops save failed"),
+                )
+                .finally(() => setSaving(false));
+            }}
+            disabled={saving}
+          >
+            Save store &amp; channel
+          </button>
+        </section>
+      )}
     </div>
   );
 }

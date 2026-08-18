@@ -7,6 +7,8 @@ import type { HqSummary } from "@/lib/hq";
 export default function HqHomePage() {
   const [summary, setSummary] = useState<HqSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [storeSlug, setStoreSlug] = useState("main-store");
+  const [waConfigured, setWaConfigured] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetch("/api/hq/summary")
@@ -18,18 +20,31 @@ export default function HqHomePage() {
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
       );
+
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data?.storeSlug) setStoreSlug(j.data.storeSlug);
+      })
+      .catch(() => undefined);
+
+    fetch("/api/whatsapp/status")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setWaConfigured(Boolean(j.data?.configured));
+      })
+      .catch(() => setWaConfigured(false));
   }, []);
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-text-strong">Command center</h1>
       <p className="mt-1 text-sm text-text-dim">
-        Fleet health for Grabber Mobility Solutions operators — separate from
-        each tenant&apos;s{" "}
+        MyPoz HQ fleet health for operators — separate from each tenant&apos;s{" "}
         <Link href="/admin" className="text-accent underline-offset-2 hover:underline">
           /admin
         </Link>{" "}
-        console.
+        console. GMS access stays gated; tenant owners do not see this portal.
       </p>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
@@ -52,6 +67,33 @@ export default function HqHomePage() {
         <Stat
           label="Open tickets"
           value={summary ? String(summary.openTickets) : "…"}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <StatusCard
+          label="Storefront"
+          value={`/store/${storeSlug}`}
+          href={`/store/${storeSlug}`}
+          hint="Public catalog on the same inventory as POS"
+        />
+        <StatusCard
+          label="WhatsApp Cloud API"
+          value={
+            waConfigured == null
+              ? "…"
+              : waConfigured
+                ? "Credentials present"
+                : "Not configured"
+          }
+          href="/hq/whatsapp"
+          hint="Official Graph API only — see fleet inbox"
+          tone={waConfigured === false ? "warn" : undefined}
+        />
+        <StatusCard
+          label="Tenant admin"
+          value="Owner role required"
+          hint="If login works but the org is empty, run the documented upsert-admin provisioning script. Do not invent credentials here."
         />
       </div>
 
@@ -84,6 +126,11 @@ export default function HqHomePage() {
           href="/hq/onboard"
           title="Onboard"
           body="Provision a client into the pipeline (and optionally an org)."
+        />
+        <QuickLink
+          href="/hq/whatsapp"
+          title="WhatsApp"
+          body="Cloud API connection status and conversation overview."
         />
         <QuickLink
           href="/hq/tickets"
@@ -123,6 +170,46 @@ function Stat({
       </p>
     </div>
   );
+}
+
+function StatusCard({
+  label,
+  value,
+  hint,
+  href,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  href?: string;
+  tone?: "warn";
+}) {
+  const inner = (
+    <>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+        {label}
+      </p>
+      <p
+        className={`mt-1 truncate text-sm font-semibold ${
+          tone === "warn" ? "text-warn" : "text-text-strong"
+        }`}
+      >
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-text-dim">{hint}</p>
+    </>
+  );
+  const className =
+    "block rounded-2xl border border-line bg-surface-1 p-4 transition hover:border-accent/50";
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={className}>{inner}</div>;
 }
 
 function QuickLink({

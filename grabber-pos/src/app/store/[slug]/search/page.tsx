@@ -8,10 +8,13 @@ import { storeCopy } from "@/lib/commerce/i18n";
 
 export default async function SearchPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const { slug } = await params;
+  const { q } = await searchParams;
   const host = (await headers()).get("host");
   const info = await getStorefrontInfo({ host, slug });
   if (!info) notFound();
@@ -29,6 +32,7 @@ export default async function SearchPage({
         products={catalog.items}
         categories={catalog.categories}
         title={t.search}
+        initialSearch={q ?? ""}
       />
     </>
   );

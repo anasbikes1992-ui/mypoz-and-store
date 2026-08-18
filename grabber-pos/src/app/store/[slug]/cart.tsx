@@ -189,7 +189,7 @@ export function CartButton() {
     >
       Cart
       {count > 0 && (
-        <span className="rounded-full bg-white/95 px-2 py-0.5 text-xs font-extrabold text-accent">
+        <span className="rounded-full bg-accent-ink/15 px-2 py-0.5 text-xs font-bold text-accent-ink">
           {count}
         </span>
       )}

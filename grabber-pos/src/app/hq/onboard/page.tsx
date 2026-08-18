@@ -12,7 +12,9 @@ export default function HqOnboardPage() {
       <p className="mt-1 max-w-2xl text-sm text-text-dim">
         Grabber Mobility Solutions pipeline — adds the client to the fleet
         roster, optionally white-labels this workspace, and can create an
-        organization when the service-role key is set.
+        organization when the service-role key is set. Tenant owners still need
+        the documented upsert-admin provisioning script to attach a login to an
+        org; HQ does not invent credentials.
       </p>
       <div className="mt-6">
         <OnboardWizard

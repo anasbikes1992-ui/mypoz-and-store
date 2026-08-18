@@ -2,7 +2,7 @@
 
 Live tracker for the master roadmap implementation.
 
-**Last updated:** 2026-08-17 (P0–P4 commerce loop)
+**Last updated:** 2026-08-18 (POS ticket UI, HQ config CRUD, Shopify-like store chrome, migrations 0014–0015)
 
 ---
 
@@ -62,7 +62,7 @@ Live tracker for the master roadmap implementation.
 | `store_collections` smart rules | ✅ Migration `0012` |
 | Collections engine (TS) | ✅ `collections-engine.ts` |
 | Smart collection evaluation | ✅ |
-| Collection admin UI | 🔲 Basic via builder |
+| Collection admin UI | 🔲 Basic via builder — dedicated admin still next |
 
 ---
 
@@ -70,10 +70,11 @@ Live tracker for the master roadmap implementation.
 
 | Task | Status |
 |------|--------|
-| Six commerce themes | ✅ Existing |
+| Six commerce themes | ✅ Existing CSS + tokens |
 | Theme pack format | ✅ `theme-pack.ts` |
 | Design token system | ✅ Existing |
 | Industry presets | ✅ Starter kits in theme-pack |
+| Admin live preview + persist | ✅ `/commerce/themes` swatches, sample card, Preview store; `applyStoreTheme` writes draft + published |
 
 ---
 
@@ -127,19 +128,75 @@ Live tracker for the master roadmap implementation.
 
 ---
 
+## POS sale UI (2026-08-18)
+
+| Task | Status |
+|------|--------|
+| Thermal-ticket bill + compact shelf | ✅ Receipt tape chrome, dashed totals |
+| Payment behind **Take payment** | ✅ Cash/card/split, walk-in, paid stay in tender sheet |
+| Line expand for qty / price / discount | ✅ One-row lines by default |
+| HQ platform config CRUD | ✅ `/hq/config` + `platform_settings` (`0015`) |
+| HQ tenant extras + store/channel ops | ✅ Tenant detail extras + theme/announcement |
+| Store chrome (Shopify-like) | ✅ Announcement, theme headers, 4-col footer, search |
+
+---
+
+## HQ (2026-08-18)
+
+| Task | Status |
+|------|--------|
+| `/api/hq/me` 200 `{ allowed: false }` for non-admins | ✅ No more TopBar 403 |
+| TopBar HQ link only when allowed | ✅ Label: MyPoz HQ |
+| `/hq/whatsapp` fleet nav | ✅ |
+| Command center storefront / WA / licence notes | ✅ |
+| Tenant-facing chrome rebrand to MyPoz HQ | ✅ GMS ops docs unchanged |
+| Provisioning empty-state note | ✅ HQ command center, tenants, onboard — run documented `upsert-admin.mjs`; no invented credentials |
+
+---
+
+## WhatsApp Cloud API (2026-08-18)
+
+Ported domain logic from Whats App Auto into `grabber-pos` only (no nested tree, no Prisma).
+
+| Task | Status |
+|------|--------|
+| `normalizeLkPhone` | ✅ `src/lib/whatsapp/phone.ts` |
+| Greeting menu state machine + unit tests | ✅ `src/lib/whatsapp/menu.ts` |
+| Bot uses `getRepository()` catalog | ✅ |
+| Conversations in `app_collections` / local JSON | ✅ `whatsapp_conversations`, `whatsapp_messages` |
+| Dedup by `waMessageId` | ✅ |
+| Public webhook GET verify + POST HMAC | ✅ `/api/whatsapp/webhook` on `PUBLIC_PATHS` |
+| Merchant `/whatsapp` settings + inbox | ✅ Launcher tile under Sales & comms |
+| HQ `/hq/whatsapp` | ✅ |
+| Checkout → `createSale` source `WHATSAPP` | ✅ Fallback POS hold if sale post fails |
+| Durable webhook sales (no user JWT) | ✅ Service-role tenant + `whatsapp_create_order` (`0014`) |
+| EN / SI / TA bot copy | ✅ `src/lib/whatsapp/i18n.ts` |
+| Per-client phone + token CRUD (HQ + merchant) | ✅ `/hq/whatsapp`, `/whatsapp` |
+| Staff handoff badge | ✅ `needsStaffReply` |
+| Fulfillment WhatsApp ping | ✅ Commerce order status |
+| Operating manual | ✅ `docs/MYPOZ_OPERATING_MANUAL.md` + `docs/WHATSAPP.md` |
+
+Webhook env (names only): `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, optional `WHATSAPP_API_VERSION`. Applied `0014_whatsapp_orders.sql` and `0015_platform_settings.sql` on Anaz `vtawrxmkahpgwgydibox`.
+
+---
+
 ## Verification
 
 | Check | Status |
 |-------|--------|
-| TypeScript typecheck | ✅ Pass |
-| Vitest | ✅ 79 tests |
+| TypeScript typecheck | Not run this pass (focused vitest) |
+| Vitest | ✅ 88 passed (14 files), including WhatsApp phone / menu / signature |
 
 ---
 
-## Next priorities
+## Next phases (not in this pass)
 
-1. Domain DNS verification job (never show Connected until verified)
-2. Customer identity unification (POS + online)
-3. Media library on Supabase Storage
-4. Discount codes / promotions
-5. Theme engine expansion (industry packs) — after the commerce loop stays green
+1. **Collections admin** — dedicated CRUD on `store_collections` beyond the builder.
+2. **Discount codes / promotions** — first-class codes on POS + storefront, not only bill discounts.
+3. **Media library** — Supabase Storage browser for product/theme images.
+4. **Domain DNS verify** — never show Connected until the verify job succeeds.
+5. **SaaS billing** — plans, invoices, dunning.
+6. **Customer identity** — unify POS loyalty + storefront accounts.
+7. **Block editor** — finish nested block editing in the visual builder.
+8. **Theme marketplace** — third-party packs after the live theme loop stays green.
+10. **Org attachment** — if login works but the tenant has no org, run `scripts/upsert-admin.mjs` as documented in `grabber-pos/docs/ADMIN_PROVISIONING_GUIDE.md`.

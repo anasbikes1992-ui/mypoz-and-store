@@ -79,6 +79,9 @@ type SaleRow = {
   status: SaleStatus;
   client_uuid: string | null;
   created_at: string;
+  customer_name: string | null;
+  customer_mobile: string | null;
+  employee: string | null;
 }
 
 /** Keyed records for every module store — see migrations 0005/0006. */
@@ -144,6 +147,20 @@ export interface Database {
         StockDocumentRow,
         Partial<StockDocumentRow> & { type: StockDocType }
       >;
+      platform_settings: Table<
+        { key: string; data: Json; updated_at: string },
+        { key: string; data: Json; updated_at?: string }
+      >;
+      categories: Table<{
+        id: string;
+        org_id: string;
+        name: string;
+      }>;
+      profiles: Table<{
+        id: string;
+        org_id: string;
+        role: string;
+      }>;
       product_variants: Table<
         {
           id: string;
@@ -190,6 +207,18 @@ export interface Database {
     Functions: {
       create_sale: {
         Args: { payload: Record<string, unknown> };
+        Returns: Record<string, unknown>;
+      };
+      create_sale_internal: {
+        Args: { p_org: string; p_actor: string | null; payload: Json };
+        Returns: Record<string, unknown>;
+      };
+      whatsapp_resolve_org: {
+        Args: { p_phone_number_id: string };
+        Returns: string;
+      };
+      whatsapp_create_order: {
+        Args: { p_phone_number_id: string; p_payload: Json };
         Returns: Record<string, unknown>;
       };
       get_sale: { Args: { p_sale: string }; Returns: Record<string, unknown> };

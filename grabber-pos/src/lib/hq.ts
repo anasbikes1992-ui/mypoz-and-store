@@ -32,6 +32,7 @@ export interface HqTenant {
   brand: HqTenantBrand | null;
   status: HqTenantStatus;
   source: HqTenantSource;
+  extras: string[];
 }
 
 export interface HqSummary {
@@ -63,16 +64,24 @@ export const HQ_NAV = [
   { href: "/hq/licences", label: "Licences", exact: false },
   { href: "/hq/onboard", label: "Onboard", exact: false },
   { href: "/hq/tickets", label: "Tickets", exact: false },
+  { href: "/hq/whatsapp", label: "WhatsApp", exact: false },
+  { href: "/hq/config", label: "Config", exact: false },
   { href: "/hq/docs", label: "Docs", exact: false },
 ] as const;
 
 /** In-app docs hub entries — paths must match files under docs/. */
 export const HQ_DOC_PAGES = [
   {
-    slug: "gms-operations",
-    title: "GMS operations",
-    blurb: "Monitoring, fixing, guiding tenants — do’s and don’ts for Grabber staff.",
-    docPath: "docs/GMS-OPERATIONS.md",
+    slug: "operating-manual",
+    title: "Operating manual",
+    blurb: "Super admin vs client owner vs staff — HQ, POS, store, WhatsApp.",
+    docPath: "docs/MYPOZ_OPERATING_MANUAL.md",
+  },
+  {
+    slug: "whatsapp",
+    title: "WhatsApp Cloud API",
+    blurb: "Webhook, per-client numbers, bot menu, same sales ledger.",
+    docPath: "docs/WHATSAPP.md",
   },
   {
     slug: "customer-storefront",
@@ -85,6 +94,12 @@ export const HQ_DOC_PAGES = [
     title: "Reseller guide",
     blurb: "Plans, white-label, and client handover.",
     docPath: "docs/RESELLER-GUIDE.md",
+  },
+  {
+    slug: "gms-operations",
+    title: "GMS operations",
+    blurb: "Monitoring, fixing, guiding tenants — do’s and don’ts for Grabber staff.",
+    docPath: "docs/GMS-OPERATIONS.md",
   },
   {
     slug: "production",

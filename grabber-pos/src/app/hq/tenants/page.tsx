@@ -69,6 +69,12 @@ export default function HqTenantsPage() {
         className="mt-5 w-full max-w-md rounded-lg border border-line bg-surface-1 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent"
       />
 
+      <p className="mt-3 max-w-2xl text-xs text-text-dim">
+        If a tenant can sign in but has no org or empty catalog, run the documented
+        upsert-admin provisioning script in that environment. HQ does not mint
+        passwords.
+      </p>
+
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
       <div className="mt-5 overflow-x-auto rounded-2xl border border-line">

@@ -120,6 +120,29 @@ export async function writeDraftStore(input: unknown): Promise<StoreConfig> {
   return draft;
 }
 
+/** Persist a theme on draft and on the published snapshot so the live storefront updates. */
+export async function applyStoreTheme(themeId: StoreConfig["themeId"]): Promise<StoreConfig> {
+  const current = await readRaw();
+  const draft = storeConfigSchema.parse({ ...current.draft, themeId });
+  const published = current.published
+    ? storeConfigSchema.parse({ ...current.published, themeId })
+    : current.published;
+  const next: CommerceDocument = {
+    ...current,
+    draft,
+    published,
+    updatedAt: new Date().toISOString(),
+  };
+  await store.write(next);
+  try {
+    const website = await readWebsite();
+    await writeWebsite({ ...website, theme: themeToWebsite(themeId) });
+  } catch {
+    // CMS theme alias is best-effort.
+  }
+  return draft;
+}
+
 /**
  * Atomic publish: draft becomes the published snapshot.
  * If the write fails, the previous published version remains.

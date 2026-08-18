@@ -71,5 +71,14 @@ export async function PATCH(
     }
   }
 
+  if (order.customerMobile) {
+    const { notifyWhatsAppOrderStatus } = await import("@/lib/server/whatsapp");
+    await notifyWhatsAppOrderStatus({
+      to: order.customerMobile,
+      receipt: order.receiptNo || order.id,
+      status: parsed.data.status,
+    });
+  }
+
   return NextResponse.json({ success: true, data: updated, error: null });
 }

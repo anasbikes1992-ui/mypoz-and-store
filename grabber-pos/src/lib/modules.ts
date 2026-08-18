@@ -84,6 +84,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "tables", title: "Tables", subtitle: "Restaurant floor", icon: "🪑", href: "/tables", status: "active" },
       { key: "drivers", title: "Delivery drivers", subtitle: "Fleet", icon: "🛵", href: "/drivers", status: "active" },
       { key: "sms", title: "SMS templates", subtitle: "Message templates", icon: "✉️", href: "/sms", status: "active" },
+      { key: "whatsapp", title: "WhatsApp", subtitle: "Cloud API inbox + bot", icon: "WA", href: "/whatsapp", status: "active" },
     ],
   },
   {

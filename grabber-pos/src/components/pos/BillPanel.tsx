@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { springSoft } from "@/lib/motion";
 import {
   useCartStore,
@@ -112,6 +112,9 @@ export function BillPanel() {
   const [businessName, setBusinessName] = useState("Store");
   const [trainingMode, setTrainingMode] = useState(false);
   const [drawerStatus, setDrawerStatus] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
 
   const customerNameRef = useRef<HTMLInputElement>(null);
   const employeeRef = useRef<HTMLInputElement>(null);
@@ -444,6 +447,8 @@ export function BillPanel() {
       }
       const sale = json.data as Sale;
       setDone(sale);
+      setPayOpen(false);
+      setExpandedLine(null);
 
       if (store.customerId) {
         const earn = Math.floor(sale.total / loyalty.perCurrency);
@@ -567,21 +572,25 @@ export function BillPanel() {
       if (key === "F1") {
         e.preventDefault();
         setMethod("cash");
+        setPayOpen(true);
         return;
       }
       if (key === "F2") {
         e.preventDefault();
-        customerNameRef.current?.focus();
+        setPayOpen(true);
+        requestAnimationFrame(() => customerNameRef.current?.focus());
         return;
       }
       if (key === "F3") {
         e.preventDefault();
-        employeeRef.current?.focus();
+        setMoreOpen(true);
+        requestAnimationFrame(() => employeeRef.current?.focus());
         return;
       }
       if (key === "F4") {
         e.preventDefault();
-        paidRef.current?.focus();
+        setPayOpen(true);
+        requestAnimationFrame(() => paidRef.current?.focus());
         return;
       }
       if (key === "Insert") {
@@ -591,6 +600,8 @@ export function BillPanel() {
           setWaStatus(null);
           setReceiptStatus(null);
           setEarnedMsg(null);
+        } else if (!payOpen && store.lines.length > 0) {
+          setPayOpen(true);
         } else if (!pending && store.lines.length > 0) {
           void proceed();
         }
@@ -601,7 +612,7 @@ export function BillPanel() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [done, pending, store.lines.length, proceed]);
+  }, [done, pending, store.lines.length, proceed, payOpen]);
 
   if (done) {
     return (
@@ -675,54 +686,30 @@ export function BillPanel() {
       initial={reducedMotion ? false : { opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
       transition={reducedMotion ? { duration: 0 } : springSoft}
-      className="panel-glass flex h-full flex-col rounded-3xl border border-line"
+      className="pos-ticket flex h-full min-h-0 flex-col overflow-hidden"
     >
       {trainingMode && (
-        <div className="border-b border-warn/30 bg-warn/15 px-4 py-1.5 text-center text-xs font-semibold uppercase tracking-wide text-warn">
-          TRAINING — sales not stocked / shift skipped
+        <div className="border-b border-warn/30 bg-warn/15 px-3 py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-warn">
+          Training — sales not stocked
         </div>
       )}
-      <div className="border-b border-line px-4 py-3 sm:px-5 sm:py-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="font-semibold tracking-tight text-text-strong">
-            Bill{" "}
-            <span className="text-sm font-normal text-text-dim">
-              ({store.lines.length})
-            </span>
-          </h2>
-          <p className="max-w-[11rem] text-right text-[10px] leading-snug text-text-dim">
-            F1 cash · F2 customer · F3 employee · F4 paid · INSERT proceed
+      <div className="pos-ticket-head flex items-center justify-between gap-2 px-3 py-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-dim">
+            Ticket
           </p>
+          <h2 className="font-mono text-sm font-semibold tabular-nums text-text-strong">
+            {store.lines.length} line{store.lines.length === 1 ? "" : "s"}
+          </h2>
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={addNonStock}
-            className="rounded border border-line px-2 py-1 text-[11px] text-text-dim transition hover:border-accent hover:text-accent"
-          >
-            Add non-stock
-          </button>
-          <button
-            type="button"
-            onClick={() => void checkVoucher()}
-            className="rounded border border-line px-2 py-1 text-[11px] text-text-dim transition hover:border-accent hover:text-accent"
-          >
-            Check voucher
-          </button>
-          <button
-            type="button"
-            onClick={() => void openDrawer()}
-            className="rounded border border-line px-2 py-1 text-[11px] text-text-dim transition hover:border-accent hover:text-accent"
-          >
-            {drawerStatus ?? "Open drawer"}
-          </button>
+        <div className="flex flex-wrap justify-end gap-1">
           <button
             type="button"
             onClick={() => void holdCurrentBill()}
             disabled={store.lines.length === 0}
-            className="rounded border border-line px-2 py-1 text-[11px] text-text-dim transition hover:border-accent hover:text-accent disabled:opacity-40"
+            className="rounded px-2 py-1 text-[11px] text-text-dim hover:text-accent disabled:opacity-40"
           >
-            Hold bill
+            Hold
           </button>
           <div className="relative">
             <button
@@ -731,9 +718,9 @@ export function BillPanel() {
                 refreshHeld();
                 setRecallOpen((o) => !o);
               }}
-              className="rounded border border-line px-2 py-1 text-[11px] text-text-dim transition hover:border-accent hover:text-accent"
+              className="rounded px-2 py-1 text-[11px] text-text-dim hover:text-accent"
             >
-              Recall ({heldBills.length})
+              Recall {heldBills.length ? `(${heldBills.length})` : ""}
             </button>
             {recallOpen && (
               <ul className="absolute right-0 z-30 mt-1 max-h-48 w-52 overflow-y-auto rounded-lg border border-line bg-surface-2 shadow-xl">
@@ -760,123 +747,134 @@ export function BillPanel() {
               </ul>
             )}
           </div>
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((o) => !o)}
+            className={`rounded px-2 py-1 text-[11px] ${
+              moreOpen ? "text-accent" : "text-text-dim hover:text-accent"
+            }`}
+          >
+            More
+          </button>
         </div>
       </div>
 
       {/* Cart lines */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         {store.lines.length === 0 ? (
-          <p className="mt-10 text-center text-sm text-text-dim">
-            Scan or tap a product to begin
+          <p className="mt-8 text-center font-mono text-[11px] uppercase tracking-wider text-text-dim">
+            Scan to start
           </p>
         ) : (
-          <AnimatePresence initial={false}>
-            {store.lines.map((l) => (
-              <motion.div
-                key={l.productId}
-                layout
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.18 }}
-                className="mb-2.5 rounded-lg border border-line bg-surface-2 p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-text-strong">
-                    {l.name}
-                    {l.custom && (
-                      <span className="ml-1 text-[10px] text-text-dim">
-                        (custom)
+          <ul className="divide-y divide-dashed divide-line/80">
+            {store.lines.map((l) => {
+              const open = expandedLine === l.productId;
+              const lineTotal =
+                (effectivePrice(l, store.isWholesale) - l.discount) * l.quantity;
+              return (
+                <li key={l.productId} className="py-1.5">
+                  <div className="flex items-baseline gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedLine(open ? null : l.productId)
+                      }
+                      className="flex min-w-0 flex-1 items-baseline gap-2 text-left"
+                    >
+                      <span className="w-6 shrink-0 font-mono text-xs tabular-nums text-text-dim">
+                        {l.quantity}×
                       </span>
-                    )}
-                  </p>
-                  <button
-                    onClick={() => store.remove(l.productId)}
-                    aria-label={`Remove ${l.name}`}
-                    className="text-text-dim transition hover:text-danger"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <StepBtn
-                      label="−"
-                      onClick={() =>
-                        store.setQuantity(l.productId, l.quantity - 1)
-                      }
-                    />
-                    <span className="w-8 text-center text-sm font-semibold text-text-strong">
-                      {l.quantity}
-                    </span>
-                    <StepBtn
-                      label="+"
-                      onClick={() =>
-                        store.setQuantity(l.productId, l.quantity + 1)
-                      }
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      defaultValue={effectivePrice(l, store.isWholesale)}
-                      key={`${l.productId}-${store.isWholesale}-${effectivePrice(l, store.isWholesale)}-${priceEditNonce}`}
-                      onBlur={(e) =>
-                        void applyUnitPrice(l.productId, e.target.value)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          (e.target as HTMLInputElement).blur();
+                      <span className="min-w-0 flex-1 truncate text-sm text-text-strong">
+                        {l.name}
+                      </span>
+                      <span className="shrink-0 font-mono text-sm tabular-nums text-text-strong">
+                        {formatMoney(lineTotal)}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => store.remove(l.productId)}
+                      className="text-xs text-text-dim hover:text-danger"
+                      aria-label={`Remove ${l.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  {open && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1 pl-6">
+                      <StepBtn
+                        label="−"
+                        onClick={() =>
+                          store.setQuantity(l.productId, l.quantity - 1)
                         }
-                      }}
-                      title="Unit price (PIN required to override catalog)"
-                      aria-label={`Unit price for ${l.name}`}
-                      className={`ml-1 w-20 rounded border bg-surface-1 px-2 py-1 text-xs text-text-strong outline-none focus:border-accent ${
-                        isPriceOverridden(l, store.isWholesale)
-                          ? "border-warn text-warn"
-                          : "border-line"
-                      }`}
-                    />
-                    {l.maxDiscount > 0 && (
+                      />
+                      <span className="w-8 text-center font-mono text-sm tabular-nums">
+                        {l.quantity}
+                      </span>
+                      <StepBtn
+                        label="+"
+                        onClick={() =>
+                          store.setQuantity(l.productId, l.quantity + 1)
+                        }
+                      />
                       <input
                         type="number"
                         min={0}
-                        max={l.maxDiscount}
-                        value={l.discount || ""}
-                        placeholder="disc"
-                        onChange={(e) =>
-                          store.setDiscount(l.productId, Number(e.target.value))
+                        step="0.01"
+                        defaultValue={effectivePrice(l, store.isWholesale)}
+                        key={`${l.productId}-${store.isWholesale}-${effectivePrice(l, store.isWholesale)}-${priceEditNonce}`}
+                        onBlur={(e) =>
+                          void applyUnitPrice(l.productId, e.target.value)
                         }
-                        title={`Max discount ${l.maxDiscount}`}
-                        className="w-16 rounded border border-line bg-surface-1 px-2 py-1 text-xs text-text-strong outline-none focus:border-accent"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        title="Unit price (PIN required to override catalog)"
+                        aria-label={`Unit price for ${l.name}`}
+                        className={`w-20 rounded border bg-surface-1 px-2 py-1 font-mono text-xs tabular-nums outline-none focus:border-accent ${
+                          isPriceOverridden(l, store.isWholesale)
+                            ? "border-warn text-warn"
+                            : "border-line"
+                        }`}
                       />
-                    )}
-                  </div>
-                  <p className="shrink-0 text-sm font-semibold text-accent">
-                    {formatMoney(
-                      (effectivePrice(l, store.isWholesale) - l.discount) *
-                        l.quantity,
-                    )}
-                  </p>
-                </div>
-                {!l.custom && (
-                  <input
-                    value={l.serial ?? ""}
-                    onChange={(e) =>
-                      store.setSerial(l.productId, e.target.value)
-                    }
-                    placeholder="Serial / IMEI"
-                    className="mt-2 w-full rounded border border-line bg-surface-1 px-2 py-1 text-[11px] text-text-strong outline-none focus:border-accent"
-                  />
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                      {l.maxDiscount > 0 && (
+                        <input
+                          type="number"
+                          min={0}
+                          max={l.maxDiscount}
+                          value={l.discount || ""}
+                          placeholder="disc"
+                          onChange={(e) =>
+                            store.setDiscount(l.productId, Number(e.target.value))
+                          }
+                          title={`Max discount ${l.maxDiscount}`}
+                          className="w-16 rounded border border-line bg-surface-1 px-2 py-1 font-mono text-xs outline-none focus:border-accent"
+                        />
+                      )}
+                      {!l.custom && moreOpen && (
+                        <input
+                          value={l.serial ?? ""}
+                          onChange={(e) =>
+                            store.setSerial(l.productId, e.target.value)
+                          }
+                          placeholder="Serial / IMEI"
+                          className="w-full rounded border border-line bg-surface-1 px-2 py-1 text-[11px] outline-none focus:border-accent"
+                        />
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
 
       {/* Totals + payment */}
-      <div className="space-y-2 border-t border-line px-5 py-4">
+      <div className="pos-ticket-foot max-h-[48%] shrink-0 overflow-y-auto px-3 py-3">
         <Row label="Sub total" value={formatMoney(totals.subtotal)} />
         {totals.lineDiscount > 0 && (
           <Row
@@ -886,30 +884,109 @@ export function BillPanel() {
           />
         )}
 
-        <Field label="Service charge">
-          <NumberInput
-            value={store.serviceCharge}
-            onChange={store.setServiceCharge}
-            placeholder="0"
-          />
-        </Field>
-        <Field label="Final discount (Rs)">
-          <NumberInput
-            value={store.finalDiscount}
-            onChange={store.setFinalDiscount}
-            placeholder="0"
-          />
-        </Field>
-        <Field label="Final discount (%)">
-          <NumberInput
-            value={Number(finalPct.toFixed(2))}
-            onChange={(pct) => {
-              const base = totals.subtotal - totals.lineDiscount;
-              store.setFinalDiscount((base * pct) / 100);
-            }}
-            placeholder="0"
-          />
-        </Field>
+        {moreOpen && (
+          <div className="mt-2 space-y-2 rounded-lg border border-dashed border-line p-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-text-dim">
+              Checkout options
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={addNonStock}
+                className="rounded border border-line px-2 py-1 text-[11px] text-text-dim hover:text-accent"
+              >
+                Add non-stock
+              </button>
+              <button
+                type="button"
+                onClick={() => void checkVoucher()}
+                className="rounded border border-line px-2 py-1 text-[11px] text-text-dim hover:text-accent"
+              >
+                Check voucher
+              </button>
+              <button
+                type="button"
+                onClick={() => void openDrawer()}
+                className="rounded border border-line px-2 py-1 text-[11px] text-text-dim hover:text-accent"
+              >
+                {drawerStatus ?? "Open drawer"}
+              </button>
+            </div>
+            <Field label="Service charge">
+              <NumberInput
+                value={store.serviceCharge}
+                onChange={store.setServiceCharge}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Final discount (Rs)">
+              <NumberInput
+                value={store.finalDiscount}
+                onChange={store.setFinalDiscount}
+                placeholder="0"
+              />
+            </Field>
+            <Field label="Final discount (%)">
+              <NumberInput
+                value={Number(finalPct.toFixed(2))}
+                onChange={(pct) => {
+                  const base = totals.subtotal - totals.lineDiscount;
+                  store.setFinalDiscount((base * pct) / 100);
+                }}
+                placeholder="0"
+              />
+            </Field>
+            {currencies.length > 0 && (
+              <div className="rounded-lg border border-line bg-surface-1 p-2">
+                <p className="mb-2 text-xs font-medium text-text-dim">
+                  Foreign tender (optional · settles in LKR)
+                </p>
+                <div className="flex gap-2">
+                  <select
+                    value={fxCode}
+                    onChange={(e) => setFxCode(e.target.value)}
+                    className="rounded border border-line bg-surface-1 px-2 py-1.5 text-xs text-text-strong outline-none focus:border-accent"
+                  >
+                    <option value="">—</option>
+                    {currencies.map((c) => (
+                      <option key={c.id ?? c.code} value={c.code}>
+                        {c.code}
+                        {c.name ? ` · ${c.name}` : ""} ({c.rate})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={fxAmount}
+                    onChange={(e) => setFxAmount(e.target.value)}
+                    placeholder="Amount"
+                    disabled={!fxCode}
+                    className="w-24 rounded border border-line bg-surface-1 px-2 py-1.5 text-right text-xs text-text-strong outline-none focus:border-accent disabled:opacity-40"
+                  />
+                </div>
+                {fxLkr > 0 && (
+                  <p className="mt-2 text-right text-xs text-accent">
+                    ≈ {formatMoney(fxLkr)} LKR
+                    {Math.abs(fxLkr - chargedTotal) > 0.5 && (
+                      <span className="ml-1 text-text-dim">
+                        (total {formatMoney(chargedTotal)})
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+            <input
+              ref={employeeRef}
+              value={store.employee}
+              onChange={(e) => store.setEmployee(e.target.value)}
+              placeholder="Employee (F3)"
+              className="w-full rounded-lg border border-line bg-surface-1 px-3 py-2 text-sm text-text-strong outline-none focus:border-accent"
+            />
+          </div>
+        )}
 
         {redeemValue > 0 && (
           <Row
@@ -926,218 +1003,190 @@ export function BillPanel() {
           />
         )}
 
-        <div className="flex items-center justify-between pt-1">
-          <p className="font-semibold text-text-strong">Total</p>
-          <motion.p
-            key={chargedTotal}
-            initial={{ scale: 1.1 }}
-            animate={{ scale: 1 }}
-            className="text-xl font-bold text-accent"
-          >
+        <div className="mt-2 flex items-end justify-between border-t border-dashed border-line pt-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-text-dim">
+            Total
+          </p>
+          <p className="font-mono text-2xl font-semibold tabular-nums text-text-strong">
             {formatMoney(chargedTotal)}
-          </motion.p>
+          </p>
         </div>
 
-        {currencies.length > 0 && (
-          <div className="rounded-lg border border-line bg-surface-2 p-3">
-            <p className="mb-2 text-xs font-medium text-text-dim">
-              Foreign tender (optional · settles in LKR)
-            </p>
-            <div className="flex gap-2">
-              <select
-                value={fxCode}
-                onChange={(e) => setFxCode(e.target.value)}
-                className="rounded border border-line bg-surface-1 px-2 py-1.5 text-xs text-text-strong outline-none focus:border-accent"
-              >
-                <option value="">—</option>
-                {currencies.map((c) => (
-                  <option key={c.id ?? c.code} value={c.code}>
-                    {c.code}
-                    {c.name ? ` · ${c.name}` : ""} ({c.rate})
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={fxAmount}
-                onChange={(e) => setFxAmount(e.target.value)}
-                placeholder="Amount"
-                disabled={!fxCode}
-                className="w-24 rounded border border-line bg-surface-1 px-2 py-1.5 text-right text-xs text-text-strong outline-none focus:border-accent disabled:opacity-40"
-              />
-            </div>
-            {fxLkr > 0 && (
-              <p className="mt-2 text-right text-xs text-accent">
-                ≈ {formatMoney(fxLkr)} LKR
-                {Math.abs(fxLkr - chargedTotal) > 0.5 && (
-                  <span className="ml-1 text-text-dim">
-                    (total {formatMoney(chargedTotal)})
-                  </span>
-                )}
+        {!payOpen ? (
+          <button
+            type="button"
+            disabled={store.lines.length === 0}
+            onClick={() => setPayOpen(true)}
+            className="mt-3 w-full rounded-xl bg-accent py-3.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Take payment
+          </button>
+        ) : (
+          <div className="mt-3 space-y-2 border-t border-dashed border-line pt-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+                Tender
               </p>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-3 gap-2 pt-2">
-          {PAYMENT_METHODS.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => setMethod(m.id)}
-              className={`rounded-xl border py-2.5 text-sm font-medium transition duration-150 ${
-                method === m.id
-                  ? "border-accent bg-accent/10 text-accent"
-                  : "border-line text-text-dim hover:border-accent/40 hover:text-text-body"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Customer + loyalty */}
-        <div className="pt-1">
-          {store.customerId ? (
-            <div className="rounded-xl border border-accent/40 bg-accent/5 p-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-text-strong">
-                    {store.customerName || "Customer"}
-                  </p>
-                  <p className="text-xs text-text-dim">
-                    {store.customerMobile} · {store.customerPoints} points
-                  </p>
-                </div>
+              <button
+                type="button"
+                onClick={() => setPayOpen(false)}
+                className="text-[11px] text-text-dim hover:text-accent"
+              >
+                Back to bill
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {PAYMENT_METHODS.map((m) => (
                 <button
-                  onClick={() => store.clearCustomer()}
-                  className="text-xs text-text-dim transition hover:text-danger"
+                  key={m.id}
+                  type="button"
+                  onClick={() => setMethod(m.id)}
+                  className={`rounded-lg border py-2 text-xs font-medium ${
+                    method === m.id
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-line text-text-dim"
+                  }`}
                 >
-                  Change
+                  {m.label}
                 </button>
-              </div>
-              {store.customerPoints > 0 && (
-                <label className="mt-2 flex items-center justify-between gap-2 text-xs text-text-dim">
-                  Redeem points
-                  <input
-                    type="number"
-                    min={0}
-                    max={store.customerPoints}
-                    value={store.redeemPoints || ""}
-                    placeholder="0"
-                    onChange={(e) =>
-                      store.setRedeemPoints(Number(e.target.value))
-                    }
-                    className="w-24 rounded border border-line bg-surface-1 px-2 py-1 text-right text-text-strong outline-none focus:border-accent"
-                  />
-                </label>
+              ))}
+            </div>
+
+            <div>
+              {store.customerId ? (
+                <div className="rounded-lg border border-line p-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-text-strong">
+                        {store.customerName || "Customer"}
+                      </p>
+                      <p className="text-xs text-text-dim">
+                        {store.customerMobile} · {store.customerPoints} points
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => store.clearCustomer()}
+                      className="text-xs text-text-dim hover:text-danger"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  {store.customerPoints > 0 && (
+                    <label className="mt-2 flex items-center justify-between gap-2 text-xs text-text-dim">
+                      Redeem points
+                      <input
+                        type="number"
+                        min={0}
+                        max={store.customerPoints}
+                        value={store.redeemPoints || ""}
+                        placeholder="0"
+                        onChange={(e) =>
+                          store.setRedeemPoints(Number(e.target.value))
+                        }
+                        className="w-24 rounded border border-line bg-surface-1 px-2 py-1 text-right text-text-strong outline-none focus:border-accent"
+                      />
+                    </label>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <CustomerPicker onSelect={store.selectCustomer} />
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <input
+                      ref={customerNameRef}
+                      value={store.customerName}
+                      onChange={(e) => store.setCustomerName(e.target.value)}
+                      placeholder="Walk-in (F2)"
+                      className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-accent"
+                    />
+                    <input
+                      value={store.customerMobile}
+                      onChange={(e) => store.setCustomerMobile(e.target.value)}
+                      placeholder="Mobile"
+                      className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-accent"
+                    />
+                  </div>
+                </>
               )}
             </div>
-          ) : (
-            <>
-              <CustomerPicker onSelect={store.selectCustomer} />
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <input
-                  ref={customerNameRef}
-                  value={store.customerName}
-                  onChange={(e) => store.setCustomerName(e.target.value)}
-                  placeholder="Walk-in name (F2)"
-                  className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-text-strong outline-none focus:border-accent"
-                />
-                <input
-                  value={store.customerMobile}
-                  onChange={(e) => store.setCustomerMobile(e.target.value)}
-                  placeholder="Mobile"
-                  className="rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-text-strong outline-none focus:border-accent"
-                />
+
+            {method === "cash" && (
+              <div>
+                <Field label="Paid (F4)">
+                  <input
+                    ref={paidRef}
+                    type="number"
+                    min={0}
+                    value={customerPaid}
+                    placeholder="0"
+                    onChange={(e) => setCustomerPaid(e.target.value)}
+                    className="w-full rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-right font-mono text-sm tabular-nums outline-none focus:border-accent"
+                  />
+                </Field>
+                <p
+                  className={`mt-1 text-right font-mono text-sm tabular-nums ${
+                    balance < 0 ? "text-danger" : "text-text-dim"
+                  }`}
+                >
+                  Change {formatMoney(Math.max(balance, 0))}
+                </p>
               </div>
-            </>
-          )}
-        </div>
-        <input
-          ref={employeeRef}
-          value={store.employee}
-          onChange={(e) => store.setEmployee(e.target.value)}
-          placeholder="Employee (F3)"
-          className="mt-2 w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-text-strong outline-none focus:border-accent"
-        />
+            )}
 
-        {method === "cash" && (
-          <div className="pt-1">
-            <Field label="Customer paid (F4)">
-              <input
-                ref={paidRef}
-                type="number"
-                min={0}
-                value={customerPaid}
-                placeholder="0"
-                onChange={(e) => setCustomerPaid(e.target.value)}
-                className="w-full rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-right text-sm text-text-strong outline-none focus:border-accent"
-              />
-            </Field>
-            <p
-              className={`mt-1 text-right text-sm ${
-                balance < 0 ? "text-danger" : "text-text-dim"
-              }`}
+            {method === "split" && (
+              <div className="space-y-2">
+                <Field label="Cash amount">
+                  <NumberInput
+                    value={splitCashN}
+                    onChange={(v) => setSplitCash(String(v))}
+                    placeholder="0"
+                  />
+                </Field>
+                <Field label="Card amount">
+                  <NumberInput
+                    value={splitCardN}
+                    onChange={(v) => setSplitCard(String(v))}
+                    placeholder="0"
+                  />
+                </Field>
+                <p
+                  className={`text-right font-mono text-xs ${
+                    splitSum + 0.01 < chargedTotal ? "text-danger" : "text-text-dim"
+                  }`}
+                >
+                  Tendered {formatMoney(splitSum)} / {formatMoney(chargedTotal)}
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+                {error}
+              </p>
+            )}
+
+            <motion.button
+              whileTap={
+                reducedMotion || !store.lines.length ? undefined : { scale: 0.98 }
+              }
+              disabled={
+                pending ||
+                store.lines.length === 0 ||
+                (method === "cash" && balance < 0) ||
+                (method === "split" && splitSum + 0.01 < chargedTotal)
+              }
+              onClick={() => void proceed()}
+              className="w-full rounded-xl bg-accent py-3.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Balance: {formatMoney(Math.max(balance, 0))}
-            </p>
+              {pending ? "Processing…" : `Charge · ${formatMoney(chargedTotal)}`}
+            </motion.button>
           </div>
         )}
-
-        {method === "split" && (
-          <div className="space-y-2 pt-1">
-            <Field label="Cash amount">
-              <NumberInput
-                value={splitCashN}
-                onChange={(v) => setSplitCash(String(v))}
-                placeholder="0"
-              />
-            </Field>
-            <Field label="Card amount">
-              <NumberInput
-                value={splitCardN}
-                onChange={(v) => setSplitCard(String(v))}
-                placeholder="0"
-              />
-            </Field>
-            <p
-              className={`text-right text-xs ${
-                splitSum + 0.01 < chargedTotal ? "text-danger" : "text-text-dim"
-              }`}
-            >
-              Tendered {formatMoney(splitSum)} / {formatMoney(chargedTotal)}
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <p className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
-            {error}
-          </p>
-        )}
-
-        <motion.button
-          whileTap={
-            reducedMotion || !store.lines.length ? undefined : { scale: 0.98 }
-          }
-          disabled={
-            pending ||
-            store.lines.length === 0 ||
-            (method === "cash" && balance < 0) ||
-            (method === "split" && splitSum + 0.01 < chargedTotal)
-          }
-          onClick={() => void proceed()}
-          className="mt-2 w-full rounded-2xl bg-accent py-3.5 font-semibold text-accent-ink shadow-[0_4px_14px_-4px_color-mix(in_oklch,var(--accent)_55%,transparent)] transition duration-150 hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-        >
-          {pending ? "Processing…" : `Proceed · ${formatMoney(chargedTotal)}`}
-        </motion.button>
       </div>
     </motion.div>
   );
 }
-
 function StepBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button

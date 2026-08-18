@@ -6,10 +6,11 @@ This folder is the all-in-one product: the existing MyPoz / Grabber POS engine p
 
 | Surface | Path | Role |
 |---|---|---|
-| POS + back office | [`grabber-pos/`](grabber-pos/) | Next.js ? counter, inventory, staff, **Commerce Cloud admin** |
-| Public storefront | `/store/<slug>` | Theme engine, cart, checkout, SEO pages |
+| POS + back office | [`grabber-pos/`](grabber-pos/) | Counter, inventory, staff, commerce admin, **WhatsApp inbox** |
+| Public storefront | `/store/<slug>` | Themes, cart, checkout |
+| MyPoz HQ | `/hq` | Super admin: clients, licences, WhatsApp fleet |
 | Handheld POS | [`grabber-pos-mobile/`](grabber-pos-mobile/) | Flutter companion |
-| Data | `grabber-pos/supabase/` | Postgres + RLS ? canonical products, stock, sales |
+| Data | `grabber-pos/supabase/` | Postgres + RLS — canonical products, stock, sales |
 
 The online store is a **sales channel of MyPoz**, not a second product database.
 
@@ -25,8 +26,21 @@ Open:
 
 - POS launcher: http://localhost:3000
 - Demo login: `admin` / `admin123` (demo mode, no Supabase)
-- Store builder: http://localhost:3000/commerce/builder
-- Public shop: http://localhost:3000/store/main-store
+- Store: http://localhost:3000/store/main-store
+- Client WhatsApp: http://localhost:3000/whatsapp
+- Super admin HQ: http://localhost:3000/hq (allowlisted emails only)
+
+## Documentation
+
+| Doc | Purpose |
+|---|---|
+| [`docs/MYPOZ_OPERATING_MANUAL.md`](docs/MYPOZ_OPERATING_MANUAL.md) | Super admin vs client owner vs staff |
+| [`docs/WHATSAPP.md`](docs/WHATSAPP.md) | Cloud API webhook, bot, per-client numbers |
+| [`docs/MYPOZ_COMMERCE_ARCHITECTURE_V1.md`](docs/MYPOZ_COMMERCE_ARCHITECTURE_V1.md) | Frozen architecture |
+| [`docs/MYPOZ_BUILD_STATUS.md`](docs/MYPOZ_BUILD_STATUS.md) | Phase tracker |
+| [`grabber-pos/docs/ADMIN_PROVISIONING_GUIDE.md`](grabber-pos/docs/ADMIN_PROVISIONING_GUIDE.md) | Attach an owner to an org |
+
+Whats App Auto is **not** a second app in this repo. Bot and webhook live in `grabber-pos`.
 
 ## What is unified
 

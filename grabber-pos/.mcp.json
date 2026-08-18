@@ -1,8 +1,13 @@
 {
   "mcpServers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
     "supabase": {
-      "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=xeuirobzzxvcvmfwufge&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+      "url": "https://mcp.supabase.com/mcp?project_ref=vtawrxmkahpgwgydibox"
+    },
+    "vercel": {
+      "url": "https://mcp.vercel.com"
     }
   }
 }

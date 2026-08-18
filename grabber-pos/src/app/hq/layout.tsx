@@ -4,8 +4,8 @@ import { getGmsAdmin } from "@/lib/server/gms-auth";
 import { HqShell } from "@/components/hq/HqShell";
 
 export const metadata: Metadata = {
-  title: "GMS HQ",
-  description: "Grabber Mobility Solutions fleet portal",
+  title: "MyPoz HQ",
+  description: "MyPoz fleet portal for Grabber Mobility Solutions operators",
   robots: { index: false, follow: false },
 };
 

@@ -30,6 +30,16 @@ const EN = {
   share: "Share",
   continueShopping: "Continue shopping",
   orderConfirmed: "Order confirmed",
+  menu: "Menu",
+  collections: "Collections",
+  privacy: "Privacy",
+  terms: "Terms",
+  shipping: "Shipping",
+  returns: "Returns",
+  visitUs: "Visit",
+  follow: "Follow",
+  sale: "Sale",
+  searchPlaceholder: "Search products",
 } as const;
 
 const SI: Record<keyof typeof EN, string> = {
@@ -62,6 +72,16 @@ const SI: Record<keyof typeof EN, string> = {
   share: "බෙදාගන්න",
   continueShopping: "සාප්පුවට ආපසු",
   orderConfirmed: "ඇණවුම තහවුරු විය",
+  menu: "මෙනුව",
+  collections: "එකතු",
+  privacy: "රහස්‍යතාව",
+  terms: "කොන්දේසි",
+  shipping: "බෙදාහැරීම",
+  returns: "ආපසු භාරදීම",
+  visitUs: "පැමිණෙන්න",
+  follow: "අනුගමනය",
+  sale: "වට්ටම",
+  searchPlaceholder: "නිෂ්පාදන සොයන්න",
 };
 
 const TA: Record<keyof typeof EN, string> = {
@@ -94,6 +114,16 @@ const TA: Record<keyof typeof EN, string> = {
   share: "பகிர்",
   continueShopping: "ஷாப்பிங் தொடரவும்",
   orderConfirmed: "ஆர்டர் உறுதிப்படுத்தப்பட்டது",
+  menu: "பட்டி",
+  collections: "தொகுப்புகள்",
+  privacy: "தனியுரிமை",
+  terms: "விதிமுறைகள்",
+  shipping: "டெலிவரி",
+  returns: "திருப்பங்கள்",
+  visitUs: "வருக",
+  follow: "பின்தொடர்",
+  sale: "சலுகை",
+  searchPlaceholder: "பொருட்களை தேடு",
 };
 
 const DICTS: Record<StoreLocale, Record<keyof typeof EN, string>> = {

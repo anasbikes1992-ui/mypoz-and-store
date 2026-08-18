@@ -70,6 +70,7 @@ function fromResellerRow(row: ResellerLicenceRow): HqTenant {
     brand: brandFromUnknown(row.brand),
     status: licenceStatus(expiry),
     source: "reseller_licences",
+    extras: [],
   };
 }
 
@@ -106,6 +107,7 @@ async function demoFleet(): Promise<HqTenant[]> {
     },
     status: licenceStatus(tenant.license.expiry || null),
     source: "local_tenant",
+    extras: Array.isArray(tenant.license.extras) ? tenant.license.extras : [],
   };
 
   const fromClients: HqTenant[] = clients.map((c) => {
@@ -125,6 +127,7 @@ async function demoFleet(): Promise<HqTenant[]> {
       brand: null,
       status: licenceStatus(expiry, suspended),
       source: "clients" as const,
+      extras: Array.isArray(c.extras) ? c.extras.map(String) : [],
     };
   });
 
@@ -158,7 +161,27 @@ export async function listHqTenants(): Promise<{
 
 export async function getHqTenant(id: string): Promise<HqTenant | null> {
   const { tenants } = await listHqTenants();
-  return tenants.find((t) => t.id === id) ?? null;
+  const found = tenants.find((t) => t.id === id) ?? null;
+  if (!found) return null;
+  if (found.source !== "reseller_licences") return found;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return found;
+  try {
+    const db = createServiceSupabase();
+    const { data } = await db
+      .from("app_documents")
+      .select("data")
+      .eq("org_id", id)
+      .eq("key", "tenant")
+      .maybeSingle();
+    const extras = (data?.data as { license?: { extras?: unknown } } | null)
+      ?.license?.extras;
+    if (Array.isArray(extras)) {
+      return { ...found, extras: extras.map(String).filter((k) => /^[a-z0-9-]{2,40}$/.test(k)) };
+    }
+  } catch {
+    // keep listed extras
+  }
+  return found;
 }
 
 export async function getHqSummary(): Promise<HqSummary> {
@@ -179,7 +202,7 @@ export async function updateHqTenant(
   id: string,
   input: {
     brand?: Partial<HqTenantBrand>;
-    license?: { plan?: PlanTier; expiry?: string };
+    license?: { plan?: PlanTier; expiry?: string; extras?: string[] };
     status?: "active" | "suspended";
   },
 ): Promise<HqTenant | null> {
@@ -196,7 +219,7 @@ export async function updateHqTenant(
       license: {
         plan: input.license?.plan,
         expiry: input.license?.expiry,
-        extras: undefined,
+        extras: input.license?.extras,
       },
     });
     return getHqTenant(LOCAL_TENANT_ID);
@@ -207,6 +230,7 @@ export async function updateHqTenant(
     if (input.brand?.businessName != null) patch.name = input.brand.businessName;
     if (input.license?.plan) patch.plan = input.license.plan;
     if (input.license?.expiry != null) patch.expiry = input.license.expiry;
+    if (input.license?.extras) patch.extras = input.license.extras;
     if (input.status) patch.status = input.status;
     await updateEntity("clients", id, patch);
     return getHqTenant(id);
@@ -239,9 +263,11 @@ export async function updateHqTenant(
           (current.license?.plan as PlanTier) ??
           "starter") as PlanTier,
         expiry: input.license?.expiry ?? current.license?.expiry ?? "",
-        extras: Array.isArray(current.license?.extras)
-          ? current.license.extras
-          : [],
+        extras: Array.isArray(input.license?.extras)
+          ? input.license.extras
+          : Array.isArray(current.license?.extras)
+            ? current.license.extras
+            : [],
       },
     };
 

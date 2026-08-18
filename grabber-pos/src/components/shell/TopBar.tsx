@@ -29,7 +29,7 @@ export function TopBar() {
     fetch("/api/hq/me")
       .then((r) => r.json())
       .then((j) => {
-        if (!cancelled && j.success) setShowHq(true);
+        if (!cancelled && j.success && j.data?.allowed) setShowHq(true);
       })
       .catch(() => undefined);
     return () => {
@@ -106,7 +106,7 @@ export function TopBar() {
             href="/hq"
             className="rounded-2xl border border-accent/40 px-3 py-1.5 text-sm font-medium text-accent transition duration-150 hover:bg-accent/10"
           >
-            GMS HQ
+            MyPoz HQ
           </Link>
         )}
         <Link

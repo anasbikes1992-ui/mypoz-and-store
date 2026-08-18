@@ -100,3 +100,53 @@ export async function sendInvoiceViaWhatsApp(opts: {
   }
   return { messageId: sendJson.messages?.[0]?.id ?? "sent" };
 }
+
+export async function sendWhatsAppText(opts: {
+  to: string;
+  body: string;
+  token?: string;
+  phoneNumberId?: string;
+}): Promise<{ messageId: string }> {
+  const token = opts.token || process.env.WHATSAPP_TOKEN;
+  const phoneNumberId = opts.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const version = process.env.WHATSAPP_API_VERSION ?? "v21.0";
+  if (!token || !phoneNumberId) throw new WhatsAppNotConfiguredError();
+
+  const to = opts.to.replace(/[^\d]/g, "");
+  const sendRes = await fetch(`${GRAPH}/${version}/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { preview_url: false, body: opts.body.slice(0, 4096) },
+    }),
+  });
+  const sendJson = await sendRes.json();
+  if (!sendRes.ok) {
+    throw new Error(
+      `WhatsApp send failed: ${sendJson?.error?.message ?? sendRes.status}`,
+    );
+  }
+  return { messageId: sendJson.messages?.[0]?.id ?? "sent" };
+}
+
+export async function notifyWhatsAppOrderStatus(opts: {
+  to: string;
+  receipt: string;
+  status: string;
+}): Promise<void> {
+  if (!opts.to.trim()) return;
+  try {
+    await sendWhatsAppText({
+      to: opts.to,
+      body: `Order ${opts.receipt}: ${opts.status.replaceAll("_", " ")}.`,
+    });
+  } catch {
+    // Status ping is best-effort — never block fulfillment.
+  }
+}

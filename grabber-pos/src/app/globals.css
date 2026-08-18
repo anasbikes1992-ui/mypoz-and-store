@@ -422,6 +422,75 @@ body {
   }
 }
 
+.pos-ticket {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: 2px 12px 12px 2px;
+  box-shadow: inset 7px 0 0 var(--surface-3);
+  font-variant-numeric: tabular-nums;
+}
+.pos-ticket-head {
+  border-bottom: 1px dashed var(--line);
+}
+.pos-ticket-foot {
+  border-top: 1px dashed var(--line);
+  background: var(--surface-1);
+}
+.pos-scan {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.pos-shelf {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+@media (min-width: 768px) {
+  .pos-shelf {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .pos-shelf {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1536px) {
+  .pos-shelf {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.pos-shelf-card {
+  display: flex;
+  min-height: 5.5rem;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+  padding: 0.65rem 0.75rem 0.65rem 0.85rem;
+  text-align: left;
+  box-shadow: inset 3px 0 0 var(--shelf-ink, var(--accent));
+}
+.pos-shelf-card:hover {
+  border-color: var(--accent);
+}
+.theme-mypoz-fashion header.store-chrome,
+.theme-mypoz-luxury header.store-chrome {
+  background: color-mix(in oklch, var(--surface-1) 72%, transparent);
+}
+.theme-mypoz-fashion .store-announce,
+.theme-mypoz-luxury .store-announce {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.theme-mypoz-market .store-search {
+  flex: 1;
+}
+.store-announce {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
 @media print {
   body {
     background: #fff !important;

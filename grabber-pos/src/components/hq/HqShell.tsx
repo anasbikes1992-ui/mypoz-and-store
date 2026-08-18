@@ -39,9 +39,11 @@ export function HqShell({
             </span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-text-strong">
-                Grabber Mobility Solutions
+                MyPoz HQ
               </p>
-              <p className="truncate text-[11px] text-text-dim">HQ · fleet portal</p>
+              <p className="truncate text-[11px] text-text-dim">
+                Fleet portal · GMS ops
+              </p>
             </div>
           </Link>
           <div className="flex items-center gap-2">
