@@ -10,6 +10,6 @@ describe("whatsapp i18n", () => {
 
   it("translates greeting keys", () => {
     expect(t("si", "order")).toContain("ඇණවුම්");
-    expect(t("ta", "talkToStaff")).toContain("ஊழியர்");
+    expect(t("ta", "talkToStaff")).toContain("ஊழியரிடம்");
   });
 });
