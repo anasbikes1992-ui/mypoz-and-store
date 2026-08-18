@@ -108,7 +108,10 @@ export async function listWhatsAppCatalog(
       .from("categories")
       .select("id, name")
       .eq("org_id", tenant.orgId),
-    tenant.db.from("branch_stock").select("product_id, quantity"),
+    tenant.db
+      .from("branch_stock")
+      .select("product_id, quantity")
+      .eq("branch_id", tenant.branchId),
   ]);
   if (error) throw new Error(error.message);
 

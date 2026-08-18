@@ -186,6 +186,13 @@ export interface Database {
         quantity: number;
         updated_at: string;
       }>;
+      branch_stock: Table<{
+        branch_id: string;
+        product_id: string;
+        quantity: number;
+        expire_date: string | null;
+        updated_at: string;
+      }>;
     };
     Views: {
       reseller_licences: {
