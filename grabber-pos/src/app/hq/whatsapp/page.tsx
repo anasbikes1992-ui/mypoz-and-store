@@ -117,8 +117,53 @@ Reply YES and I’ll send the login.`}
       </div>
 
       <p className="mt-4 text-xs text-text-dim">
-        Shared webhook: <code className="text-text-body">{data?.webhookPath ?? "/api/whatsapp/webhook"}</code>
+        Shared webhook:{" "}
+        <code className="text-text-body">
+          https://mypoz-and-store.vercel.app{data?.webhookPath ?? "/api/whatsapp/webhook"}
+        </code>
       </p>
+
+      <section className="mt-8 rounded-2xl border border-line bg-surface-1 p-5">
+        <h2 className="text-sm font-semibold text-text-strong">
+          Meta app (GRABBER) — paste these, not /welcome everywhere
+        </h2>
+        <p className="mt-1 text-xs text-text-dim">
+          /welcome is only the public site URL. WhatsApp will not verify if you
+          put that path in the webhook or App domains field.
+        </p>
+        <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+          <MetaField
+            label="App domains"
+            value="mypoz-and-store.vercel.app"
+          />
+          <MetaField
+            label="Site URL (Basic / Facebook Login)"
+            value="https://mypoz-and-store.vercel.app/welcome"
+          />
+          <MetaField
+            label="Privacy policy URL"
+            value="https://mypoz-and-store.vercel.app/privacy-policy"
+          />
+          <MetaField
+            label="Terms of Service URL"
+            value="https://mypoz-and-store.vercel.app/terms-of-service"
+          />
+          <MetaField
+            label="Data deletion instructions URL"
+            value="https://mypoz-and-store.vercel.app/data-deletion"
+          />
+          <MetaField
+            label="WhatsApp webhook callback"
+            value="https://mypoz-and-store.vercel.app/api/whatsapp/webhook"
+          />
+        </dl>
+        <p className="mt-3 text-xs text-text-dim">
+          Verify token and App secret live in Vercel env (
+          <code>WHATSAPP_VERIFY_TOKEN</code>, <code>WHATSAPP_APP_SECRET</code>
+          ). Token + phone number id come from WhatsApp → API Setup, not Basic
+          Settings.
+        </p>
+      </section>
 
       <section className="mt-8 rounded-2xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">Attach to a client</h2>
@@ -211,6 +256,15 @@ Reply YES and I’ll send the login.`}
 function yn(value: boolean | undefined): string {
   if (value == null) return "…";
   return value ? "Set" : "Missing";
+}
+
+function MetaField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-line bg-surface-2 p-3">
+      <dt className="text-text-dim">{label}</dt>
+      <dd className="mt-1 break-all font-mono text-text-strong">{value}</dd>
+    </div>
+  );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {

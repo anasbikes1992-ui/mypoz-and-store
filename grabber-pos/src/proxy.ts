@@ -6,6 +6,9 @@ const DEMO_COOKIE = "pos_session";
 const PUBLIC_PATHS = [
   "/login",
   "/welcome",
+  "/privacy-policy",
+  "/terms-of-service",
+  "/data-deletion",
   "/display",
   "/api/auth/login",
   "/api/health",

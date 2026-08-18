@@ -16,6 +16,24 @@ Webhook (public, on `PUBLIC_PATHS`):
 - **GET** `/api/whatsapp/webhook` — Meta hub challenge
 - **POST** `/api/whatsapp/webhook` — HMAC SHA256 (`X-Hub-Signature-256`) when `WHATSAPP_APP_SECRET` is set
 
+Live host: `https://mypoz-and-store.vercel.app`. **Do not** put `/welcome` in App domains or the webhook callback.
+
+### Meta Developer app (GRABBER) field map
+
+| Meta field | Value |
+|---|---|
+| App domains | `mypoz-and-store.vercel.app` (host only, no `https://`, no path) |
+| Site URL / Facebook Login | `https://mypoz-and-store.vercel.app/welcome` |
+| Privacy policy URL | `https://mypoz-and-store.vercel.app/privacy-policy` |
+| Terms of Service URL | `https://mypoz-and-store.vercel.app/terms-of-service` |
+| Data deletion instructions URL | `https://mypoz-and-store.vercel.app/data-deletion` |
+| WhatsApp → Configuration → Callback URL | `https://mypoz-and-store.vercel.app/api/whatsapp/webhook` |
+| WhatsApp verify token | same as Vercel `WHATSAPP_VERIFY_TOKEN` |
+| App secret | Vercel `WHATSAPP_APP_SECRET` (never commit; rotate if it was on screen) |
+| Permanent token + Phone number ID | WhatsApp → API Setup → Vercel `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` |
+
+Subscribe the webhook to **messages**. App Mode can stay Development until the WABA is approved; only test numbers receive events in Development.
+
 Inbound messages are routed by `metadata.phone_number_id` to the matching org (`whatsapp_resolve_org` in migration `0014`).
 
 ## Bot menu

@@ -460,6 +460,17 @@ export default function WelcomePage() {
           © {new Date().getFullYear()} Grabber Mobility Solutions (Pvt) Ltd. All
           rights reserved.
         </p>
+        <p className="mt-3 space-x-3">
+          <Link href="/privacy-policy" className="hover:text-accent">
+            Privacy
+          </Link>
+          <Link href="/terms-of-service" className="hover:text-accent">
+            Terms
+          </Link>
+          <Link href="/data-deletion" className="hover:text-accent">
+            Data deletion
+          </Link>
+        </p>
       </footer>
     </div>
   );

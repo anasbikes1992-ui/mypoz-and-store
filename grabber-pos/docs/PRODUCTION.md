@@ -61,6 +61,9 @@ Set these in the hosting project (Vercel → Settings → Environment Variables)
 | `GMS_ADMIN_USERS` | demo HQ | Demo usernames allowed into `/hq` (defaults to `POS_USER`) |
 | `WHATSAPP_TOKEN` | optional | WhatsApp Cloud API token for invoice sending |
 | `WHATSAPP_PHONE_NUMBER_ID` | optional | Sender number id |
+| `WHATSAPP_VERIFY_TOKEN` | WhatsApp webhook | Same string as Meta hub.verify_token |
+| `WHATSAPP_APP_SECRET` | WhatsApp webhook | Meta App secret (HMAC). Rotate if exposed |
+| `NEXT_PUBLIC_APP_URL` | payments / links | `https://mypoz-and-store.vercel.app` |
 | `PRINTER_RECEIPT_IP` | optional | ESC/POS receipt + cash-drawer kick |
 | `PRINTER_KOT_IP` | optional | Kitchen order ticket (KOT) |
 | `PRINTER_BOT_IP` | optional | Bar order ticket (BOT) |
