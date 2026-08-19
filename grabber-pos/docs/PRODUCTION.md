@@ -19,7 +19,7 @@ are not backed up, not multi-tenant, and assume one server process.
 ## 1. Provision Supabase
 
 ```bash
-npx supabase link --project-ref <your-project-ref>
+npx supabase link --project-ref vtawrxmkahpgwgydibox
 npx supabase db push
 ```
 

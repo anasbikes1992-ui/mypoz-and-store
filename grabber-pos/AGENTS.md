@@ -5,7 +5,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 ## Product Authentication Invariants
-- **Grabber POS (grabber-pos)**: Uses Supabase Auth project vahbamhliophlipyfgp. Admin access requires profiles.role = 'owner'.
+- **Grabber POS (grabber-pos)**: Uses Supabase project `vtawrxmkahpgwgydibox` (mypoz-and-store, ap-southeast-1). Admin access requires `profiles.role = 'owner'`.
 - **Jarvis Consultant (jarvis-consultant)**: Customer auth uses Supabase project ehboyqzljulgphxjcqjz. Admin auth uses /admin/login backed by ADMIN_EMAIL and scrypt ADMIN_PASSWORD_HASH.
 - **PearlHub Pro (pearl-hub-pro)**: Customer and provider auth use Supabase project jfabjzamplmmusryxfvp.
 - **Admin Provisioning**: Always use non-destructive scripts (e.g., 
