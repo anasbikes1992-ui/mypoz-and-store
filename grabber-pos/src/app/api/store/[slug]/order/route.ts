@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { placeStorefrontOrder } from "@/lib/server/storefront-repo";
+import { sendEmail } from "@/lib/email/client";
+import { orderConfirmationEmail } from "@/lib/email/templates/order-confirmation";
+import { readSettings } from "@/lib/server/settings-store";
+import { readTenant } from "@/lib/server/tenant-store";
 import { PAYMENT_MODES, FULFILMENT_MODES } from "@/lib/website";
 import {
   demoCustomerCookieName,
@@ -119,6 +123,38 @@ export async function POST(
         discountCode: data.discountCode,
       },
     );
+
+    // Fire order confirmation email — best-effort, never blocks the response.
+    const customerEmail = data.customerEmail || customer?.email;
+    if (customerEmail && order.receiptNo) {
+      void (async () => {
+        try {
+          const [settings, tenant] = await Promise.all([readSettings(), readTenant()]);
+          const businessName = settings.businessName || tenant.brand.businessName || "MyPoz Store";
+          const accentColor = tenant.brand.accentColor || "#2563eb";
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store.vercel.app";
+          const email = orderConfirmationEmail({
+            businessName, accentColor,
+            receiptNo: order.receiptNo,
+            customerName: data.customerName,
+            // Use cart lines from the request since the order response is minimal.
+            items: data.lines.map((l) => ({
+              name: String(l.productId),
+              qty: l.quantity,
+              price: "",
+            })),
+            subtotal: `Rs ${(order.total ?? 0).toLocaleString("en-LK")}`,
+            total: `Rs ${(order.total ?? 0).toLocaleString("en-LK")}`,
+            paymentMethod: data.paymentMethod,
+            fulfilment: data.fulfilment,
+            address: data.address || undefined,
+            ordersUrl: `${appUrl}/store/${slug}/account`,
+          });
+          await sendEmail({ to: customerEmail, subject: email.subject, html: email.html, text: email.text, tags: [{ name: "type", value: "order-confirmation" }] });
+        } catch { /* email failure must never affect order response */ }
+      })();
+    }
+
     return NextResponse.json({ success: true, data: order, error: null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Order could not be placed";

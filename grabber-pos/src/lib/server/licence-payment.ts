@@ -2,8 +2,12 @@ import "server-only";
 import { PLAN_PRICES_LKR } from "@/lib/billing";
 import type { PlanTier } from "@/lib/plans";
 import { readTenant, writeTenant } from "./tenant-store";
+import { readSettings } from "./settings-store";
 import type { GatewayPaymentRecord } from "./gateway-payments-store";
 import { createHqTicket } from "./hq-repo";
+import { sendEmail } from "@/lib/email/client";
+import { licenceRenewedEmail } from "@/lib/email/templates/licence-renewed";
+import { licenceInvoiceEmail } from "@/lib/email/templates/licence-invoice";
 
 /** Extend licence 30 days from today (or current expiry, whichever is later). */
 export function nextLicenceExpiry(currentExpiry: string, from = new Date()): string {
@@ -30,6 +34,19 @@ export async function applyLicencePayment(payment: GatewayPaymentRecord): Promis
       extras: tenant.license.extras,
     },
   });
+
+  // Send licence renewed email — best-effort.
+  void (async () => {
+    try {
+      const settings = await readSettings();
+      const email = settings.email;
+      if (!email) return;
+      const businessName = settings.businessName || tenant.brand.businessName || "MyPoz Store";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store.vercel.app";
+      const mail = licenceRenewedEmail({ businessName: "MyPoz", tenantName: businessName, plan: nextPlan, newExpiry: expiry, dashboardUrl: appUrl });
+      await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text, tags: [{ name: "type", value: "licence-renewed" }] });
+    } catch { /* never block the licence write */ }
+  })();
 }
 
 export async function recordLicenceInvoice(opts: {
@@ -48,13 +65,21 @@ export async function recordLicenceInvoice(opts: {
     tenantName: opts.tenantName,
     priority: "high",
   });
-  return {
-    ticketId: ticket.id,
-    amountLkr: opts.amountLkr,
-    bankNote:
-      process.env.MYPOS_BANK_INSTRUCTIONS ||
-      "Transfer to the MyPoz operating account and send the slip to HQ. Selling stays blocked after expiry until HQ confirms.",
-  };
+  const bankNote = process.env.MYPOS_BANK_INSTRUCTIONS ||
+    "Transfer to the MyPoz operating account and send the slip to HQ. Selling stays blocked after expiry until HQ confirms.";
+
+  // Send invoice email to the tenant's billing email — best-effort.
+  void (async () => {
+    try {
+      const settings = await readSettings();
+      const email = settings.email;
+      if (!email) return;
+      const mail = licenceInvoiceEmail({ businessName: "MyPoz", tenantName: opts.tenantName, plan: opts.plan, amountLkr: opts.amountLkr, ticketId: ticket.id, bankInstructions: bankNote });
+      await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text, tags: [{ name: "type", value: "licence-invoice" }] });
+    } catch { /* never block the ticket creation */ }
+  })();
+
+  return { ticketId: ticket.id, amountLkr: opts.amountLkr, bankNote };
 }
 
 export function licenceAmountLkr(plan: PlanTier): number {

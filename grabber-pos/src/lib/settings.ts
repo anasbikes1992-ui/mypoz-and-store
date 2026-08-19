@@ -65,6 +65,13 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     ],
   },
   {
+    label: "Email (Resend)",
+    fields: [
+      { key: "resendFromEmail", label: "From address (e.g. MyPoz Store <noreply@yourdomain.com>)", type: "text", full: true },
+      { key: "resendReplyTo", label: "Reply-to address", type: "email" },
+    ],
+  },
+  {
     label: "Website Storefront & Marketing (SEO / Ads)",
     fields: [
       { key: "storeEnabled", label: "Enable Public Website", type: "select", options: ["Yes", "No"] },
@@ -107,6 +114,8 @@ export const settingsSchema = z.object({
   googleAdsId: z.string().max(60).default(""),
   metaPixelId: z.string().max(60).default(""),
   socialWhatsapp: z.string().max(30).default(""),
+  resendFromEmail: z.string().max(200).default(""),
+  resendReplyTo: z.string().max(120).default(""),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
