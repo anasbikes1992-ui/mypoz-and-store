@@ -54,8 +54,8 @@ export const STARTER_KEYS = [
   "dashboard",
   "reports",
   "settings",
-  "website",
   "commerce",
+  "commerce-onboarding",
   "commerce-builder",
   "commerce-themes",
   "commerce-orders",
@@ -75,6 +75,8 @@ export const STARTER_KEYS = [
   "assistant",
   // In-app help must reach every client, whatever they pay.
   "help",
+  "billing",
+  "observability",
 ];
 
 /** Resolve the enabled module keys for a plan (+ per-client extras). */

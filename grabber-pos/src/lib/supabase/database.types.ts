@@ -253,6 +253,10 @@ export interface Database {
         Args: { p_host: string | null; p_slug: string | null; p_product: string };
         Returns: unknown;
       };
+      storefront_ingest_ux_event: {
+        Args: { p_host: string; p_slug: string; p_payload: Json };
+        Returns: Json;
+      };
       update_sale_fulfillment: {
         Args: { p_sale: string; p_status: string };
         Returns: Record<string, unknown>;

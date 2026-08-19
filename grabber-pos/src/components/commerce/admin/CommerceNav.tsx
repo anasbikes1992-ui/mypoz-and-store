@@ -7,7 +7,7 @@ const LINKS = [
   { href: "/commerce", label: "Overview" },
   { href: "/commerce/onboarding", label: "Launch store" },
   { href: "/commerce/builder", label: "Store builder" },
-  { href: "/commerce/themes", label: "Themes" },
+  { href: "/commerce/themes", label: "Marketplace" },
   { href: "/commerce/orders", label: "Orders" },
   { href: "/commerce/pages", label: "Pages" },
   { href: "/commerce/collections", label: "Collections" },
@@ -19,7 +19,6 @@ const LINKS = [
   { href: "/commerce/analytics", label: "Analytics" },
   { href: "/products", label: "Products (POS)" },
   { href: "/customers", label: "Customers (POS)" },
-  { href: "/website", label: "Legacy website" },
 ];
 
 export function CommerceNav() {

@@ -2,7 +2,7 @@
 
 Live tracker for the master roadmap implementation.
 
-**Last updated:** 2026-08-19 (public storefront docs by slug + Shopping Station tenant)
+**Last updated:** 2026-08-19 (theme toggle everywhere, billing, marketplace, WAF/DDoS, session replay)
 
 ---
 
@@ -94,8 +94,8 @@ Live tracker for the master roadmap implementation.
 | Domain DNS verify | ✅ Connected only after CNAME |
 | Media library | ✅ Durable Storage + local fallback (`0016`) |
 | Storefront → POS customer upsert | ✅ |
-| Theme marketplace | 🔲 Future |
-| SaaS billing | 🔲 Future |
+| Theme marketplace | ✅ Official config themes at `/commerce/themes` |
+| SaaS billing | ✅ `/billing` + HQ tickets (no Stripe keys yet) |
 
 ---
 
@@ -105,7 +105,7 @@ Live tracker for the master roadmap implementation.
 |------|--------|
 | Period sales, top/slow SKUs, demand hint | ✅ Same sales ledger |
 | HQ backups (secrets redacted) | ✅ |
-| Light/dark cookie | ✅ App chrome only |
+| Light/dark cookie | ✅ POS TopBar, store chrome, HQ, login, welcome |
 | WhatsApp bot + webhook | ✅ Token / Live parked |
 
 ---
@@ -120,15 +120,22 @@ Live tracker for the master roadmap implementation.
 | Empty catalogue CTA | ✅ |
 | Public storefront chrome by slug/host | ✅ `0017` `storefront_documents` + proxy headers |
 | Shopping Station tenant | ✅ Org `shopping-station`, owner `stationshopping11@gmail.com` |
+| Light/dark on POS, store, HQ | ✅ `ThemeToggle` + viewport |
+| Theme marketplace | ✅ Six official packs, install = `POST /api/commerce/theme` |
+| SaaS billing | ✅ `/billing` requests upgrade via HQ tickets |
+| App WAF + adaptive IP ban | ✅ `src/proxy.ts` + `docs/DDOS_AND_WAF.md` |
+| Session replay / rage click | ✅ `/observability` + `0018_ux_events.sql` |
+| Bundled demo catalogue | ✅ `src/data/products.json` is empty; local overrides still work |
+| Route integrity tests | ✅ Launcher + HQ + critical APIs |
 
 ---
 
 ## Parked
 
-1. SaaS billing
-2. Theme marketplace
-3. WhatsApp Live — `WHATSAPP_TOKEN` + numeric Phone number ID
-4. Reviews / blog / BXGY (out of architecture MVP)
+1. Card checkout / Stripe invoices (billing UI talks to HQ until a processor is connected)
+2. WhatsApp Live — `WHATSAPP_TOKEN` + numeric Phone number ID
+3. Reviews / blog / BXGY (out of architecture MVP)
+4. Cloudflare zone in front of production (required for volumetric DDoS — see `docs/DDOS_AND_WAF.md`)
 
 ---
 
@@ -138,4 +145,5 @@ Live tracker for the master roadmap implementation.
 node --env-file=.env.local scripts/apply-sql.mjs supabase/migrations/0010b_product_commerce_columns.sql
 node --env-file=.env.local scripts/apply-sql.mjs supabase/migrations/0016_media_and_storefront_discount.sql
 node --env-file=.env.local scripts/apply-sql.mjs supabase/migrations/0017_storefront_public_documents.sql
+node --env-file=.env.local scripts/apply-sql.mjs supabase/migrations/0018_ux_events.sql
 ```

@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { fadeUp, springSoft } from "@/lib/motion";
 
 const FEATURES = [
@@ -82,10 +83,13 @@ export default function LoginPage() {
   const formMotion = fadeUp(reduced, 0.06);
 
   return (
-    <main className="theme-marketing flex min-h-screen items-stretch">
+    <main className="theme-marketing relative flex min-h-screen items-stretch">
       <a href="#login-form" className="skip-link">
         Skip to main content
       </a>
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       <section className="relative hidden flex-1 flex-col justify-center overflow-hidden px-12 xl:px-16 lg:flex">
         {!reduced && (
           <>
@@ -246,7 +250,9 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-xs text-text-dim">
             {isSupabaseEnabled
               ? "Grabber Mobility Solutions (Pvt) Ltd"
-              : "Demo mode — admin / admin123"}
+              : process.env.NODE_ENV === "development"
+                ? "Local demo — use POS_USER / POS_PASSWORD from .env"
+                : "Sign in with your provisioned account"}
           </p>
           <p className="mt-3 text-center text-xs text-text-dim lg:hidden">
             <Link href="/welcome" className="text-accent hover:underline">

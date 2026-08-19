@@ -169,27 +169,36 @@ export async function applyGatewayWebhook(opts: {
 
   // ONLY verified PAID transitions complete the sale and decrement stock.
   if (opts.status === "PAID") {
-    const saleRef =
-      (typeof existing.meta?.saleId === "string" && existing.meta.saleId) ||
-      existing.reference;
-    try {
-      const { completePendingSale } = await import("@/lib/server/complete-pending-sale");
-      const { fulfillPendingStorefrontBoards } = await import(
-        "@/lib/server/storefront-repo"
-      );
-      const sale = await completePendingSale(saleRef);
-      await fulfillPendingStorefrontBoards(sale.id, existing.reference);
+    const kind = existing.meta?.kind;
+    if (kind === "licence") {
+      const { applyLicencePayment } = await import("@/lib/server/licence-payment");
+      await applyLicencePayment(existing);
       updated.meta = {
         ...updated.meta,
-        saleId: sale.id,
-        completedAt: new Date().toISOString(),
+        licenceAppliedAt: new Date().toISOString(),
       };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "complete_failed";
-      // If sale already completed, still mark ledger PAID
-      if (!msg.startsWith("SALE_NOT_PENDING") && !msg.includes("already")) {
-        console.error("[applyGatewayWebhook] completePendingSale failed:", msg);
-        return { ok: false, reason: `SALE_COMPLETE_FAILED:${msg}` };
+    } else {
+      const saleRef =
+        (typeof existing.meta?.saleId === "string" && existing.meta.saleId) ||
+        existing.reference;
+      try {
+        const { completePendingSale } = await import("@/lib/server/complete-pending-sale");
+        const { fulfillPendingStorefrontBoards } = await import(
+          "@/lib/server/storefront-repo"
+        );
+        const sale = await completePendingSale(saleRef);
+        await fulfillPendingStorefrontBoards(sale.id, existing.reference);
+        updated.meta = {
+          ...updated.meta,
+          saleId: sale.id,
+          completedAt: new Date().toISOString(),
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "complete_failed";
+        if (!msg.startsWith("SALE_NOT_PENDING") && !msg.includes("already")) {
+          console.error("[applyGatewayWebhook] completePendingSale failed:", msg);
+          return { ok: false, reason: `SALE_COMPLETE_FAILED:${msg}` };
+        }
       }
     }
   }

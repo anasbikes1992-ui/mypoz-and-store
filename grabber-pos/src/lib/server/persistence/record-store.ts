@@ -114,11 +114,28 @@ export function recordStore<T extends KeyedRecord>(
         });
       }
 
-      const { error } = await db.from("app_collections").upsert(
-        { collection: config.collection, entity_id: item.id, data: asJson(item) },
-        { onConflict: "org_id,collection,entity_id" },
-      );
-      if (error) throw new Error(error.message);
+      // RLS fills org_id from the session, but PostgREST requires it in the
+      // VALUES row for the ON CONFLICT target. Use select+update/insert instead.
+      const { data: existing } = await db
+        .from("app_collections")
+        .select("id")
+        .eq("collection", config.collection)
+        .eq("entity_id", item.id)
+        .maybeSingle<{ id: string }>();
+
+      if (existing?.id) {
+        const { error } = await db
+          .from("app_collections")
+          .update({ data: asJson(item) })
+          .eq("collection", config.collection)
+          .eq("entity_id", item.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await db
+          .from("app_collections")
+          .insert({ collection: config.collection, entity_id: item.id, data: asJson(item) });
+        if (error) throw new Error(error.message);
+      }
       return item;
     },
 
@@ -135,15 +152,37 @@ export function recordStore<T extends KeyedRecord>(
         });
       }
 
-      const { error } = await db.from("app_collections").upsert(
-        items.map((item) => ({
-          collection: config.collection,
-          entity_id: item.id,
-          data: asJson(item),
-        })),
-        { onConflict: "org_id,collection,entity_id" },
-      );
-      if (error) throw new Error(error.message);
+      // Batch: fetch existing entity_ids for this collection, then split into
+      // inserts and updates to avoid the org_id conflict issue.
+      const entityIds = items.map((i) => i.id);
+      const { data: existing } = await db
+        .from("app_collections")
+        .select("entity_id")
+        .eq("collection", config.collection)
+        .in("entity_id", entityIds);
+      const existingIds = new Set((existing ?? []).map((r: { entity_id: string }) => r.entity_id));
+
+      const toInsert = items.filter((i) => !existingIds.has(i.id));
+      const toUpdate = items.filter((i) => existingIds.has(i.id));
+
+      if (toInsert.length > 0) {
+        const { error } = await db.from("app_collections").insert(
+          toInsert.map((item) => ({
+            collection: config.collection,
+            entity_id: item.id,
+            data: asJson(item),
+          })),
+        );
+        if (error) throw new Error(error.message);
+      }
+      for (const item of toUpdate) {
+        const { error } = await db
+          .from("app_collections")
+          .update({ data: asJson(item) })
+          .eq("collection", config.collection)
+          .eq("entity_id", item.id);
+        if (error) throw new Error(error.message);
+      }
       return items;
     },
 

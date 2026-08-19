@@ -48,20 +48,20 @@ export function HqShell({
             </div>
           </Link>
           <div className="flex items-center gap-2">
-            <span className="hidden text-xs text-text-dim sm:inline">
+            <span className="hidden max-w-[10rem] truncate text-xs text-text-dim sm:inline">
               {identityLabel}
             </span>
-            <ThemeToggle />
+            <ThemeToggle compact />
             <Link
               href="/"
-              className="rounded-xl px-3 py-1.5 text-sm text-text-dim transition hover:bg-surface-2 hover:text-text-strong"
+              className="inline-flex min-h-11 items-center rounded-xl px-3 py-1.5 text-sm text-text-dim transition hover:bg-surface-2 hover:text-text-strong"
             >
               Tenant app
             </Link>
             <button
               type="button"
               onClick={() => void logout()}
-              className="rounded-xl px-3 py-1.5 text-sm text-text-dim transition hover:bg-surface-2 hover:text-text-strong"
+              className="inline-flex min-h-11 items-center rounded-xl px-3 py-1.5 text-sm text-text-dim transition hover:bg-surface-2 hover:text-text-strong"
             >
               Sign out
             </button>
@@ -79,7 +79,7 @@ export function HqShell({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-sm transition ${
+                className={`whitespace-nowrap rounded-xl px-3 py-2 text-sm transition ${
                   active
                     ? "bg-accent/15 font-medium text-accent"
                     : "text-text-dim hover:bg-surface-2 hover:text-text-strong"

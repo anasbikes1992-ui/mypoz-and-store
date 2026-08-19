@@ -44,14 +44,28 @@ export function docStore<T>(config: DocStoreConfig): DocStore<T> {
         return value;
       }
 
-      const { error } = await db
+      // RLS policies on app_documents supply org_id from the session automatically.
+      // We cannot put org_id in the payload without a second round-trip to read
+      // current_org_id(), so we use a select-then-update/insert pattern instead
+      // of relying on the composite unique constraint directly.
+      const { data: existing } = await db
         .from("app_documents")
-        .upsert(
-          // Documents are plain config objects — JSON-serializable by contract.
-          { key: config.key, data: value as Json },
-          { onConflict: "org_id,key" },
-        );
-      if (error) throw new Error(error.message);
+        .select("id")
+        .eq("key", config.key)
+        .maybeSingle<{ id: string }>();
+
+      if (existing?.id) {
+        const { error } = await db
+          .from("app_documents")
+          .update({ data: value as Json })
+          .eq("key", config.key);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await db
+          .from("app_documents")
+          .insert({ key: config.key, data: value as Json });
+        if (error) throw new Error(error.message);
+      }
       return value;
     },
   };

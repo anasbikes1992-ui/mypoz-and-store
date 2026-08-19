@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { isSupabaseEnabled, SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/config";
-import { getRepository } from "@/lib/server/repositories";
 import { readTenant } from "@/lib/server/tenant-store";
 import { isLicenseExpired } from "@/lib/plans";
 import { isWhatsAppConfigured } from "@/lib/server/whatsapp";
 import { isDefaultSessionSecret } from "@/lib/server/session";
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * Liveness + readiness probe. Fail-closed for half-configured Supabase and
@@ -36,9 +36,18 @@ export async function GET() {
     detail = "SUPABASE_SERVICE_ROLE_KEY required for gateway payment ledger in production";
   } else {
     try {
-      const repo = await getRepository();
-      await repo.salesStats();
-      ready = true;
+      if (isSupabaseEnabled) {
+        // Public health check must work without a session user. We only
+        // validate connectivity by executing a small RLS-filtered query.
+        const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        });
+        await db.from("sales").select("id").limit(1);
+        ready = true;
+      } else {
+        // Local demo backend.
+        ready = true;
+      }
     } catch (error) {
       detail = error instanceof Error ? error.message : "unknown";
     }

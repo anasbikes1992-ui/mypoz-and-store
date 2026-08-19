@@ -9,6 +9,7 @@ import {
   staggerContainer,
   staggerItem,
 } from "@/lib/motion";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 const VERTICALS = [
   {
@@ -98,13 +99,7 @@ export default function WelcomePage() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/store/main-store"
-              target="_blank"
-              className="hidden rounded-2xl border border-line px-3.5 py-2 text-sm text-text-dim transition hover:border-accent hover:text-accent sm:inline-flex"
-            >
-              Demo store
-            </Link>
+            <ThemeToggle compact />
             <Link
               href="/login"
               className="inline-flex rounded-2xl bg-accent px-4 py-2 text-sm font-semibold text-accent-ink shadow-[0_4px_14px_-4px_color-mix(in_oklch,var(--accent)_45%,transparent)] transition hover:bg-accent-strong"
@@ -146,11 +141,10 @@ export default function WelcomePage() {
                 Open dashboard
               </Link>
               <Link
-                href="/store/main-store"
-                target="_blank"
+                href="/login"
                 className="inline-flex h-12 items-center justify-center rounded-2xl border border-line bg-surface-2/60 px-7 text-sm font-semibold text-text-strong transition hover:border-[var(--tint-teal)] hover:text-[var(--tint-teal)] active:scale-[0.98]"
               >
-                View live storefront
+                Sign in to your store
               </Link>
             </div>
           </motion.div>
@@ -295,42 +289,35 @@ export default function WelcomePage() {
               ))}
             </ul>
             <Link
-              href="/store/main-store"
-              target="_blank"
+              href="/login"
               className="inline-flex h-11 items-center rounded-2xl bg-accent px-5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
             >
-              Preview tenant website
+              Open your workspace
             </Link>
           </div>
 
           <div className="rounded-3xl border border-line bg-surface-0 p-5">
             <div className="flex items-center justify-between border-b border-line pb-3">
               <span className="text-sm font-semibold text-text-strong">
-                Grabber Demo Store
+                Your public store
               </span>
-              <span className="font-mono text-[11px] text-accent">Synced</span>
+              <span className="font-mono text-[11px] text-accent">Same stock as POS</span>
             </div>
             <p className="mt-3 text-xs text-text-dim">
-              2,509 products · Islandwide delivery
+              Catalogue, prices, and delivery come from the live tenant — not a demo dump.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <div className="rounded-2xl border border-line bg-surface-1-solid p-3">
-                <p className="text-xs text-text-body">
-                  Jasmine Bouquet Freshener
-                </p>
-                <p className="mt-1 font-mono text-sm font-medium text-accent">
-                  LKR 300.00
-                </p>
+                <p className="text-xs text-text-body">Featured product</p>
+                <p className="mt-1 font-mono text-sm font-medium text-accent">Live price</p>
               </div>
               <div className="rounded-2xl border border-line bg-surface-1-solid p-3">
-                <p className="text-xs text-text-body">
-                  Khomba Baby Cologne 100ml
-                </p>
+                <p className="text-xs text-text-body">In-stock SKU</p>
                 <p
                   className="mt-1 font-mono text-sm font-medium"
                   style={{ color: "var(--tint-coral)" }}
                 >
-                  LKR 570.00
+                  Deducts at checkout
                 </p>
               </div>
             </div>

@@ -2,7 +2,9 @@ import "server-only";
 import { randomUUID } from "crypto";
 import { recordStore } from "./persistence/record-store";
 import type { PaymentMode, FulfilmentMode } from "@/lib/website";
+import { createServiceSupabase } from "@/lib/supabase/server";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
+import type { Json } from "@/lib/supabase/database.types";
 
 export interface StorefrontOrderLine {
   productId: string;
@@ -45,17 +47,61 @@ const store = recordStore<StorefrontWebOrder>({
   file: "storefront-orders.json",
 });
 
+function useServiceLedger(): boolean {
+  return isSupabaseEnabled && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function resolveStorefrontOrgId(opts: {
+  host: string | null;
+  slug: string | null;
+}): Promise<string> {
+  if (!useServiceLedger()) throw new Error("Service ledger unavailable");
+  const db = createServiceSupabase();
+  const p_host = opts.host ?? "";
+  const p_slug = opts.slug ?? "";
+  const { data, error } = await (db as any).rpc("storefront_by_host", {
+    p_host,
+    p_slug,
+  });
+  if (error || !data) throw new Error("Could not resolve storefront org id");
+  const row = data as { org_id?: string | null } | null;
+  const orgId = row?.org_id ?? null;
+  if (!orgId) throw new Error("Storefront org_id not found");
+  return orgId;
+}
+
 export async function saveStorefrontWebOrder(
   order: Omit<StorefrontWebOrder, "id" | "createdAt"> & {
     id?: string;
     createdAt?: string;
   },
+  ctx?: { host?: string | null; slug?: string | null },
 ): Promise<StorefrontWebOrder> {
   const row: StorefrontWebOrder = {
     ...order,
     id: order.id ?? `WEB-${randomUUID().slice(0, 8).toUpperCase()}`,
     createdAt: order.createdAt ?? new Date().toISOString(),
   };
+
+  if (useServiceLedger()) {
+    const orgId = await resolveStorefrontOrgId({
+      host: ctx?.host ?? null,
+      slug: ctx?.slug ?? order.slug,
+    });
+    const db = createServiceSupabase();
+    const { error } = await db.from("app_collections").upsert(
+      {
+        org_id: orgId,
+        collection: "storefront-orders",
+        entity_id: row.id,
+        data: row as unknown as Json,
+      },
+      { onConflict: "org_id,collection,entity_id" },
+    );
+    if (error) throw new Error(error.message);
+    return row;
+  }
+
   return store.put(row);
 }
 
@@ -115,10 +161,9 @@ export async function findStorefrontOrderBySaleOrReceipt(
   //   (b) prefer the globally-unique order id / saleId over the per-branch
   //       receiptNo (which can collide across organizations), and refuse an
   //       ambiguous receipt match rather than complete the wrong org's sale.
-  if (isSupabaseEnabled && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    try {
-      const { createServiceSupabase } = await import("@/lib/supabase/server");
-      const db = createServiceSupabase();
+  if (useServiceLedger()) {
+    const { createServiceSupabase } = await import("@/lib/supabase/server");
+    const db = createServiceSupabase();
       // Only values safe to embed in a PostgREST or() filter (no '.', ',', or parens).
       const safe = (v?: string | null) =>
         v && /^[A-Za-z0-9:_-]+$/.test(v) ? v : null;
@@ -146,9 +191,9 @@ export async function findStorefrontOrderBySaleOrReceipt(
           if (receiptMatches.length > 1) return null;
         }
       }
-    } catch {
-      // fall through to session/local store
-    }
+    // Fail-closed: when the service ledger is active, do not fall back to
+    // local JSON for webhook completion.
+    return null;
   }
 
   const all = await store.list();
@@ -159,6 +204,32 @@ export async function updateStorefrontWebOrder(
   id: string,
   patch: Partial<StorefrontWebOrder>,
 ): Promise<StorefrontWebOrder | null> {
+  if (useServiceLedger()) {
+    const db = createServiceSupabase();
+    const { data: existing, error } = await db
+      .from("app_collections")
+      .select("org_id,data")
+      .eq("collection", "storefront-orders")
+      .eq("entity_id", id)
+      .maybeSingle<{ org_id?: string; data?: StorefrontWebOrder }>();
+    if (error) throw new Error(error.message);
+    const orgId = (existing as { org_id?: string } | null)?.org_id ?? null;
+    const payload = (existing as { data?: StorefrontWebOrder } | null)?.data ?? null;
+    if (!orgId || !payload) return null;
+    const next: StorefrontWebOrder = { ...payload, ...patch, id };
+    const { error: upErr } = await db.from("app_collections").upsert(
+      {
+        org_id: orgId,
+        collection: "storefront-orders",
+        entity_id: id,
+        data: next as unknown as Json,
+      },
+      { onConflict: "org_id,collection,entity_id" },
+    );
+    if (upErr) throw new Error(upErr.message);
+    return next;
+  }
+
   const all = await store.list();
   const existing = all.find((o) => o.id === id);
   if (!existing) return null;

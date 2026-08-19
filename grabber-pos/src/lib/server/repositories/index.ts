@@ -7,7 +7,12 @@ import type { PosRepository } from "./types";
 
 /**
  * Resolve the active data backend for the current request.
- * Supabase when configured (and the user has a branch), else the local store.
+ * Supabase when configured.
+ *
+ * Fail-closed rule: when Supabase is configured we never serve the bundled
+ * local JSON store for data-backed operations. Public storefront operations
+ * must use the SECURITY DEFINER storefront RPCs instead of relying on
+ * LocalRepository fallbacks.
  */
 export async function getRepository(): Promise<PosRepository> {
   if (!isSupabaseEnabled) {
@@ -26,7 +31,11 @@ export async function getRepository(): Promise<PosRepository> {
   const {
     data: { user },
   } = await db.auth.getUser();
-  if (!user) return new LocalRepository();
+  if (!user) {
+    throw new Error(
+      "Unauthorized: Supabase is enabled but no session user was found.",
+    );
+  }
 
   // Resolve the caller's active branch (first active branch in their org).
   const { data: branch } = await db
@@ -37,7 +46,9 @@ export async function getRepository(): Promise<PosRepository> {
     .limit(1)
     .maybeSingle<{ id: string }>();
 
-  if (!branch) return new LocalRepository();
+  if (!branch) {
+    throw new Error("No active branch found for the caller organization.");
+  }
   return new SupabaseRepository(db, branch.id);
 }
 

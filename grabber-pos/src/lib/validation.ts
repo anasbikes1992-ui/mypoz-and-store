@@ -27,6 +27,8 @@ export const createSaleSchema = z.object({
   cardAmount: z.number().min(0).optional(),
   managerPin: z.string().max(32).optional(),
   clientUuid: z.string().min(8).max(64).optional(),
+  source: z.enum(["POS", "ONLINE_STORE", "WHATSAPP", "PHONE", "OTHER"]).optional(),
+  channel: z.string().max(40).optional(),
 });
 
 export const productQuerySchema = z.object({

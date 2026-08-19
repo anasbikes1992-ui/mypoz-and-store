@@ -24,9 +24,9 @@ const MAX_PAGE_SIZE = 200;
 const seedProducts = seed as Product[];
 
 /**
- * Working product list = seed merged with the writable override map
- * (creates/edits/deletes). Recomputed per call so mutations are reflected
- * immediately in the demo backend.
+ * Working product list = optional seed merged with the writable override map
+ * (creates/edits/deletes). Production catalogue lives in Supabase; this seed
+ * file stays empty so local demo does not ship a fake shop.
  */
 function getProducts(): Product[] {
   const overrides = readOverridesSync();

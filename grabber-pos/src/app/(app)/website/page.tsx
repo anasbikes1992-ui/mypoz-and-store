@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useBrand } from "@/components/brand/BrandProvider";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { Button } from "@/components/ui/Button";
 import { SkeletonRows } from "@/components/ui/EmptyState";
@@ -23,13 +25,21 @@ const fieldClass =
   "w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-sm text-text-strong outline-none transition focus:border-accent";
 
 export default function WebsiteCmsPage() {
+  const router = useRouter();
+  const { enabledKeys, loading } = useBrand();
   const [config, setConfig] = useState<WebsiteConfig | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [slug, setSlug] = useState("main-store");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!loading && !enabledKeys.has("website")) {
+      router.replace("/commerce/onboarding");
+    }
+  }, [loading, enabledKeys, router]);
 
   useEffect(() => {
     Promise.all([
@@ -42,7 +52,7 @@ export default function WebsiteCmsPage() {
           setSlug(settings.data.storeSlug);
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => setFetching(false));
   }, []);
 
   function patch<K extends keyof WebsiteConfig>(key: K, value: WebsiteConfig[K]) {
@@ -118,7 +128,7 @@ export default function WebsiteCmsPage() {
     }
   }
 
-  if (loading || !config) {
+  if (fetching || !config) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
         <ModuleHeader

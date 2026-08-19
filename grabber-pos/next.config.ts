@@ -13,6 +13,13 @@ const nextConfig: NextConfig = {
       { source: "/updates", destination: "/help", permanent: true },
     ];
   },
+  async rewrites() {
+    return [
+      // Fail-closed WAF: Next may serve dotfiles directly before middleware,
+      // so we hard-deny /.env at the edge.
+      { source: "/.env", destination: "/api/waf-deny" },
+    ];
+  },
 };
 
 export default nextConfig;

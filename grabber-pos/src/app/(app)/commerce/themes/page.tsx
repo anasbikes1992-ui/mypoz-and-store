@@ -54,8 +54,8 @@ export default function ThemesPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <ModuleHeader
-        title="Themes"
-        subtitle="Each theme has its own layout and product cards — not a recolor."
+        title="Theme marketplace"
+        subtitle="Official MyPoz configuration packs — layout and cards, not merchant plugins."
         actions={
           <Link
             href={storePath(slug)}
@@ -69,6 +69,14 @@ export default function ThemesPage() {
         <CommerceNav />
       </div>
       {msg ? <p className="mt-4 text-sm text-accent">{msg}</p> : null}
+
+      <section className="mt-6 rounded-3xl border border-line bg-surface-1 p-5">
+        <h2 className="text-sm font-semibold text-text-strong">Marketplace</h2>
+        <p className="mt-1 text-xs text-text-dim">
+          Install applies the same theme tokens the live storefront already uses.
+          Third-party code is not allowed — these are MyPoz configuration packs.
+        </p>
+      </section>
 
       <section className="mt-6 rounded-3xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">Live preview</h2>
@@ -125,6 +133,7 @@ export default function ThemesPage() {
               <h2 className="text-lg font-semibold text-text-strong">{theme.name}</h2>
               <p className="mt-1 text-sm text-text-dim">{theme.tagline}</p>
               <p className="mt-2 text-xs text-text-dim">{theme.idealFor.join(" · ")}</p>
+              <p className="mt-2 text-xs font-semibold text-accent">Free · MyPoz</p>
               <div className="mt-4 flex gap-2">
                 <Button
                   className="flex-1"
@@ -132,7 +141,7 @@ export default function ThemesPage() {
                   disabled={busy}
                   onClick={() => void select(theme.id)}
                 >
-                  {active ? "Selected" : "Use theme"}
+                  {active ? "Installed" : "Install theme"}
                 </Button>
               </div>
             </article>

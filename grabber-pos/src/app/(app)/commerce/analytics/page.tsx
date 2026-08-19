@@ -16,6 +16,11 @@ export default async function CommerceAnalyticsPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <ModuleHeader title="Analytics" subtitle="Funnel is traffic. Channel revenue is the same sales ledger as POS — not a second warehouse." />
       <div className="mt-4"><CommerceNav /></div>
+      <p className="mt-3 text-sm">
+        <a href="/observability" className="text-accent hover:underline">
+          Session replay · errors · rage clicks
+        </a>
+      </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Visitors" value={String(funnel.visitors)} />
         <Stat label="Purchases" value={String(funnel.purchases)} />

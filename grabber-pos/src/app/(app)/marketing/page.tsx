@@ -9,6 +9,8 @@ export default function MarketingPage() {
   const [platform, setPlatform] = useState<"facebook" | "instagram" | "whatsapp" | "google">("facebook");
   const [generatedCopy, setGeneratedCopy] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [storeUrl, setStoreUrl] = useState("/store");
+  const [feedSlug, setFeedSlug] = useState("");
 
   useEffect(() => {
     fetch("/api/products")
@@ -20,6 +22,18 @@ export default function MarketingPage() {
         }
       })
       .catch(console.error);
+    Promise.all([fetch("/api/settings").then((r) => r.json()), fetch("/api/commerce").then((r) => r.json())])
+      .then(([settings, commerce]) => {
+        const slug =
+          commerce?.data?.draft?.slug ||
+          settings?.data?.storeSlug ||
+          "";
+        if (!slug) return;
+        setFeedSlug(slug);
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        setStoreUrl(`${origin}/store/${slug}`);
+      })
+      .catch(() => undefined);
   }, []);
 
   const generateAdCopy = () => {
@@ -29,11 +43,11 @@ export default function MarketingPage() {
 
     let copy = "";
     if (platform === "facebook") {
-      copy = `🔥 SPECIAL OFFER: ${name}! 🔥\n\nUpgrade your daily routine with ${name} available now at an unbeatable price of ${price}.\n\n✅ 100% Genuine Quality\n✅ Fast Islandwide Delivery\n✅ Cash on Delivery Available\n\n👉 Order Online Now: https://grabber-pos.vercel.app/store/main-store\n💬 Or message us on WhatsApp to order instantly!`;
+      copy = `🔥 SPECIAL OFFER: ${name}! 🔥\n\nUpgrade your daily routine with ${name} available now at an unbeatable price of ${price}.\n\n✅ 100% Genuine Quality\n✅ Fast Islandwide Delivery\n✅ Cash on Delivery Available\n\n👉 Order Online Now: ${storeUrl}\n💬 Or message us on WhatsApp to order instantly!`;
     } else if (platform === "instagram") {
       copy = `✨ NEW ARRIVAL: ${name} ✨\n\nGet yours today for only ${price}! Limited stock available. 🛍️\n\nTap the link in bio to shop online! 📦✨\n\n#shopping #onlinestore #fastdelivery #bestdeals #${name.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
     } else if (platform === "whatsapp") {
-      copy = `👋 Hello! Check out our featured product of the week:\n\n🛍️ *${name}*\n🏷️ *Price:* ${price}\n🚚 *Delivery:* Fast Cash on Delivery\n\n👇 Click to buy online:\nhttps://grabber-pos.vercel.app/store/main-store`;
+      copy = `👋 Hello! Check out our featured product of the week:\n\n🛍️ *${name}*\n🏷️ *Price:* ${price}\n🚚 *Delivery:* Fast Cash on Delivery\n\n👇 Click to buy online:\n${storeUrl}`;
     } else if (platform === "google") {
       copy = `Headline 1: Buy ${name} Online\nHeadline 2: Best Price ${price} - Fast Delivery\nDescription: Shop ${name} at official store. High quality, authentic products, fast cash on delivery.`;
     }
@@ -43,7 +57,7 @@ export default function MarketingPage() {
 
   useEffect(() => {
     generateAdCopy();
-  }, [selectedProduct, platform]);
+  }, [selectedProduct, platform, storeUrl]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedCopy);
@@ -160,8 +174,10 @@ export default function MarketingPage() {
           <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
             <span>💡 Tip: Paste this directly into Meta Ads Manager, WhatsApp groups, or social posts!</span>
             <div className="flex flex-wrap gap-3">
+              {feedSlug ? (
+                <>
               <a
-                href="/api/store/main-store/feed/google"
+                href={`/api/store/${feedSlug}/feed/google`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-sky-400 hover:underline font-semibold"
@@ -169,7 +185,7 @@ export default function MarketingPage() {
                 Google feed
               </a>
               <a
-                href="/api/store/main-store/feed/meta"
+                href={`/api/store/${feedSlug}/feed/meta`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-sky-400 hover:underline font-semibold"
@@ -177,13 +193,17 @@ export default function MarketingPage() {
                 Meta feed
               </a>
               <a
-                href="https://grabber-pos.vercel.app/store/main-store"
+                href={storeUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="text-sky-400 hover:underline font-semibold"
               >
-                View Live Storefront →
+                View live storefront →
               </a>
+                </>
+              ) : (
+                <span>Publish a store slug in Website settings first.</span>
+              )}
             </div>
           </div>
         </div>

@@ -29,6 +29,11 @@ test.describe("public critical path", () => {
     await expect(page.locator("form")).toBeVisible();
   });
 
+  test("WAF blocks exploit probes", async ({ request }) => {
+    const res = await request.get("/.env");
+    expect(res.status()).toBe(403);
+  });
+
   test("robots and sitemap are crawlable", async ({ request }) => {
     const robots = await request.get("/robots.txt");
     expect(robots.ok()).toBeTruthy();

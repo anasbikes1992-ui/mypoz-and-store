@@ -24,6 +24,7 @@ export function TopBar() {
   const { brand } = useBrand();
   const reduced = useReducedMotion();
   const [showHq, setShowHq] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +52,7 @@ export function TopBar() {
   const businessName = brand.businessName || "MyPoz";
 
   return (
+    <>
     <motion.header
       initial={reduced ? false : { opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -81,6 +83,15 @@ export function TopBar() {
         </span>
       </Link>
       <nav aria-label="Primary" className="flex items-center gap-1 sm:gap-2">
+        <button
+          type="button"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-line text-sm md:hidden"
+          aria-expanded={menuOpen}
+          aria-label="Open menu"
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          {menuOpen ? "×" : "☰"}
+        </button>
         <div className="mr-0.5 hidden items-center gap-0.5 md:flex">
           {QUICK_LINKS.map((link) => {
             const active =
@@ -112,19 +123,51 @@ export function TopBar() {
         )}
         <Link
           href="/help"
-          className="rounded-2xl border border-line px-3 py-1.5 text-sm text-text-dim transition duration-150 hover:border-accent hover:text-accent"
+          className="hidden min-h-11 items-center rounded-2xl border border-line px-3 py-1.5 text-sm text-text-dim transition duration-150 hover:border-accent hover:text-accent sm:inline-flex"
         >
           Help
         </Link>
-        <ThemeToggle />
+        <ThemeToggle compact />
         <button
           type="button"
           onClick={logout}
-          className="rounded-2xl border border-line px-3 py-1.5 text-sm text-text-dim transition duration-150 hover:border-danger/50 hover:text-danger"
+          className="min-h-11 rounded-2xl border border-line px-3 py-1.5 text-sm text-text-dim transition duration-150 hover:border-danger/50 hover:text-danger"
         >
           Sign out
         </button>
       </nav>
     </motion.header>
+    {menuOpen ? (
+      <nav
+        aria-label="Mobile"
+        className="border-b border-line bg-surface-1 px-3 py-2 md:hidden"
+      >
+        {QUICK_LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="block min-h-11 py-2 text-sm font-medium text-text-strong"
+            onClick={() => setMenuOpen(false)}
+          >
+            {link.label}
+          </Link>
+        ))}
+        <Link
+          href="/billing"
+          className="block min-h-11 py-2 text-sm text-text-dim"
+          onClick={() => setMenuOpen(false)}
+        >
+          Billing
+        </Link>
+        <Link
+          href="/observability"
+          className="block min-h-11 py-2 text-sm text-text-dim"
+          onClick={() => setMenuOpen(false)}
+        >
+          Session replay
+        </Link>
+      </nav>
+    ) : null}
+    </>
   );
 }

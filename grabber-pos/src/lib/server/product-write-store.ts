@@ -5,9 +5,8 @@ import path from "path";
 import type { Product } from "@/lib/types";
 
 /**
- * Writable overlay for the demo/local backend. The bundled seed
- * (src/data/products.json) stays read-only; creates, edits and deletes are
- * persisted here as an override map: id -> Product (upsert) or null (deleted).
+ * Writable overlay for the local JSON backend. src/data/products.json is an
+ * empty seed; creates, edits and deletes persist here as an override map.
  * In production, Supabase is the store and this file is unused.
  */
 const DATA_DIR = path.join(process.cwd(), "data");

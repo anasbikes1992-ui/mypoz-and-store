@@ -9,6 +9,19 @@ export function formatMoney(amount: number): string {
   return LKR.format(amount);
 }
 
+/**
+ * Compact money for dashboard stat cards where space is limited.
+ * 1,250,000 → "Rs 1.25M"   |   9,957,925,131 → "Rs 9.96B"
+ */
+export function formatMoneyCompact(amount: number): string {
+  if (amount === 0) return "Rs 0";
+  const abs = Math.abs(amount);
+  if (abs >= 1_000_000_000) return `Rs ${(amount / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000) return `Rs ${(amount / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `Rs ${(amount / 1_000).toFixed(1)}K`;
+  return LKR.format(amount);
+}
+
 export function formatDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);

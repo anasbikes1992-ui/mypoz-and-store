@@ -6,6 +6,7 @@ import { storePath, type StoreConfig } from "@/lib/commerce/schema";
 import { THEMES } from "@/lib/commerce/themes";
 import { storeCopy } from "@/lib/commerce/i18n";
 import { CartButton } from "@/app/store/[slug]/cart";
+import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
 export function StoreChrome({
   slug,
@@ -88,6 +89,7 @@ export function StoreChrome({
               </span>
             </Link>
             <div className="ml-auto flex items-center gap-2 md:hidden">
+              <ThemeToggle compact />
               <CartButton />
             </div>
           </div>
@@ -129,10 +131,11 @@ export function StoreChrome({
             </form>
             <Link
               href={storePath(slug, "account")}
-              className="px-3 py-2 text-xs font-semibold text-text-dim hover:text-accent"
+              className="min-h-11 px-3 py-2 text-xs font-semibold text-text-dim hover:text-accent"
             >
               {t.account}
             </Link>
+            <ThemeToggle compact />
             <CartButton />
           </div>
         </div>
@@ -158,7 +161,7 @@ export function StoreChrome({
             </Link>
             <Link
               href={storePath(slug, "account")}
-              className="block py-2 text-sm text-text-dim"
+              className="block min-h-11 py-2 text-sm text-text-dim"
               onClick={() => setOpen(false)}
             >
               {t.account}

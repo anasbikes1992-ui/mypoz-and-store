@@ -2,6 +2,8 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY, isSupabaseEnabled } from "@/lib/supabase/config";
 import { getRepository } from "@/lib/server/repositories";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import { computeDiscount, normalizeCode, type DiscountCodeRecord } from "@/lib/commerce/discount-codes";
 import { readSettings } from "./settings-store";
 import { readWebsite } from "./website-store";
 import { createClickCollect } from "./click-collect-store";
@@ -9,6 +11,7 @@ import { createOrderFromStorefront } from "./delivery-store";
 import { saveStorefrontWebOrder, findStorefrontOrderBySaleOrReceipt, updateStorefrontWebOrder } from "./storefront-orders-store";
 import { readPublishedStore } from "./commerce-store";
 import { quoteDelivery } from "@/lib/commerce/delivery";
+import { upsertPosCustomer } from "./pos-customer-link";
 import {
   slugify,
   type StorefrontInfo,
@@ -25,6 +28,94 @@ function anonClient() {
   return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+}
+
+function useServiceLedger(): boolean {
+  return isSupabaseEnabled && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function resolveStorefrontOrgId(key: StorefrontKey): Promise<string> {
+  if (!useServiceLedger()) throw new Error("Service ledger unavailable");
+  const db = createServiceSupabase();
+  const { data, error } = await (db as any).rpc("storefront_by_host", {
+    p_host: key.host ?? "",
+    p_slug: key.slug ?? "",
+  });
+  if (error) throw new Error(error.message);
+  const row = data as { org_id?: string | null } | null;
+  const orgId = row?.org_id ?? null;
+  if (!orgId) throw new Error("Could not resolve storefront org_id");
+  return orgId;
+}
+
+async function validateDiscountCodeServiceOrg(opts: {
+  orgId: string;
+  code: string;
+  subtotal: number;
+}): Promise<
+  | { ok: true; discount: number; code: string; id: string }
+  | { ok: false; error: string }
+> {
+  const needle = normalizeCode(opts.code);
+  const db = createServiceSupabase();
+  const { data, error } = await db
+    .from("app_collections")
+    .select("data")
+    .eq("org_id", opts.orgId)
+    .eq("collection", "discount_codes")
+    .limit(200);
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as { data?: Record<string, unknown> }[];
+  const match = rows
+    .map((r) => r.data ?? null)
+    .filter((r): r is Record<string, unknown> => Boolean(r))
+    .find((d) => normalizeCode(String(d.code ?? "")) === needle);
+
+  if (!match) return { ok: false, error: "Unknown discount code" };
+  const rec: DiscountCodeRecord = {
+    id: String((match as Record<string, unknown>).id ?? ""),
+    code: String(match.code ?? ""),
+    kind: (String(match.kind ?? "fixed") === "percent" ? "percent" : "fixed") as
+      | "percent"
+      | "fixed",
+    amount: Number(match.amount ?? 0) || 0,
+    minSubtotal: Number((match as Record<string, unknown>).minSubtotal ?? 0) || 0,
+    maxUses: Number((match as Record<string, unknown>).maxUses ?? 0) || 0,
+    usedCount: Number((match as Record<string, unknown>).usedCount ?? 0) || 0,
+    expiry: String(match.expiry ?? ""),
+    status: String(match.status ?? "active"),
+  };
+  const computed = computeDiscount(rec, opts.subtotal);
+  if (!computed.ok) return { ok: false, error: computed.error };
+  return { ok: true, discount: computed.discount, code: rec.code, id: rec.id ?? "" };
+}
+
+async function consumeDiscountCodeServiceOrg(opts: {
+  orgId: string;
+  id: string | undefined;
+}): Promise<void> {
+  if (!opts.id) return;
+  const db = createServiceSupabase();
+  const { data: existing, error } = await db
+    .from("app_collections")
+    .select("data")
+    .eq("org_id", opts.orgId)
+    .eq("collection", "discount_codes")
+    .eq("entity_id", opts.id)
+    .maybeSingle<{ data?: Record<string, unknown> }>();
+  if (error) throw new Error(error.message);
+  if (!existing?.data) return;
+
+  const prev = Number((existing.data as Record<string, unknown>).usedCount ?? 0) || 0;
+  const nextData = { ...(existing.data as Record<string, unknown>), usedCount: prev + 1 };
+  const { error: upErr } = await db
+    .from("app_collections")
+    .update({ data: nextData })
+    .eq("org_id", opts.orgId)
+    .eq("collection", "discount_codes")
+    .eq("entity_id", opts.id);
+  if (upErr) throw new Error(upErr.message);
 }
 
 export interface StorefrontKey {
@@ -56,7 +147,7 @@ function localInfo(
 /** True when the product should appear on the public catalog (local path). */
 export function isOnlineVisible(p: Product): boolean {
   const flag = (p as Product & { onlineVisible?: boolean }).onlineVisible;
-  // Demo JSON products rarely set the flag — treat unset as visible.
+  // Unset means visible on the local JSON backend (empty seed + overrides).
   return flag !== false;
 }
 
@@ -118,6 +209,10 @@ export async function getStorefrontCatalog(
   const size = Math.min(Math.max(q.size ?? 24, 1), 100);
 
   const fallbackCatalog = async (): Promise<StoreCatalog> => {
+    if (isSupabaseEnabled) {
+      throw new Error("STORE: storefront_catalog RPC failed in fail-closed mode");
+    }
+    // Local demo fallback (only used when Supabase is disabled).
     const repo = await getRepository();
     const pPage = await repo.queryProducts({
       pageSize: 500,
@@ -169,11 +264,12 @@ export async function getStorefrontCatalog(
       p_size: size,
     });
     if (error || !data) {
-      return fallbackCatalog();
+      return { items: [], total: 0, page, size, categories: [] };
     }
     return data as StoreCatalog;
   } catch {
-    return fallbackCatalog();
+    // Fail closed: never serve local JSON. Empty catalog is safe for prerender.
+    return { items: [], total: 0, page, size, categories: [] };
   }
 }
 
@@ -182,6 +278,9 @@ export async function getStorefrontProduct(
   productSlug: string,
 ): Promise<StoreProduct | null> {
   const fallbackProduct = async (): Promise<StoreProduct | null> => {
+    if (isSupabaseEnabled) {
+      throw new Error("STORE: storefront_product RPC failed in fail-closed mode");
+    }
     const repo = await getRepository();
     const pPage = await repo.queryProducts({ pageSize: 500 });
     const match = pPage.items
@@ -212,12 +311,10 @@ export async function getStorefrontProduct(
       p_slug: key.slug,
       p_product: productSlug,
     });
-    if (error || !data) {
-      return fallbackProduct();
-    }
+    if (error || !data) return null;
     return data as StoreProduct;
   } catch {
-    return fallbackProduct();
+    return null;
   }
 }
 
@@ -249,11 +346,11 @@ export async function getStorefrontProductVariants(
       p_slug: key.slug,
       p_product: product.slug,
     });
-    if (error || !data) return fromLocal();
+    if (error || !data) return [];
     const rows = data as StoreProductVariant[];
-    return Array.isArray(rows) ? rows : fromLocal();
+    return Array.isArray(rows) ? rows : [];
   } catch {
-    return fromLocal();
+    return [];
   }
 }
 
@@ -305,49 +402,161 @@ export async function placeStorefrontOrder(
     throw new Error("ORDER: fulfilment mode is not available");
   }
 
-  const repo = await getRepository();
-  const productsPage = await repo.queryProducts({ pageSize: 500 });
-  const visible = productsPage.items.filter(isOnlineVisible);
-  const allVariants = await listVariants();
+  let repo: Awaited<ReturnType<typeof getRepository>> | null = null;
 
-  const resolvedLines = input.lines.map((line) => {
-    const parsed = parseCommerceLineId(line.productId);
-    const productId = parsed.productId;
-    const variantId = line.variantId ?? parsed.variantId;
-    const matched = visible.find(
-      (p) =>
-        p.id === productId ||
-        p.barcodes?.includes(productId) ||
-        slugify(p.name) === productId,
-    );
-    if (!matched) {
-      throw new Error(`PRODUCT: ${line.productId} is not available online`);
-    }
-    const productVariants = allVariants.filter(
-      (v) => String(v.productId) === String(matched.id) && v.isActive,
-    );
-    let variant = variantId
-      ? productVariants.find((v) => v.id === variantId)
-      : parsed.variantSku
-        ? productVariants.find((v) => v.sku === parsed.variantSku)
-        : undefined;
-    if (productVariants.length > 0 && !variant) {
-      throw new Error(`VARIANT: ${matched.name} requires a variant`);
-    }
-    const unitPrice = variant?.salePrice ?? matched.salePrice;
-    const displayName = variant
-      ? `${matched.name} — ${variant.title}`
-      : matched.name;
-    return {
-      productId: matched.id,
-      variantId: variant?.id ?? null,
-      variantSku: variant?.sku ?? null,
-      name: displayName,
-      unitPrice,
-      quantity: Math.max(1, Number(line.quantity) || 1),
-      discount: 0,
-    };
-  });
+  const resolvedLines = isSupabaseEnabled
+    ? await (async () => {
+        // Resolve products/variants for anonymous shoppers using the public
+        // storefront RPCs. In fail-closed mode we never fall back to local JSON.
+        const uniqueProductIds = [
+          ...new Set(input.lines.map((l) => String(l.productId))),
+        ];
+        const missing = new Set(uniqueProductIds);
+
+        const productsById = new Map<string, StoreProduct>();
+        const maxPages = 20; // 20 * 100 items = 2000 products max lookup per checkout.
+        for (let p = 1; p <= maxPages && missing.size > 0; p += 1) {
+          const { data, error } = await anonClient().rpc("storefront_catalog", {
+            p_host: key.host,
+            p_slug: key.slug,
+            p_search: null,
+            p_category: null,
+            p_page: p,
+            p_size: 100,
+          });
+          if (error || !data) {
+            throw new Error(
+              error?.message ?? "ORDER: storefront_catalog lookup failed",
+            );
+          }
+          const catalog = data as StoreCatalog;
+          for (const item of catalog.items) {
+            if (missing.has(item.id)) {
+              productsById.set(item.id, item);
+              missing.delete(item.id);
+            }
+          }
+        }
+
+        if (missing.size > 0) {
+          throw new Error(
+            "ORDER: selected product is currently unavailable for online order",
+          );
+        }
+
+        // Fetch variants for each product slug returned by the catalog.
+        const variantMapsByProductId = new Map<
+          string,
+          Map<string, StoreProductVariant>
+        >();
+        for (const product of productsById.values()) {
+          const { data, error } = await anonClient().rpc(
+            "storefront_product_variants",
+            {
+              p_host: key.host,
+              p_slug: key.slug,
+              p_product: product.slug,
+            },
+          );
+          if (error || !data) {
+            throw new Error(
+              error?.message ?? "ORDER: storefront variants lookup failed",
+            );
+          }
+          const variants = (Array.isArray(data) ? data : []) as StoreProductVariant[];
+          variantMapsByProductId.set(
+            product.id,
+            new Map(variants.map((v) => [v.id, v])),
+          );
+        }
+
+        return input.lines.map((line) => {
+          const product = productsById.get(String(line.productId));
+          if (!product) {
+            throw new Error(
+              `PRODUCT: ${line.productId} is not available online`,
+            );
+          }
+
+          const variantId = line.variantId ?? null;
+          const variantsMap = variantMapsByProductId.get(product.id) ?? new Map();
+          const variant = variantId ? variantsMap.get(variantId) : null;
+
+          // When a product has variants, a variantId is required for checkout.
+          if (variantsMap.size > 0 && !variantId) {
+            throw new Error(`VARIANT: ${product.name} requires a variant`);
+          }
+          if (variantId && !variant) {
+            throw new Error(`VARIANT: selected variant is not available`);
+          }
+
+          const unitPrice = variant?.price ?? product.price;
+          const displayName = variant
+            ? `${product.name} — ${variant.title}`
+            : product.name;
+
+          return {
+            productId: product.id,
+            variantId: variant?.id ?? null,
+            variantSku: variant?.sku ?? null,
+            name: displayName,
+            unitPrice,
+            quantity: Math.max(1, Number(line.quantity) || 1),
+            discount: 0,
+          };
+        });
+      })()
+    : await (async () => {
+        // Local demo path (Supabase disabled): legacy repository resolution.
+        repo = await getRepository();
+        const productsPage = await repo.queryProducts({ pageSize: 500 });
+        const visible = productsPage.items.filter(isOnlineVisible);
+        const allVariants = await listVariants();
+
+        return input.lines.map((line) => {
+          const parsed = parseCommerceLineId(line.productId);
+          const productId = parsed.productId;
+          const variantId = line.variantId ?? parsed.variantId;
+          const matched = visible.find(
+            (p) =>
+              p.id === productId ||
+              p.barcodes?.includes(productId) ||
+              slugify(p.name) === productId,
+          );
+          if (!matched) {
+            throw new Error(`PRODUCT: ${line.productId} is not available online`);
+          }
+
+          const productVariants = allVariants.filter(
+            (v) => String(v.productId) === String(matched.id) && v.isActive,
+          );
+
+          const variant = variantId
+            ? productVariants.find((v) => v.id === variantId) ?? undefined
+            : parsed.variantSku
+              ? productVariants.find((v) => v.sku === parsed.variantSku)
+              : undefined;
+
+          if (productVariants.length > 0 && !variant) {
+            throw new Error(`VARIANT: ${matched.name} requires a variant`);
+          }
+
+          const unitPrice = variant?.salePrice ?? matched.salePrice;
+          const displayName = variant
+            ? `${matched.name} — ${variant.title}`
+            : matched.name;
+
+          return {
+            productId: matched.id,
+            variantId: variant?.id ?? null,
+            variantSku: variant?.sku ?? null,
+            name: displayName,
+            unitPrice,
+            quantity: Math.max(1, Number(line.quantity) || 1),
+            discount: 0,
+          };
+        });
+      })();
 
   // Map storefront payment modes onto POS sale methods (card stays card; bank → cash pending).
   const salePayment: "cash" | "card" =
@@ -372,17 +581,32 @@ export async function placeStorefrontOrder(
   let finalDiscount = 0;
   let discountCodeId: string | undefined;
   if (input.discountCode) {
-    const { validateDiscountCode, consumeDiscountCode } = await import(
-      "@/lib/server/discount-codes"
-    );
-    const applied = await validateDiscountCode(input.discountCode, lineTotal);
-    if (!applied.ok) {
-      throw new Error(`ORDER: ${applied.error}`);
-    }
-    finalDiscount = applied.discount;
-    discountCodeId = applied.id;
-    if (!isCardPending) {
-      await consumeDiscountCode(discountCodeId);
+    if (isSupabaseEnabled && useServiceLedger()) {
+      const orgId = await resolveStorefrontOrgId(key);
+      const applied = await validateDiscountCodeServiceOrg({
+        orgId,
+        code: input.discountCode,
+        subtotal: lineTotal,
+      });
+      if (!applied.ok) throw new Error(`ORDER: ${applied.error}`);
+      finalDiscount = applied.discount;
+      discountCodeId = applied.id;
+      if (!isCardPending) {
+        await consumeDiscountCodeServiceOrg({ orgId, id: discountCodeId });
+      }
+    } else {
+      const { validateDiscountCode, consumeDiscountCode } = await import(
+        "@/lib/server/discount-codes"
+      );
+      const applied = await validateDiscountCode(input.discountCode, lineTotal);
+      if (!applied.ok) {
+        throw new Error(`ORDER: ${applied.error}`);
+      }
+      finalDiscount = applied.discount;
+      discountCodeId = applied.id;
+      if (!isCardPending) {
+        await consumeDiscountCode(discountCodeId);
+      }
     }
   }
   const payable = Math.max(0, quote.total - finalDiscount);
@@ -397,38 +621,81 @@ export async function placeStorefrontOrder(
     saleId = receiptNo;
     total = payable;
   } else {
-    const sale = await repo.createSale({
-      paymentMethod: salePayment,
-      lines: resolvedLines.map((l) => ({
-        productId: l.productId,
-        quantity: l.quantity,
-        discount: 0,
-        variantId: l.variantId,
-        variantSku: l.variantSku,
-        name: l.name,
-        unitPrice: l.unitPrice,
-      })),
-      customerName: input.customerName,
-      customerMobile: input.customerMobile,
-      clientUuid: input.clientUuid,
-      cashReceived: payable,
-      status: "completed",
-      source: "ONLINE_STORE",
-      channel: "storefront",
-      fulfillmentStatus: input.fulfilment === "pickup" ? "ready" : "pending",
-      paymentStatus: "paid",
-      deliveryAddress: input.address,
-      deliveryFee: quote.deliveryFee,
-      codFee: quote.codFee,
-      serviceCharge: quote.deliveryFee + quote.codFee,
-      finalDiscount,
-    });
-    const s = sale as unknown as Record<string, unknown>;
-    receiptNo =
-      (s.receiptNo as string) || (s.receipt_no as string) || sale.id;
-    saleId = sale.id;
-    total = Number(sale.total || 0);
+    if (isSupabaseEnabled) {
+      const { data, error } = await anonClient().rpc("storefront_create_order", {
+        p_host: key.host,
+        p_slug: key.slug,
+        p_payload: {
+          customerName: input.customerName,
+          customerMobile: input.customerMobile,
+          clientUuid: input.clientUuid,
+          address: input.address,
+          fulfilment: input.fulfilment,
+          paymentMethod: input.paymentMethod,
+          deliveryFee: quote.deliveryFee,
+          codFee: quote.codFee,
+          final_discount: finalDiscount,
+          lines: resolvedLines.map((l) => ({
+            productId: l.productId,
+            quantity: l.quantity,
+            variantId: l.variantId,
+          })),
+        },
+      });
+      if (error || !data) {
+        throw new Error(error?.message ?? "ORDER: storefront_create_order failed");
+      }
+      const s = data as Record<string, unknown>;
+      receiptNo =
+        (s.receipt_no as string) ||
+        (s.receiptNo as string) ||
+        String(s.id ?? ""); // fallback
+      saleId = String(s.id ?? receiptNo);
+      total = Number(s.total ?? payable);
+    } else {
+      if (!repo) throw new Error("Local repository missing");
+      const sale = await (repo as any).createSale({
+        paymentMethod: salePayment,
+        lines: resolvedLines.map((l) => ({
+          productId: l.productId,
+          quantity: l.quantity,
+          discount: 0,
+          variantId: l.variantId,
+          variantSku: l.variantSku,
+          name: l.name,
+          unitPrice: l.unitPrice,
+        })),
+        customerName: input.customerName,
+        customerMobile: input.customerMobile,
+        clientUuid: input.clientUuid,
+        cashReceived: payable,
+        status: "completed",
+        source: "ONLINE_STORE",
+        channel: "storefront",
+        fulfillmentStatus: input.fulfilment === "pickup" ? "ready" : "pending",
+        paymentStatus: "paid",
+        deliveryAddress: input.address,
+        deliveryFee: quote.deliveryFee,
+        codFee: quote.codFee,
+        serviceCharge: quote.deliveryFee + quote.codFee,
+        finalDiscount,
+      });
+      const s = sale as unknown as Record<string, unknown>;
+      receiptNo =
+        (s.receiptNo as string) || (s.receipt_no as string) || sale.id;
+      saleId = sale.id;
+      total = Number(sale.total || 0);
+    }
   }
+
+  // Unify: link storefront shopper into the shared POS customers table so
+  // counter staff and reports see one customer, not two separate stores.
+  void upsertPosCustomer({
+    name: input.customerName,
+    email: input.customerEmail ?? null,
+    mobile: input.customerMobile,
+  }).catch(() => {/* best-effort — never block the order response */});
+
   const itemsSummary = resolvedLines
     .map((l) => `${l.name} × ${l.quantity}`)
     .join("\n");
@@ -483,7 +750,8 @@ export async function placeStorefrontOrder(
     }
   }
 
-  await saveStorefrontWebOrder({
+  await saveStorefrontWebOrder(
+    {
     receiptNo,
     saleId,
     slug: key.slug || "main-store",
@@ -512,7 +780,9 @@ export async function placeStorefrontOrder(
     boardId,
     boardKind,
     pendingPayment: isCardPending,
-  });
+    },
+    { host: key.host, slug: key.slug },
+  );
 
   return { id: saleId, receiptNo, total, boardId, boardKind, pendingPayment: isCardPending };
 }

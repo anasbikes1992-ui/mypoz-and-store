@@ -1,5 +1,5 @@
 import { getRepository } from "@/lib/server/repositories";
-import { formatMoney, formatDateTime } from "@/lib/format";
+import { formatMoney, formatMoneyCompact, formatDateTime } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 
@@ -21,29 +21,35 @@ export default async function DashboardPage() {
         <StatCard
           index={0}
           label="Today's revenue"
-          value={formatMoney(sales.todayRevenue)}
+          value={formatMoneyCompact(sales.todayRevenue)}
           hint={`${sales.todayCount} sales today`}
         />
         <StatCard
           index={1}
           label="Total revenue"
-          value={formatMoney(sales.totalRevenue)}
+          value={formatMoneyCompact(sales.totalRevenue)}
           hint={`${sales.totalCount} sales all-time`}
           tone="info"
         />
         <StatCard
           index={2}
           label="Stock value (cost)"
-          value={formatMoney(inv.stockValue)}
-          hint={`${inv.productCount.toLocaleString()} products`}
+          value={inv.stockValue > 0 ? formatMoneyCompact(inv.stockValue) : "—"}
+          hint={inv.stockValue > 0
+            ? `${inv.productCount.toLocaleString()} products`
+            : `${inv.productCount.toLocaleString()} products · add cost prices`}
           tone="accent"
         />
         <StatCard
           index={3}
           label="Attention needed"
-          value={`${inv.lowStock} low`}
-          hint={`${inv.expired} expired items`}
-          tone={inv.expired > 0 ? "danger" : "warn"}
+          value={inv.expired > 0 ? `${inv.expired} expired` : inv.lowStock > 0 ? `${inv.lowStock} low` : "All good"}
+          hint={inv.expired > 0
+            ? `${inv.expired} expired · ${inv.lowStock} low stock`
+            : inv.lowStock > 0
+              ? `${inv.lowStock} of ${inv.productCount} products below 6 units`
+              : "Stock levels look healthy"}
+          tone={inv.expired > 0 ? "danger" : inv.lowStock > 0 ? "warn" : "accent"}
         />
       </div>
 

@@ -90,9 +90,10 @@ export const MODULE_GROUPS: ModuleGroup[] = [
   {
     label: "Online store",
     tiles: [
+      { key: "commerce-onboarding", title: "Launch store", subtitle: "Products → theme → COD → publish", icon: "🚀", href: "/commerce/onboarding", status: "active" },
       { key: "commerce", title: "Store overview", subtitle: "Sales, orders, live stock", icon: "🛍️", href: "/commerce", status: "active" },
       { key: "commerce-builder", title: "Store builder", subtitle: "Pages · sections · publish", icon: "🧩", href: "/commerce/builder", status: "active" },
-      { key: "commerce-themes", title: "Themes", subtitle: "Six original looks", icon: "🎨", href: "/commerce/themes", status: "active" },
+      { key: "commerce-themes", title: "Theme marketplace", subtitle: "Official MyPoz looks", icon: "🎨", href: "/commerce/themes", status: "active" },
       { key: "commerce-orders", title: "Online orders", subtitle: "Same inventory as POS", icon: "📦", href: "/commerce/orders", status: "active" },
       { key: "commerce-analytics", title: "Store analytics", subtitle: "Visitors to purchase", icon: "📉", href: "/commerce/analytics", status: "active" },
       { key: "commerce-collections", title: "Collections", subtitle: "Smart rules from POS stock", icon: "🗂️", href: "/commerce/collections", status: "active" },
@@ -114,6 +115,8 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "assistant", title: "Jarvis", subtitle: "Shop AI agents", icon: "✦", href: "/assistant", status: "active" },
       { key: "display", title: "Customer display", subtitle: "Second screen total", icon: "🖥️", href: "/display", status: "active" },
       { key: "privacy", title: "Privacy purge", subtitle: "PII retention", icon: "🧹", href: "/privacy", status: "active" },
+      { key: "billing", title: "Billing", subtitle: "Plan, expiry, upgrade", icon: "💳", href: "/billing", status: "active" },
+      { key: "observability", title: "Session replay", subtitle: "Errors and rage clicks", icon: "🎬", href: "/observability", status: "active" },
       { key: "backup", title: "Backup", subtitle: "Download tenant JSON", icon: "💾", href: "/api/backup", status: "active" },
       { key: "help", title: "Help & guides", subtitle: "Notes & videos", icon: "📣", href: "/help", status: "active" },
     ],

@@ -126,12 +126,21 @@ export async function POST(
   }
 }
 
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
 function cleanMessage(message: string): string {
   if (message.includes("invalid input syntax for type uuid") || message.includes("Invalid UUID")) {
-    return "Selected product is currently unavailable for online order. Please try another product.";
+    return "A product in your cart is no longer available online. Please remove it and try again.";
   }
-  const known = /^(PRODUCT|STOCK|ORDER|STOREFRONT|QTY|CASH|SALE|BRANCH|AUTH):\s*/;
-  if (!known.test(message)) return message.length < 80 ? message : "Order could not be placed. Please try again.";
-  const text = message.replace(known, "");
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  const known = /^(PRODUCT|STOCK|ORDER|STOREFRONT|QTY|CASH|SALE|BRANCH|AUTH|VARIANT):\s*/;
+  let text = known.test(message) ? message.replace(known, "") : message;
+
+  // Replace any raw UUIDs with a friendly placeholder so internal IDs never leak.
+  text = text.replace(UUID_RE, "a product");
+
+  // Replace generic "is not available online" with a cleaner phrase.
+  text = text.replace(/\s*is not available online/i, " is not available for online purchase");
+
+  const clean = text.charAt(0).toUpperCase() + text.slice(1);
+  return clean.length > 0 && clean.length < 160 ? clean : "Order could not be placed. Please try again.";
 }

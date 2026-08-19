@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { MODULE_GROUPS, type ModuleTile } from "@/lib/modules";
+import { VERTICAL_KEYS } from "@/lib/plans";
 import { useBrand } from "@/components/brand/BrandProvider";
 import {
   fadeUp,
@@ -32,15 +33,23 @@ export function Launcher() {
             {businessName}
           </h1>
           <p className="mt-1 max-w-xl text-sm text-text-dim">
-            Choose a sale mode, a business tool, or open your online store.
+            First hour: publish the store, then sell at the counter. Extra verticals stay hidden until they are on the plan.
           </p>
         </div>
-        <Link
-          href="/pos"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-accent-ink shadow-[0_4px_14px_-4px_color-mix(in_oklch,var(--accent)_55%,transparent)] transition duration-150 ease-out hover:bg-accent-strong sm:w-auto"
-        >
-          Open retail terminal
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link
+            href="/commerce/onboarding"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-line px-5 text-sm font-semibold text-text-strong transition hover:border-accent hover:text-accent sm:w-auto"
+          >
+            Launch online store
+          </Link>
+          <Link
+            href="/pos"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-accent px-5 text-sm font-semibold text-accent-ink shadow-[0_4px_14px_-4px_color-mix(in_oklch,var(--accent)_55%,transparent)] transition duration-150 ease-out hover:bg-accent-strong sm:w-auto"
+          >
+            Open retail terminal
+          </Link>
+        </div>
       </motion.div>
 
       {MODULE_GROUPS.map((group) => (
@@ -54,7 +63,18 @@ export function Launcher() {
             animate="show"
             className="grid grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-3 lg:grid-cols-4"
           >
-            {group.tiles.map((tile) => {
+            {group.tiles
+              .filter((tile) => {
+                if (loading) return true;
+                if (!enabledKeys.has(tile.key) && VERTICAL_KEYS.includes(tile.key)) {
+                  return false;
+                }
+                if (tile.key === "website" && !enabledKeys.has("website")) {
+                  return false;
+                }
+                return true;
+              })
+              .map((tile) => {
               const tint = tileTint(tintIndex++);
               return (
                 <Tile

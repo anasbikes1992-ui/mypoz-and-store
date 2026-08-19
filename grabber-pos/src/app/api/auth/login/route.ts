@@ -16,6 +16,22 @@ import {
  */
 
 export async function POST(req: NextRequest) {
+  // Hard rule: demo credential login must not run on production deploys
+  // unless explicitly opted-in.
+  if (
+    process.env.NODE_ENV === "production" &&
+    !isSupabaseEnabled &&
+    process.env.POS_ALLOW_DEMO !== "true"
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Demo password login is disabled in production.",
+      },
+      { status: 403 },
+    );
+  }
+
   if (isSupabaseEnabled) {
     return NextResponse.json(
       {

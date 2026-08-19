@@ -109,6 +109,12 @@ export const HQ_DOC_PAGES = [
     blurb: "Env, migrations, and go-live checklist.",
     docPath: "docs/PRODUCTION.md",
   },
+  {
+    slug: "ddos-waf",
+    title: "DDoS and WAF",
+    blurb: "Cloudflare in front, Vercel edge, application WAF and IP bans.",
+    docPath: "docs/DDOS_AND_WAF.md",
+  },
 ] as const;
 
 export function licenceStatus(
