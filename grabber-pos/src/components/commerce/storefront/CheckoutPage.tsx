@@ -14,6 +14,9 @@ import {
 import type { StoreConfig } from "@/lib/commerce/schema";
 import { storeCopy } from "@/lib/commerce/i18n";
 
+const MAX_LOCATION_LEN = 300;
+const MAX_ADDRESS_LEN = 500;
+
 export function CheckoutPage({
   slug,
   businessName,
@@ -34,7 +37,12 @@ export function CheckoutPage({
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [locationUrl, setLocationUrl] = useState("");
   const [pickupNote, setPickupNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMode>(
     website.paymentModes[0] || "cash",
@@ -51,6 +59,18 @@ export function CheckoutPage({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  const safeLocation = locationUrl.trim();
+  const composedAddress = [
+    addressLine1.trim(),
+    addressLine2.trim(),
+    landmark.trim() ? `Landmark: ${landmark.trim()}` : "",
+    [city.trim(), postalCode.trim()].filter(Boolean).join(" "),
+    safeLocation ? `Location: ${safeLocation}` : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   const isPickup = fulfilment === "pickup";
   const subtotal = total;
@@ -67,6 +87,18 @@ export function CheckoutPage({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!lines.length) return;
+    if (!isPickup) {
+      if (safeLocation.length > MAX_LOCATION_LEN) {
+        setError(`Location link is too long. Keep it under ${MAX_LOCATION_LEN} characters.`);
+        return;
+      }
+      if (composedAddress.length > MAX_ADDRESS_LEN) {
+        setError(
+          `Address details are too long (${composedAddress.length}/${MAX_ADDRESS_LEN}). Please shorten line 2 or landmark.`,
+        );
+        return;
+      }
+    }
     setBusy(true);
     setError(null);
     try {
@@ -77,7 +109,7 @@ export function CheckoutPage({
           customerName: name,
           customerMobile: mobile,
           customerEmail: email || undefined,
-          address: isPickup ? pickupNote || "Store pickup" : address,
+          address: isPickup ? pickupNote || "Store pickup" : composedAddress,
           pickupNote: isPickup ? pickupNote : undefined,
           paymentMethod,
           paymentReference:
@@ -165,7 +197,7 @@ export function CheckoutPage({
   if (receipt) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--tint-green)_15%,transparent)] text-2xl text-[var(--tint-green)]">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--tint-green)_15%,transparent)] text-2xl text-tint-green">
           ✓
         </div>
         <h1 className="mt-4 text-xl font-bold">{copy.orderConfirmed}</h1>
@@ -187,28 +219,37 @@ export function CheckoutPage({
       <form onSubmit={submit} className="space-y-4 lg:col-span-3">
         <h1 className="text-2xl font-bold">{copy.checkout}</h1>
 
-        <input
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name"
-          className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
-        />
-        <input
+        <label className="block space-y-1.5">
+          <span className="text-xs font-semibold uppercase text-text-dim">Full name</span>
+          <input
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-semibold uppercase text-text-dim">Mobile</span>
+          <input
           required
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
           placeholder="Mobile number"
           inputMode="tel"
           className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
-        />
-        <input
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-semibold uppercase text-text-dim">Email (optional)</span>
+          <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email (optional)"
           className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
-        />
+          />
+        </label>
 
         <fieldset>
           <legend className="mb-2 text-xs font-semibold uppercase text-text-dim">
@@ -260,14 +301,101 @@ export function CheckoutPage({
             className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
           />
         ) : (
-          <textarea
-            required
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Delivery address"
-            rows={3}
-            className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
-          />
+          <div className="space-y-3">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold uppercase text-text-dim">Address line 1</span>
+              <input
+                required
+                value={addressLine1}
+                onChange={(e) => setAddressLine1(e.target.value)}
+                placeholder="No., street, area"
+                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold uppercase text-text-dim">Address line 2 (optional)</span>
+              <input
+                value={addressLine2}
+                onChange={(e) => setAddressLine2(e.target.value)}
+                placeholder="Apartment, floor, unit, etc."
+                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+              />
+            </label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold uppercase text-text-dim">City</span>
+                <input
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="City"
+                  className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold uppercase text-text-dim">Postal code</span>
+                <input
+                  value={postalCode}
+                  onChange={(e) => setPostalCode(e.target.value)}
+                  placeholder="Postal code"
+                  className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+                />
+              </label>
+            </div>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold uppercase text-text-dim">Landmark (optional)</span>
+              <input
+                value={landmark}
+                onChange={(e) => setLandmark(e.target.value)}
+                placeholder="Nearby landmark for easier delivery"
+                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+              />
+            </label>
+            <div className="rounded-xl border border-line bg-surface-2/60 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase text-text-dim">Location picker (optional)</p>
+                <button
+                  type="button"
+                  disabled={locating}
+                  className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-text-body disabled:opacity-60"
+                  onClick={() => {
+                    setError(null);
+                    if (!navigator.geolocation) {
+                      setError("Location is not supported on this device.");
+                      return;
+                    }
+                    setLocating(true);
+                    navigator.geolocation.getCurrentPosition(
+                      ({ coords }) => {
+                        const url = `https://maps.google.com/?q=${coords.latitude},${coords.longitude}`;
+                        setLocationUrl(url);
+                        setLocating(false);
+                      },
+                      () => {
+                        setError("Could not fetch location. You can still type your address manually.");
+                        setLocating(false);
+                      },
+                      { enableHighAccuracy: true, timeout: 10000 },
+                    );
+                  }}
+                >
+                  {locating ? "Getting location..." : "Use my current location"}
+                </button>
+              </div>
+              <input
+                value={locationUrl}
+                onChange={(e) => setLocationUrl(e.target.value)}
+                placeholder="Paste Google Maps pin URL (optional)"
+                className="mt-2 w-full rounded-lg border border-line bg-surface-1 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-[11px] text-text-dim">
+                {safeLocation.length}/{MAX_LOCATION_LEN} characters
+              </p>
+            </div>
+            <p className="text-[11px] text-text-dim">
+              Combined delivery address: {composedAddress.length}/{MAX_ADDRESS_LEN}
+            </p>
+          </div>
         )}
 
         <fieldset>
@@ -341,7 +469,7 @@ export function CheckoutPage({
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-xl bg-[var(--tint-green)] py-3.5 text-sm font-bold text-white disabled:opacity-50"
+          className="w-full rounded-xl bg-tint-green py-3.5 text-sm font-bold text-accent-ink disabled:opacity-50"
         >
           {busy ? "Placing order…" : `Place order — ${formatMoney(orderTotal)}`}
         </button>
@@ -371,7 +499,7 @@ export function CheckoutPage({
             </div>
           )}
           {freeApplied && (
-            <p className="text-xs text-[var(--tint-green)]">Free delivery applied</p>
+            <p className="text-xs text-tint-green">Free delivery applied</p>
           )}
           {discount > 0 && (
             <div className="flex justify-between">
@@ -387,7 +515,7 @@ export function CheckoutPage({
           )}
           <div className="flex justify-between pt-2 text-base font-bold">
             <dt>Total</dt>
-            <dd className="tabular-nums text-[var(--tint-green)]">
+            <dd className="tabular-nums text-tint-green">
               {formatMoney(orderTotal)}
             </dd>
           </div>

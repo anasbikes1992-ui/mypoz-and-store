@@ -8,7 +8,12 @@ import { readSettings } from "./settings-store";
 import { readWebsite } from "./website-store";
 import { createClickCollect } from "./click-collect-store";
 import { createOrderFromStorefront } from "./delivery-store";
-import { saveStorefrontWebOrder, findStorefrontOrderBySaleOrReceipt, updateStorefrontWebOrder } from "./storefront-orders-store";
+import {
+  saveStorefrontWebOrder,
+  findStorefrontOrderBySaleOrReceipt,
+  updateStorefrontWebOrder,
+  assertNoLocalFallbackForPublicOrders,
+} from "./storefront-orders-store";
 import { readPublishedStore } from "./commerce-store";
 import { quoteDelivery } from "@/lib/commerce/delivery";
 import { upsertPosCustomer } from "./pos-customer-link";
@@ -391,6 +396,10 @@ export async function placeStorefrontOrder(
   boardKind: "click-collect" | "delivery" | null;
   pendingPayment?: boolean;
 }> {
+  // Fail early before we commit a sale if the service-role ledger is required
+  // for storefront order persistence but is not configured.
+  assertNoLocalFallbackForPublicOrders();
+
   const website = await readWebsite();
   if (!website.enabled) {
     throw new Error("STOREFRONT: online ordering is disabled");

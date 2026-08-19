@@ -105,7 +105,7 @@ export default function DeliveryPage() {
                   {o.address || "No address"} {o.phone ? `· ${o.phone}` : ""}
                 </p>
                 {(o.source === "storefront" || o.fulfilment || o.receiptNo) && (
-                  <p className="mt-1 text-[11px] font-medium text-[var(--tint-teal)]">
+                  <p className="mt-1 text-[11px] font-medium text-tint-teal">
                     {o.source === "storefront" ? "Web order" : "Order"}
                     {o.fulfilment ? ` · ${o.fulfilment}` : ""}
                     {o.receiptNo ? ` · ${o.receiptNo}` : ""}

@@ -49,7 +49,7 @@ export default function StorefrontClient({
 
   return (
     <div className="font-sans">
-      <div className="bg-gradient-to-r from-[var(--tint-teal)] to-[var(--accent)] px-4 py-2 text-center text-xs font-semibold tracking-wide text-white">
+      <div className="bg-gradient-to-r from-tint-teal to-accent px-4 py-2 text-center text-xs font-semibold tracking-wide text-accent-ink">
         {announcement}
       </div>
 
@@ -90,7 +90,7 @@ export default function StorefrontClient({
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           className="relative mx-auto flex max-w-7xl flex-col gap-3 px-4 py-10 sm:py-14 lg:px-8"
         >
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--tint-teal)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-tint-teal">
             Official online store
           </p>
           <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-text-strong sm:text-4xl">
@@ -106,7 +106,7 @@ export default function StorefrontClient({
                 href={`https://wa.me/${wa}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex w-fit items-center gap-2 rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_35%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] px-4 py-2 text-xs font-semibold text-[var(--tint-teal)] transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
+                className="inline-flex w-fit items-center gap-2 rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_35%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] px-4 py-2 text-xs font-semibold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
               >
                 Order on WhatsApp
               </a>
@@ -290,7 +290,7 @@ function ProductCard({
           <span className="block text-[10px] font-medium uppercase tracking-wide text-text-dim">
             Price
           </span>
-          <span className="text-sm font-bold text-[var(--tint-green)]">
+          <span className="text-sm font-bold text-tint-green">
             {formatMoney(product.price)}
           </span>
         </div>

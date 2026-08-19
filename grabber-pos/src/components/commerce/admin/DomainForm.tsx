@@ -70,7 +70,7 @@ export function DomainForm({ initial }: { initial: StoreConfig }) {
         <h2 className="text-sm font-semibold">Custom domain</h2>
         <span
           className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-            connected ? "bg-[var(--tint-green)]/15 text-[var(--tint-green)]" : "bg-surface-2 text-text-dim"
+            connected ? "bg-tint-green/15 text-tint-green" : "bg-surface-2 text-text-dim"
           }`}
         >
           {connected ? "Connected" : "Pending"}

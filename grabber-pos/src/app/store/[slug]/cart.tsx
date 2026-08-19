@@ -222,7 +222,7 @@ export function AddToCartButton({
     <button
       type="button"
       onClick={() => add({ productId, name, price, variantId })}
-      className="rounded-lg bg-[var(--tint-green)] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:brightness-110 active:scale-[0.97]"
+      className="rounded-lg bg-tint-green px-3 py-1.5 text-xs font-bold text-accent-ink shadow-sm transition hover:brightness-110 active:scale-[0.97]"
     >
       Add
     </button>
@@ -368,7 +368,7 @@ function CartDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex justify-end bg-overlay backdrop-blur-sm">
       <div className="flex h-full w-full max-w-md flex-col border-l border-line bg-surface-1 shadow-2xl">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h1 className="font-semibold text-text-strong">
@@ -387,7 +387,7 @@ function CartDrawer({
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {step === "done" ? (
             <div className="space-y-3 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--tint-green)_15%,transparent)] text-2xl font-bold text-[var(--tint-green)]">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[color-mix(in_oklch,var(--tint-green)_15%,transparent)] text-2xl font-bold text-tint-green">
                 ✓
               </div>
               <p className="font-semibold text-text-strong">
@@ -421,7 +421,7 @@ function CartDrawer({
                     <p className="truncate text-sm font-medium text-text-strong">
                       {l.name}
                     </p>
-                    <p className="text-xs font-semibold text-[var(--tint-green)]">
+                    <p className="text-xs font-semibold text-tint-green">
                       {formatMoney(l.price)}
                     </p>
                   </div>
@@ -588,7 +588,7 @@ function CartDrawer({
           <div className="space-y-3 border-t border-line px-5 py-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-text-dim">Total</span>
-              <span className="text-lg font-bold text-[var(--tint-green)]">
+              <span className="text-lg font-bold text-tint-green">
                 {formatMoney(total)}
               </span>
             </div>
@@ -607,7 +607,7 @@ function CartDrawer({
                     href={waHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_40%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] py-3 text-center text-sm font-semibold text-[var(--tint-teal)] transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
+                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_40%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] py-3 text-center text-sm font-semibold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
                   >
                     Order on WhatsApp instead
                   </a>
@@ -618,7 +618,7 @@ function CartDrawer({
                 form="checkout"
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-xl bg-[var(--tint-green)] py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+                className="w-full rounded-xl bg-tint-green py-3 text-sm font-bold text-accent-ink transition hover:brightness-110 disabled:opacity-50"
               >
                 {busy ? "Placing order…" : "Place order"}
               </button>

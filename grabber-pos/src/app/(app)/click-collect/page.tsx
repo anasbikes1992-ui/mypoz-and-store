@@ -124,7 +124,7 @@ export default function ClickCollectPage() {
                   {r.customer}{" "}
                   <span className="text-xs text-text-dim">{r.id}</span>
                   {r.source === "storefront" && (
-                    <span className="ml-2 rounded-full bg-[color-mix(in_oklch,var(--tint-teal)_15%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--tint-teal)]">
+                    <span className="ml-2 rounded-full bg-[color-mix(in_oklch,var(--tint-teal)_15%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-tint-teal">
                       web
                     </span>
                   )}

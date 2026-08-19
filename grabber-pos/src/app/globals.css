@@ -23,6 +23,8 @@
   --warn: oklch(80% 0.14 85);
   --danger: oklch(66% 0.2 25);
   --info: oklch(72% 0.12 230);
+  --overlay: oklch(0% 0 0 / 0.55);
+  --overlay-strong: oklch(0% 0 0 / 0.8);
   --glow: oklch(55% 0.14 250 / 0.16);
   --glow-cool: oklch(50% 0.1 200 / 0.12);
   --glow-warm: oklch(60% 0.12 35 / 0.1);
@@ -53,6 +55,8 @@ html[data-theme="light"] {
   --warn: oklch(62% 0.14 85);
   --danger: oklch(52% 0.2 25);
   --info: oklch(48% 0.12 230);
+  --overlay: oklch(0% 0 0 / 0.45);
+  --overlay-strong: oklch(0% 0 0 / 0.72);
   --glow: oklch(70% 0.08 250 / 0.18);
   --glow-cool: oklch(70% 0.06 200 / 0.12);
   --glow-warm: oklch(75% 0.06 35 / 0.1);
@@ -100,6 +104,32 @@ html[data-theme="dark"] {
     var(--surface-0);
 }
 
+/* Light-mode readable variant for the marketing pages (/welcome, login marketing UI). */
+html[data-theme="light"] .theme-marketing {
+  --surface-0: oklch(98.6% 0.004 250);
+  --surface-1: oklch(100% 0.002 250 / 0.92);
+  --surface-1-solid: oklch(100% 0.002 250);
+  --surface-2: oklch(95.5% 0.008 250);
+  --surface-3: oklch(91% 0.012 250);
+  --line: oklch(82% 0.018 250);
+  --text-strong: oklch(18% 0.02 250);
+  --text: oklch(30% 0.018 250);
+  --text-dim: oklch(45% 0.016 250);
+  --accent: oklch(52% 0.18 245);
+  --accent-strong: oklch(46% 0.18 245);
+  --accent-ink: oklch(99% 0.01 250);
+  --tint-blue: oklch(52% 0.18 245);
+  --tint-teal: oklch(48% 0.12 180);
+  --tint-coral: oklch(55% 0.16 35);
+  --tint-pink: oklch(55% 0.14 350);
+  --tint-amber: oklch(62% 0.14 75);
+  --tint-green: oklch(48% 0.14 145);
+  --glow: oklch(72% 0.08 245 / 0.2);
+  --glow-cool: oklch(74% 0.06 200 / 0.14);
+  --glow-warm: oklch(78% 0.06 35 / 0.1);
+  --panel-shadow: 0 10px 26px -14px oklch(36% 0.04 250 / 0.22);
+}
+
 /* ── Futuristic ambient layer (scoped, additive) ─────────── */
 .fz-grid {
   background-image:
@@ -136,6 +166,16 @@ html[data-theme="dark"] {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+html[data-theme="light"] .theme-marketing .text-hero-gradient {
+  background-image: linear-gradient(
+    115deg,
+    oklch(24% 0.03 250) 0%,
+    oklch(32% 0.04 250) 45%,
+    oklch(48% 0.14 245) 78%,
+    oklch(55% 0.14 35) 100%
+  );
 }
 
 /* Soft commerce storefront (Shopify-like) — Classic default */
@@ -346,6 +386,8 @@ html[data-theme="dark"] {
   --color-warn: var(--warn);
   --color-danger: var(--danger);
   --color-info: var(--info);
+  --color-overlay: var(--overlay);
+  --color-overlay-strong: var(--overlay-strong);
   --font-sans: var(--font-app-sans);
   --font-mono: var(--font-app-mono);
   --radius-sm: 10px;

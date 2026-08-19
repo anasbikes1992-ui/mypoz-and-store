@@ -179,7 +179,7 @@ export default function StoreAccountPage() {
                           {new Date(o.createdAt).toLocaleString()}
                         </p>
                       </div>
-                      <p className="font-bold text-[var(--tint-green)]">
+                      <p className="font-bold text-tint-green">
                         {formatMoney(o.total)}
                       </p>
                     </div>
@@ -263,7 +263,7 @@ export default function StoreAccountPage() {
           )}
 
           {err && <p className="text-sm text-danger">{err}</p>}
-          {msg && <p className="text-sm text-[var(--tint-green)]">{msg}</p>}
+          {msg && <p className="text-sm text-tint-green">{msg}</p>}
 
           <button
             type="submit"

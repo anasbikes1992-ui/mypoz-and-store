@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { recordStore } from "./persistence/record-store";
 import type { PaymentMode, FulfilmentMode } from "@/lib/website";
 import { createServiceSupabase } from "@/lib/supabase/server";
-import { isSupabaseEnabled } from "@/lib/supabase/config";
+import { isSupabaseEnabled, requireSupabase } from "@/lib/supabase/config";
 import type { Json } from "@/lib/supabase/database.types";
 
 export interface StorefrontOrderLine {
@@ -51,6 +51,14 @@ function useServiceLedger(): boolean {
   return isSupabaseEnabled && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+export function assertNoLocalFallbackForPublicOrders(): void {
+  if (isSupabaseEnabled && requireSupabase && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      "Checkout is temporarily unavailable: server payment ledger is not configured.",
+    );
+  }
+}
+
 async function resolveStorefrontOrgId(opts: {
   host: string | null;
   slug: string | null;
@@ -77,6 +85,7 @@ export async function saveStorefrontWebOrder(
   },
   ctx?: { host?: string | null; slug?: string | null },
 ): Promise<StorefrontWebOrder> {
+  assertNoLocalFallbackForPublicOrders();
   const row: StorefrontWebOrder = {
     ...order,
     id: order.id ?? `WEB-${randomUUID().slice(0, 8).toUpperCase()}`,
@@ -106,6 +115,7 @@ export async function saveStorefrontWebOrder(
 }
 
 export async function listStorefrontWebOrders(): Promise<StorefrontWebOrder[]> {
+  assertNoLocalFallbackForPublicOrders();
   const all = await store.list();
   return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
@@ -148,6 +158,7 @@ export async function findStorefrontOrderBySaleOrReceipt(
   saleId: string,
   receiptNo?: string,
 ): Promise<StorefrontWebOrder | null> {
+  assertNoLocalFallbackForPublicOrders();
   const match = (o: StorefrontWebOrder) =>
     o.saleId === saleId ||
     o.receiptNo === receiptNo ||
@@ -204,6 +215,7 @@ export async function updateStorefrontWebOrder(
   id: string,
   patch: Partial<StorefrontWebOrder>,
 ): Promise<StorefrontWebOrder | null> {
+  assertNoLocalFallbackForPublicOrders();
   if (useServiceLedger()) {
     const db = createServiceSupabase();
     const { data: existing, error } = await db

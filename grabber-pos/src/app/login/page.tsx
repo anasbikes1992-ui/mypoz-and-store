@@ -116,7 +116,7 @@ export default function LoginPage() {
             >
               G
             </span>
-            <p className="text-sm font-semibold tracking-wide text-[oklch(78%_0.15_245)]">
+            <p className="text-sm font-semibold tracking-wide text-accent">
               MyPoz Commerce Cloud
             </p>
           </div>
@@ -156,7 +156,7 @@ export default function LoginPage() {
           Looking for product details?{" "}
           <Link
             href="/welcome"
-            className="font-medium text-[var(--tint-teal)] transition hover:text-accent hover:underline"
+            className="font-medium text-tint-teal transition hover:text-accent hover:underline"
           >
             View the overview
           </Link>
@@ -259,6 +259,20 @@ export default function LoginPage() {
               Product overview
             </Link>
           </p>
+          <div className="mt-6 grid grid-cols-3 gap-2 text-center text-[11px]">
+            <div className="rounded-xl border border-line bg-surface-2/70 px-2 py-2 text-text-dim">
+              <p className="font-semibold text-text-strong">99.9%</p>
+              Uptime
+            </div>
+            <div className="rounded-xl border border-line bg-surface-2/70 px-2 py-2 text-text-dim">
+              <p className="font-semibold text-text-strong">RLS</p>
+              Secured data
+            </div>
+            <div className="rounded-xl border border-line bg-surface-2/70 px-2 py-2 text-text-dim">
+              <p className="font-semibold text-text-strong">Cloud</p>
+              Daily backups
+            </div>
+          </div>
         </motion.form>
       </section>
     </main>

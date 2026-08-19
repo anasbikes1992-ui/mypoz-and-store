@@ -231,7 +231,7 @@ function CollectionForm({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-6 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-overlay p-6 backdrop-blur-sm"
         >
           <motion.form
             onSubmit={submit}

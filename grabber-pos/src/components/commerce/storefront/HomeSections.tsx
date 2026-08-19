@@ -197,7 +197,7 @@ export function SectionView({
           )}
           {image ? (
             <div
-              className="absolute inset-0 bg-black/40"
+              className="absolute inset-0 bg-overlay"
               style={{ opacity: num(s, "overlay", 40) / 100 }}
             />
           ) : null}
@@ -213,11 +213,11 @@ export function SectionView({
             <h1
               className={`max-w-3xl font-semibold tracking-tight text-text-strong ${
                 fullbleed ? "text-4xl sm:text-6xl" : "text-3xl sm:text-5xl"
-              } ${image ? "text-white" : ""}`}
+              } ${image ? "text-accent-ink" : ""}`}
             >
               {heading}
             </h1>
-            <p className={`max-w-xl text-sm leading-relaxed sm:text-base ${image ? "text-white/85" : "text-text-dim"}`}>
+            <p className={`max-w-xl text-sm leading-relaxed sm:text-base ${image ? "text-accent-ink/85" : "text-text-dim"}`}>
               {sub}
             </p>
             <div className="flex flex-wrap gap-2">

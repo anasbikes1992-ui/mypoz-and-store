@@ -57,6 +57,9 @@ const STOREFRONT_POINTS = [
   "Schema markup for richer search listings",
 ] as const;
 
+/** Hero video pending — self-hosted asset in public/ when ready. */
+const HERO_VIDEO_PENDING = false;
+
 export default function WelcomePage() {
   const [salesVolume, setSalesVolume] = useState(500000);
   const reduced = useReducedMotion();
@@ -126,7 +129,7 @@ export default function WelcomePage() {
             <h1 className="text-hero-gradient max-w-xl text-4xl font-semibold tracking-tight sm:text-5xl lg:text-[3.4rem] lg:leading-[1.08]">
               MyPoz Commerce Cloud
             </h1>
-            <p className="text-sm font-semibold tracking-wide text-[oklch(78%_0.15_245)]">
+            <p className="text-sm font-semibold tracking-wide text-accent">
               Grabber Mobility Solutions
             </p>
             <p className="max-w-md text-base leading-relaxed text-text-body sm:text-lg">
@@ -142,7 +145,7 @@ export default function WelcomePage() {
               </Link>
               <Link
                 href="/login"
-                className="inline-flex h-12 items-center justify-center rounded-2xl border border-line bg-surface-2/60 px-7 text-sm font-semibold text-text-strong transition hover:border-[var(--tint-teal)] hover:text-[var(--tint-teal)] active:scale-[0.98]"
+                className="inline-flex h-12 items-center justify-center rounded-2xl border border-line bg-surface-2/60 px-7 text-sm font-semibold text-text-strong transition hover:border-tint-teal hover:text-tint-teal active:scale-[0.98]"
               >
                 Sign in to your store
               </Link>
@@ -152,7 +155,8 @@ export default function WelcomePage() {
           <motion.div
             {...heroVisual}
             className="panel-glass relative min-h-[16rem] overflow-hidden rounded-3xl border border-line lg:min-h-[22rem]"
-            aria-hidden
+            aria-hidden={!HERO_VIDEO_PENDING}
+            aria-label={HERO_VIDEO_PENDING ? "MyPoz terminal preview" : undefined}
           >
             <div className="absolute inset-0 bg-[linear-gradient(145deg,oklch(96%_0.02_250)_0%,transparent_45%,oklch(95%_0.04_35_/_0.45)_100%)]" />
             <div
@@ -170,34 +174,26 @@ export default function WelcomePage() {
                 </span>
               </div>
               <div className="mt-4 grid flex-1 grid-cols-3 gap-2">
-                {["Milk 1L", "Bread", "Soap", "Rice 5kg", "Oil", "Tea"].map(
-                  (name, i) => {
-                    const tints = [
-                      "var(--tint-blue)",
-                      "var(--tint-teal)",
-                      "var(--tint-coral)",
-                      "var(--tint-amber)",
-                      "var(--tint-pink)",
-                      "var(--tint-green)",
-                    ];
-                    return (
-                      <div
-                        key={name}
-                        className="rounded-2xl border border-line bg-surface-1-solid/90 p-2.5"
-                      >
-                        <p className="truncate text-[11px] text-text-body">
-                          {name}
-                        </p>
-                        <p
-                          className="mt-1 font-mono text-xs font-medium"
-                          style={{ color: tints[i] }}
-                        >
-                          LKR {(120 + name.length * 17).toFixed(0)}
-                        </p>
-                      </div>
-                    );
-                  },
-                )}
+                {(
+                  [
+                    ["Milk 1L", "text-tint-blue"],
+                    ["Bread", "text-tint-teal"],
+                    ["Soap", "text-tint-coral"],
+                    ["Rice 5kg", "text-tint-amber"],
+                    ["Oil", "text-tint-pink"],
+                    ["Tea", "text-tint-green"],
+                  ] as const
+                ).map(([name, tintClass]) => (
+                  <div
+                    key={name}
+                    className="rounded-2xl border border-line bg-surface-1-solid/90 p-2.5"
+                  >
+                    <p className="truncate text-[11px] text-text-body">{name}</p>
+                    <p className={`mt-1 font-mono text-xs font-medium ${tintClass}`}>
+                      LKR {(120 + name.length * 17).toFixed(0)}
+                    </p>
+                  </div>
+                ))}
               </div>
               <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-surface-2 px-4 py-3">
                 <span className="text-sm text-text-dim">Bill total</span>
@@ -313,10 +309,7 @@ export default function WelcomePage() {
               </div>
               <div className="rounded-2xl border border-line bg-surface-1-solid p-3">
                 <p className="text-xs text-text-body">In-stock SKU</p>
-                <p
-                  className="mt-1 font-mono text-sm font-medium"
-                  style={{ color: "var(--tint-coral)" }}
-                >
+                <p className="mt-1 font-mono text-sm font-medium text-tint-coral">
                   Deducts at checkout
                 </p>
               </div>
@@ -373,10 +366,7 @@ export default function WelcomePage() {
             </div>
             <div className="rounded-2xl border border-line bg-surface-2 p-5 text-center">
               <p className="text-xs text-text-dim">Extra web revenue</p>
-              <p
-                className="mt-1 font-mono text-2xl font-semibold"
-                style={{ color: "var(--tint-teal)" }}
-              >
+              <p className="mt-1 font-mono text-2xl font-semibold text-tint-teal">
                 LKR {extraWebSales.toLocaleString("en-LK")}
               </p>
             </div>

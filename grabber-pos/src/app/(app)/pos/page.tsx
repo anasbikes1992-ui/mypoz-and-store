@@ -134,7 +134,7 @@ function PosWorkspace() {
             }`}
           >
             <span
-              className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${
+              className={`absolute top-0.5 h-4 w-4 rounded-full bg-accent-ink transition-all ${
                 isWholesale ? "left-[18px]" : "left-0.5"
               }`}
             />
@@ -165,7 +165,7 @@ function PosWorkspace() {
 
       {variantPick && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Select variant"

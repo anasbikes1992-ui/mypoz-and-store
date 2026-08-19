@@ -76,7 +76,7 @@ export function IdleLock() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-overlay-strong backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Session locked"

@@ -165,6 +165,13 @@ export async function POST(
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 function cleanMessage(message: string): string {
+  if (
+    message.includes("Checkout is temporarily unavailable") ||
+    message.includes("SUPABASE_SERVICE_ROLE_KEY") ||
+    message.includes("ENOENT")
+  ) {
+    return "Checkout is temporarily unavailable. Please try again in a few minutes or contact support.";
+  }
   if (message.includes("invalid input syntax for type uuid") || message.includes("Invalid UUID")) {
     return "A product in your cart is no longer available online. Please remove it and try again.";
   }

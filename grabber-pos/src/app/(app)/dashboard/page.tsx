@@ -53,6 +53,37 @@ export default async function DashboardPage() {
         />
       </div>
 
+      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <a
+          href="/pos"
+          className="rounded-2xl border border-line bg-surface-1 p-4 transition hover:border-accent"
+        >
+          <p className="text-xs text-text-dim">Quick action</p>
+          <p className="mt-1 text-sm font-semibold text-text-strong">Open retail POS</p>
+        </a>
+        <a
+          href="/products"
+          className="rounded-2xl border border-line bg-surface-1 p-4 transition hover:border-accent"
+        >
+          <p className="text-xs text-text-dim">Catalog</p>
+          <p className="mt-1 text-sm font-semibold text-text-strong">Manage products</p>
+        </a>
+        <a
+          href="/inventory"
+          className="rounded-2xl border border-line bg-surface-1 p-4 transition hover:border-accent"
+        >
+          <p className="text-xs text-text-dim">Stock</p>
+          <p className="mt-1 text-sm font-semibold text-text-strong">Review inventory</p>
+        </a>
+        <a
+          href="/reports"
+          className="rounded-2xl border border-line bg-surface-1 p-4 transition hover:border-accent"
+        >
+          <p className="text-xs text-text-dim">Insights</p>
+          <p className="mt-1 text-sm font-semibold text-text-strong">Open reports</p>
+        </a>
+      </section>
+
       <section className="mt-10">
         <h2 className="text-lg font-medium tracking-tight text-text-strong">Recent sales</h2>
         {recent.length === 0 ? (
@@ -69,14 +100,14 @@ export default async function DashboardPage() {
             </a>
           </div>
         ) : (
-          <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-1">
+          <ul className="mt-4 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface-1">
             {recent.map((s) => (
               <li
                 key={s.id}
-                className="flex items-center justify-between px-5 py-3.5 text-sm"
+                className="flex items-center justify-between px-5 py-4 text-sm"
               >
                 <div>
-                  <p className="font-medium text-text-strong">{s.id}</p>
+                  <p className="font-mono text-xs text-accent">{s.id}</p>
                   <p className="text-xs text-text-dim">
                     {formatDateTime(s.createdAt)} · {s.lines.length} items ·{" "}
                     {s.paymentMethod}

@@ -43,7 +43,7 @@ export function CartPageView({
           >
             <div className="min-w-0">
               <p className="font-medium">{l.name}</p>
-              <p className="text-sm text-[var(--tint-green)]">{formatMoney(l.price)}</p>
+              <p className="text-sm text-tint-green">{formatMoney(l.price)}</p>
             </div>
             <div className="flex items-center gap-2">
               <button

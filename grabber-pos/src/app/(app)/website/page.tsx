@@ -173,7 +173,7 @@ export default function WebsiteCmsPage() {
         <p
           className={`mt-4 rounded-xl border px-4 py-2.5 text-sm ${
             msg.ok
-              ? "border-[color-mix(in_oklch,var(--tint-green)_35%,var(--line))] bg-[color-mix(in_oklch,var(--tint-green)_10%,transparent)] text-[var(--tint-green)]"
+              ? "border-[color-mix(in_oklch,var(--tint-green)_35%,var(--line))] bg-[color-mix(in_oklch,var(--tint-green)_10%,transparent)] text-tint-green"
               : "border-danger/40 bg-danger/10 text-danger"
           }`}
         >
