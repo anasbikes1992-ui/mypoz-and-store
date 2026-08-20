@@ -22,7 +22,7 @@ Set these in [Vercel → mypoz-and-store-ui → Settings → Environment Variabl
 | Variable | Must point to |
 |----------|----------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://veavfkjgtkbnggukzjds.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → publishable/anon key for **veavfkjgtkbnggukzjds** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → publishable key (`sb_publishable_…`) or legacy anon JWT for **veavfkjgtkbnggukzjds** |
 | `SUPABASE_SERVICE_ROLE_KEY` | Same project → service_role key (server-only; dashboard only) |
 | `NEXT_PUBLIC_APP_URL` | `https://mypoz-and-store-ui.vercel.app` |
 | `SUPABASE_DB_PASSWORD` | Optional locally; used by `scripts/apply-sql.mjs` only |
