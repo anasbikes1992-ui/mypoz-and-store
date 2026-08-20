@@ -59,6 +59,7 @@ Key screens: `/` launcher · `/pos` terminal · `/dashboard` · `/sales` ·
 | Doc | For |
 |-----|-----|
 | [PRODUCTION.md](docs/PRODUCTION.md) | **Going live** — migrations, env, go-live checklist, security |
+| [LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) | Anaz soft launch — UI-only host, checkout smoke, WA paste gate |
 | [CREDENTIALS.md](docs/CREDENTIALS.md) | What to paste into `.env.local` (no secrets in repo) |
 | [SETUP.md](docs/SETUP.md) | Local development setup |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, the two seams, trust boundaries |

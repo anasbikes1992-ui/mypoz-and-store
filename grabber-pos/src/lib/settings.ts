@@ -76,6 +76,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     fields: [
       { key: "storeEnabled", label: "Enable Public Website", type: "select", options: ["Yes", "No"] },
       { key: "storeSlug", label: "Website URL Slug (e.g. apex-retail)", type: "text" },
+      {
+        key: "storeSlugAliases",
+        label: "Legacy URL aliases (comma-separated → storeSlug)",
+        type: "text",
+        full: true,
+      },
       { key: "storeSlogan", label: "Store Slogan / Subtitle", type: "text", full: true },
       { key: "storeBanner", label: "Hero Banner Image URL", type: "text", full: true },
       { key: "googleAdsId", label: "Google Ads / GTAG ID (AW-xxx)", type: "text" },
@@ -109,6 +115,8 @@ export const settingsSchema = z.object({
   pointsValue: z.coerce.number().min(0).default(1),
   storeEnabled: z.enum(["Yes", "No"]).default("Yes"),
   storeSlug: z.string().max(80).default("main-store"),
+  /** Comma-separated legacy slugs that 308-redirect to storeSlug. */
+  storeSlugAliases: z.string().max(200).default(""),
   storeSlogan: z.string().max(300).default("Your Quality Everyday Store — Shop Online & Fast Delivery"),
   storeBanner: z.string().max(500).default(""),
   googleAdsId: z.string().max(60).default(""),

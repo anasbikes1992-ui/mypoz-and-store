@@ -14,8 +14,17 @@ export default async function CommerceOrderDetailPage({
 }) {
   const { id } = await params;
   const orders = await listStorefrontWebOrders();
-  const order = orders.find((o) => o.id === id || o.receiptNo === id);
+  const order = orders.find(
+    (o) => o.id === id || o.receiptNo === id || o.saleId === id,
+  );
   if (!order) notFound();
+
+  const boardHref =
+    order.boardId && order.boardKind === "delivery"
+      ? `/delivery/${order.boardId}`
+      : order.boardId && order.boardKind === "click-collect"
+        ? `/click-collect`
+        : null;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
@@ -60,6 +69,34 @@ export default async function CommerceOrderDetailPage({
         <section className="rounded-3xl border border-line bg-surface-1 p-5">
           <h2 className="text-sm font-semibold">Status</h2>
           <dl className="mt-3 space-y-2 text-sm">
+            <div className="flex justify-between gap-3">
+              <dt className="text-text-dim">Receipt</dt>
+              <dd className="font-mono text-xs">{order.receiptNo}</dd>
+            </div>
+            {order.saleId ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-dim">Sale ID</dt>
+                <dd className="break-all font-mono text-xs">{order.saleId}</dd>
+              </div>
+            ) : null}
+            {order.boardId ? (
+              <div className="flex justify-between gap-3">
+                <dt className="text-text-dim">Board</dt>
+                <dd className="text-right">
+                  {boardHref ? (
+                    <Link
+                      href={boardHref}
+                      className="font-mono text-xs text-accent hover:underline"
+                    >
+                      {order.boardId}
+                      {order.boardKind ? ` · ${order.boardKind}` : ""}
+                    </Link>
+                  ) : (
+                    <span className="font-mono text-xs">{order.boardId}</span>
+                  )}
+                </dd>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <dt className="text-text-dim">Source</dt>
               <dd>{order.source ?? "ONLINE_STORE"}</dd>

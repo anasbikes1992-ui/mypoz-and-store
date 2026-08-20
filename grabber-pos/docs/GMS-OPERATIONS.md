@@ -4,7 +4,8 @@ For **Grabber Mobility Solutions (GMS)** staff who run the shared multi-tenant
 fleet. Day-to-day work happens in **`/hq`** — not in a tenant's `/admin`.
 
 Companion guides: [RESELLER-GUIDE.md](RESELLER-GUIDE.md) (commercials & handover),
-[PRODUCTION.md](PRODUCTION.md) (cutover), [CUSTOMER-STOREFRONT.md](CUSTOMER-STOREFRONT.md)
+[PRODUCTION.md](PRODUCTION.md) (cutover), [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md)
+(Anaz soft launch on `mypoz-and-store-ui`), [CUSTOMER-STOREFRONT.md](CUSTOMER-STOREFRONT.md)
 (what you coach shop owners to do), [HQ-PLAYBOOK.md](HQ-PLAYBOOK.md) (day-to-day HQ),
 [CLIENT-PLAYBOOK.md](CLIENT-PLAYBOOK.md) (hand to shop owners), [WHATSAPP.md](WHATSAPP.md).
 

@@ -91,7 +91,9 @@ hardware layouts are all accepted).
 npm run build
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel and mobile build specifics.
+Ship to **`mypoz-and-store-ui`** only (`https://mypoz-and-store-ui.vercel.app`).  
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Root Directory / CLI link, and
+[LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) for the Anaz soft-launch sequence.
 
 ---
 
@@ -122,6 +124,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for Vercel and mobile build specifics.
 - [ ] Staff trained — see [USER-GUIDE.md](USER-GUIDE.md)
 - [ ] Reseller runbook read — see [RESELLER-GUIDE.md](RESELLER-GUIDE.md)
 - [ ] GMS fleet ops read — see [GMS-OPERATIONS.md](GMS-OPERATIONS.md)
+- [ ] Anaz soft launch: [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) (UI host + WA gate)
 
 ---
 

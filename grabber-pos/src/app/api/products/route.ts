@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRepository } from "@/lib/server/repositories";
 import { productQuerySchema, productInputSchema } from "@/lib/validation";
-import { isSupabaseEnabled } from "@/lib/supabase/config";
-import { nextProductId } from "@/lib/server/product-repo";
-import { upsertOverride } from "@/lib/server/product-write-store";
-import type { Product } from "@/lib/types";
+import { createProductAdmin } from "@/lib/server/product-admin-store";
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : "Unexpected error";
+}
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
@@ -45,12 +46,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (isSupabaseEnabled) {
-    return NextResponse.json(
-      { success: false, data: null, error: "Manage products via Supabase in production mode" },
-      { status: 400 },
-    );
-  }
   let body: unknown;
   try {
     body = await req.json();
@@ -63,25 +58,24 @@ export async function POST(req: NextRequest) {
   const parsed = productInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { success: false, data: null, error: parsed.error.issues[0]?.message ?? "Invalid product" },
+      {
+        success: false,
+        data: null,
+        error: parsed.error.issues[0]?.message ?? "Invalid product",
+      },
       { status: 400 },
     );
   }
-  const product: Product = {
-    id: nextProductId(),
-    stockDate: new Date().toISOString().slice(0, 10),
-    ...parsed.data,
-    nameLocal: parsed.data.nameLocal ?? null,
-    brand: parsed.data.brand ?? null,
-    wholesalePrice: parsed.data.wholesalePrice ?? null,
-    expireDate: parsed.data.expireDate ?? null,
-    supplier: parsed.data.supplier ?? null,
-    imageUrl: parsed.data.imageUrl ?? null,
-  };
-  await upsertOverride(product);
-  return NextResponse.json({ success: true, data: product, error: null });
-}
 
-function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : "Unexpected error";
+  try {
+    const product = await createProductAdmin(parsed.data);
+    return NextResponse.json({ success: true, data: product, error: null });
+  } catch (error) {
+    const msg = messageOf(error);
+    const status = /sign in|unauthorized/i.test(msg) ? 401 : 500;
+    return NextResponse.json(
+      { success: false, data: null, error: msg },
+      { status },
+    );
+  }
 }

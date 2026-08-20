@@ -2,7 +2,18 @@
 
 Official Meta WhatsApp Cloud API only — no unofficial “multi-device” bridges.
 
-HQ UI: `/hq/whatsapp` · Merchant UI: `/whatsapp` · Webhook: `/api/whatsapp/webhook`
+HQ UI: `/hq/whatsapp` · Merchant UI: `/whatsapp` · Webhook: `/api/whatsapp/webhook`  
+**Live host:** `https://mypoz-and-store-ui.vercel.app` only (not `mypoz-and-store`).
+
+### Anaz go-live gate
+
+Soft launch is blocked until WhatsApp is wired on **`mypoz-and-store-ui`**:
+
+1. Paste `WHATSAPP_TOKEN` (and confirm the other `WHATSAPP_*` vars) → redeploy Production  
+2. `/hq/whatsapp` → **Anaz Store** → attach `phone_number_id` → Save  
+3. `node scripts/whatsapp-smoke.mjs` (defaults to the UI host)
+
+Full ordered steps: [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).
 
 ---
 
@@ -27,7 +38,7 @@ Switch to **Live** + complete Business verification when ready for customers.
 4. Copy **Phone number ID** → `WHATSAPP_PHONE_NUMBER_ID`
 5. Copy **App Secret** (App settings → Basic) → `WHATSAPP_APP_SECRET`
 6. Create a permanent access token / system user token → `WHATSAPP_TOKEN`
-   (this is the var still missing on Vercel if you only set phone/secret/verify)
+   on **`mypoz-and-store-ui`** (often still missing if you only set phone/secret/verify)
 
 ### Vercel checklist (P1)
 
@@ -114,4 +125,5 @@ Per-tenant overrides live in `app_documents` key `whatsapp` (phoneNumberId, acce
 
 ## Docs hub
 
-Linked from HQ docs nav (`docs/WHATSAPP.md`). See also [HQ-PLAYBOOK.md](HQ-PLAYBOOK.md).
+Linked from HQ docs nav (`docs/WHATSAPP.md`). See also [HQ-PLAYBOOK.md](HQ-PLAYBOOK.md)
+and [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) for the Anaz soft-launch sequence.

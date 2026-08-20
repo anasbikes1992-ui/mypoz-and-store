@@ -6,12 +6,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { formatMoney } from "@/lib/format";
 import { whatsAppLink, whatsAppOrderText } from "@/lib/storefront";
 import {
   PAYMENT_LABELS,
+  paymentLabel,
+  paymentCashHint,
   FULFILMENT_LABELS,
   type WebsiteConfig,
   type PaymentMode,
@@ -264,6 +267,8 @@ function CartDrawer({
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [boardKind, setBoardKind] = useState<string | null>(null);
+  /** One UUID per checkout attempt; reused on retry until success/clear. */
+  const clientUuidRef = useRef<string | null>(null);
 
   const waHref = whatsAppLink(
     whatsappNumber,
@@ -272,10 +277,19 @@ function CartDrawer({
 
   const isPickup = fulfilment === "pickup";
 
+  function ensureClientUuid(): string {
+    if (!clientUuidRef.current) {
+      clientUuidRef.current = crypto.randomUUID();
+    }
+    return clientUuidRef.current;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
+    const clientUuid = ensureClientUuid();
     try {
       const res = await fetch(`/api/store/${slug}/order`, {
         method: "POST",
@@ -294,7 +308,7 @@ function CartDrawer({
               ? paymentProofUrl
               : undefined,
           fulfilment,
-          clientUuid: crypto.randomUUID(),
+          clientUuid,
           lines: lines.map((l) => ({
             productId: l.productId,
             quantity: l.quantity,
@@ -314,7 +328,7 @@ function CartDrawer({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             reference: json.data.receiptNo,
-            saleId: json.data.id,
+            saleId: json.data.saleId ?? json.data.id,
             amountMinor,
             currency: currency === "USD" ? "USD" : "LKR",
             description: `${businessName} order ${json.data.receiptNo}`,
@@ -335,10 +349,12 @@ function CartDrawer({
           formFields?: Record<string, string>;
         };
         if (checkout.mode === "redirect" && checkout.url) {
+          clientUuidRef.current = null;
           window.location.assign(checkout.url);
           return;
         }
         if (checkout.mode === "form" && checkout.formAction && checkout.formFields) {
+          clientUuidRef.current = null;
           const form = document.createElement("form");
           form.method = "POST";
           form.action = checkout.formAction;
@@ -364,6 +380,7 @@ function CartDrawer({
       });
       setReceipt(json.data.receiptNo);
       setBoardKind(json.data.boardKind);
+      clientUuidRef.current = null;
       clear();
       setStep("done");
     } catch (err) {
@@ -375,16 +392,33 @@ function CartDrawer({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-overlay backdrop-blur-sm">
-      <div className="flex h-full w-full max-w-md flex-col border-l border-line bg-surface-1 shadow-2xl">
+      <div className="flex h-[100dvh] w-full max-w-md flex-col border-l border-line bg-surface-1 shadow-2xl">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h1 className="font-semibold text-text-strong">
-            {step === "done" ? "Order placed" : "Your order"}
-          </h1>
+          <div className="flex min-w-0 items-center gap-2">
+            {step === "details" && (
+              <button
+                type="button"
+                onClick={() => setStep("cart")}
+                disabled={busy}
+                aria-label="Back to cart"
+                className="shrink-0 rounded-lg px-2 py-1.5 text-sm text-text-dim transition hover:text-text-strong disabled:opacity-50"
+              >
+                ←
+              </button>
+            )}
+            <h1 className="font-semibold text-text-strong">
+              {step === "done"
+                ? "Order placed"
+                : step === "details"
+                  ? "Checkout details"
+                  : "Your order"}
+            </h1>
+          </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close cart"
-            className="rounded-lg px-2 py-1 text-text-dim transition hover:text-text-strong"
+            className="rounded-lg px-2 py-1.5 text-text-dim transition hover:text-text-strong"
           >
             ✕
           </button>
@@ -403,7 +437,7 @@ function CartDrawer({
                 Order{" "}
                 <span className="font-mono font-semibold text-accent">{receipt}</span>{" "}
                 is confirmed. We&apos;ll contact {mobile}. Payment:{" "}
-                {PAYMENT_LABELS[paymentMethod]}. Fulfilment:{" "}
+                {paymentLabel(paymentMethod, fulfilment)}. Fulfilment:{" "}
                 {FULFILMENT_LABELS[fulfilment]}
                 {boardKind === "click-collect"
                   ? " — your pick list is with the store."
@@ -412,59 +446,14 @@ function CartDrawer({
                     : "."}
               </p>
             </div>
-          ) : lines.length === 0 ? (
-            <p className="py-10 text-center text-sm text-text-dim">
-              Your cart is empty.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {lines.map((l) => (
-                <li
-                  key={l.variantId ? `${l.productId}:${l.variantId}` : l.productId}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2/60 p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-text-strong">
-                      {l.name}
-                    </p>
-                    <p className="text-xs font-semibold text-tint-green">
-                      {formatMoney(l.price)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(l.productId, l.quantity - 1, l.variantId)}
-                      aria-label={`Reduce ${l.name}`}
-                      className="h-7 w-7 rounded-lg border border-line bg-surface-1 text-text-body transition hover:border-accent"
-                    >
-                      −
-                    </button>
-                    <span className="w-6 text-center text-sm tabular-nums text-text-strong">
-                      {l.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(l.productId, l.quantity + 1, l.variantId)}
-                      aria-label={`Add another ${l.name}`}
-                      className="h-7 w-7 rounded-lg border border-line bg-surface-1 text-text-body transition hover:border-accent"
-                    >
-                      +
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {step === "details" && (
-            <form id="checkout" onSubmit={submit} className="mt-5 space-y-3">
+          ) : step === "details" ? (
+            <form id="checkout" onSubmit={submit} className="space-y-3">
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
               <input
                 required
@@ -472,27 +461,27 @@ function CartDrawer({
                 onChange={(e) => setMobile(e.target.value)}
                 placeholder="Mobile number"
                 inputMode="tel"
-                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email (optional — for order history)"
-                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
 
               <fieldset className="space-y-2">
                 <legend className="text-xs font-semibold text-text-dim">
                   Fulfilment
                 </legend>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                   {website.fulfilmentModes.map((m) => (
                     <button
                       key={m}
                       type="button"
                       onClick={() => setFulfilment(m)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      className={`min-h-11 rounded-xl px-4 py-2.5 text-sm font-semibold sm:min-h-0 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs ${
                         fulfilment === m
                           ? "bg-accent text-accent-ink"
                           : "border border-line text-text-dim"
@@ -511,7 +500,7 @@ function CartDrawer({
                     onChange={(e) => setPickupNote(e.target.value)}
                     placeholder="Pickup note (optional)"
                     rows={2}
-                    className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
                   {website.pickupInstructions ? (
                     <p className="text-xs text-text-dim">
@@ -530,7 +519,7 @@ function CartDrawer({
                       : "Delivery address"
                   }
                   rows={3}
-                  className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
                 />
               )}
 
@@ -538,19 +527,21 @@ function CartDrawer({
                 <legend className="text-xs font-semibold text-text-dim">
                   Payment
                 </legend>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                   {website.paymentModes.map((m) => (
                     <button
                       key={m}
                       type="button"
                       onClick={() => setPaymentMethod(m)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                      className={`min-h-11 rounded-xl px-4 py-2.5 text-sm font-semibold sm:min-h-0 sm:rounded-full sm:px-3 sm:py-1.5 sm:text-xs ${
                         paymentMethod === m
                           ? "bg-accent text-accent-ink"
                           : "border border-line text-text-dim"
                       }`}
                     >
-                      {PAYMENT_LABELS[m]}
+                      {m === "cash"
+                        ? paymentLabel("cash", fulfilment)
+                        : PAYMENT_LABELS[m]}
                     </button>
                   ))}
                 </div>
@@ -568,7 +559,7 @@ function CartDrawer({
                     value={paymentReference}
                     onChange={(e) => setPaymentReference(e.target.value)}
                     placeholder="Transfer reference"
-                    className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
                   <label className="block text-xs font-semibold text-text-dim">
                     Bank slip (image, optional)
@@ -623,7 +614,7 @@ function CartDrawer({
 
               {paymentMethod === "cash" && (
                 <p className="text-xs text-text-dim">
-                  Staff will confirm cash at handover.
+                  {paymentCashHint(fulfilment)}
                 </p>
               )}
               {paymentMethod === "card" && (
@@ -635,11 +626,59 @@ function CartDrawer({
 
               {error && <p className="text-sm text-danger">{error}</p>}
             </form>
+          ) : lines.length === 0 ? (
+            <p className="py-10 text-center text-sm text-text-dim">
+              Your cart is empty.
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {lines.map((l) => (
+                <li
+                  key={l.variantId ? `${l.productId}:${l.variantId}` : l.productId}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2/60 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-text-strong">
+                      {l.name}
+                    </p>
+                    <p className="text-xs font-semibold text-tint-green">
+                      {formatMoney(l.price)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(l.productId, l.quantity - 1, l.variantId)}
+                      aria-label={`Reduce ${l.name}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface-1 text-text-body transition hover:border-accent"
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-sm tabular-nums text-text-strong">
+                      {l.quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(l.productId, l.quantity + 1, l.variantId)}
+                      aria-label={`Add another ${l.name}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface-1 text-text-body transition hover:border-accent"
+                    >
+                      +
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 
         {step !== "done" && lines.length > 0 && (
-          <div className="space-y-3 border-t border-line px-5 py-4">
+          <div
+            className="sticky bottom-0 space-y-3 border-t border-line bg-surface-1 px-5 pt-4"
+            style={{
+              paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+            }}
+          >
             <div className="flex items-center justify-between text-sm">
               <span className="text-text-dim">Total</span>
               <span className="text-lg font-bold text-tint-green">
@@ -652,7 +691,7 @@ function CartDrawer({
                 <button
                   type="button"
                   onClick={() => setStep("details")}
-                  className="w-full rounded-xl bg-accent py-3 text-sm font-bold text-accent-ink transition hover:bg-accent-strong"
+                  className="w-full rounded-xl bg-accent py-3.5 text-sm font-bold text-accent-ink transition hover:bg-accent-strong"
                 >
                   Checkout
                 </button>
@@ -661,7 +700,7 @@ function CartDrawer({
                     href={waHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_40%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] py-3 text-center text-sm font-semibold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
+                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_40%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] py-3.5 text-center text-sm font-semibold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
                   >
                     Order on WhatsApp instead
                   </a>
@@ -672,7 +711,7 @@ function CartDrawer({
                 form="checkout"
                 type="submit"
                 disabled={busy}
-                className="w-full rounded-xl bg-tint-green py-3 text-sm font-bold text-accent-ink transition hover:brightness-110 disabled:opacity-50"
+                className="w-full rounded-xl bg-tint-green py-3.5 text-sm font-bold text-accent-ink transition hover:brightness-110 disabled:pointer-events-none disabled:opacity-50"
               >
                 {busy ? "Placing order…" : "Place order"}
               </button>

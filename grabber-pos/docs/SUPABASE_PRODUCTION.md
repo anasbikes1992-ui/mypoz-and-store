@@ -4,7 +4,8 @@
 **Region:** ap-northeast-1  
 **URL:** `https://veavfkjgtkbnggukzjds.supabase.co`  
 **GitHub:** `anasbikes1992-ui/mypoz-and-store`  
-**Vercel:** `mypoz-and-store-ui` → `https://mypoz-and-store-ui.vercel.app`
+**Vercel (sole live host):** `mypoz-and-store-ui` → `https://mypoz-and-store-ui.vercel.app`  
+(Do not use `mypoz-and-store` for production traffic; leave that project undeployed.)
 
 ## Cutover checklist
 

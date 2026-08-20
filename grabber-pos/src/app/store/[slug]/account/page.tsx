@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import {
-  PAYMENT_LABELS,
+  paymentLabel,
   FULFILMENT_LABELS,
   type PaymentMode,
   type FulfilmentMode,
@@ -173,7 +173,7 @@ export default function StoreAccountPage() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <p className="font-mono text-sm font-semibold text-accent">
-                          {o.receiptNo}
+                          {o.receiptNo || o.id}
                         </p>
                         <p className="text-xs text-text-dim">
                           {new Date(o.createdAt).toLocaleString()}
@@ -184,7 +184,7 @@ export default function StoreAccountPage() {
                       </p>
                     </div>
                     <p className="mt-2 text-xs text-text-dim">
-                      {PAYMENT_LABELS[o.paymentMethod]} ·{" "}
+                      {paymentLabel(o.paymentMethod, o.fulfilment)} ·{" "}
                       {FULFILMENT_LABELS[o.fulfilment]}
                       {o.boardKind ? ` · ${o.boardKind}` : ""}
                     </p>

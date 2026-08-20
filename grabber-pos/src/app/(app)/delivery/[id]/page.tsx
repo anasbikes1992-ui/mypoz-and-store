@@ -23,9 +23,18 @@ interface Order {
   driver: string;
   status: string;
   lines: Line[];
+  source?: "manual" | "storefront";
+  saleId?: string | null;
+  receiptNo?: string | null;
 }
 
 const STATUSES = ["new", "preparing", "out", "delivered"] as const;
+
+type DoneSale = Sale & {
+  receiptNo?: string | null;
+  codCollected?: boolean;
+  source?: string;
+};
 
 export default function DeliveryOrderPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +42,7 @@ export default function DeliveryOrderPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [drivers, setDrivers] = useState<{ id: string; name?: string }[]>([]);
   const [status, setStatus] = useState<string | null>(null);
-  const [done, setDone] = useState<Sale | null>(null);
+  const [done, setDone] = useState<DoneSale | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/delivery/orders/${id}`)
@@ -60,7 +69,12 @@ export default function DeliveryOrderPage() {
   }
   async function saveMeta(meta: Record<string, string>) {
     const j = await act("meta", { meta });
-    if (j.success) setOrder(j.data);
+    if (j.success) {
+      setOrder(j.data);
+      setStatus(null);
+    } else {
+      setStatus(j.error ?? "Could not update");
+    }
   }
   async function addItem(p: Product) {
     const j = await act("addItem", { productId: p.id });
@@ -82,42 +96,49 @@ export default function DeliveryOrderPage() {
   }
   async function settle() {
     const j = await act("settle", { paymentMethod: "cash", cashReceived: total });
-    if (j.success) setDone(j.data as Sale);
+    if (j.success) setDone(j.data as DoneSale);
     else setStatus(j.error ?? "Settle failed");
   }
 
   const lines = order?.lines ?? [];
   const total = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
   const newItems = lines.reduce((s, l) => s + (l.quantity - l.sentQty), 0);
+  const isStorefront = order?.source === "storefront" && Boolean(order?.saleId);
+  const statusIdx = STATUSES.indexOf(
+    (order?.status as (typeof STATUSES)[number]) || "new",
+  );
 
   if (done) {
+    const label = done.codCollected
+      ? `${done.receiptNo || done.id} delivered · COD collected`
+      : `${done.id} delivered & settled`;
     return (
       <div className="mx-auto max-w-md px-6 py-16 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-3xl text-accent">
           ✓
         </div>
-        <h1 className="mt-4 text-lg font-semibold text-text-strong">
-          {done.id} delivered &amp; settled
-        </h1>
+        <h1 className="mt-4 text-lg font-semibold text-text-strong">{label}</h1>
         <p className="mt-1 text-3xl font-bold text-accent">
           {formatMoney(done.total)}
         </p>
         <div className="mt-8 flex gap-3">
-          <button
-            onClick={() =>
-              fetch("/api/print", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  station: "RECEIPT",
-                  content: saleToTicketText(done),
-                }),
-              }).catch(() => undefined)
-            }
-            className="flex-1 rounded-lg border border-line py-2.5 text-sm text-text-body transition hover:border-accent hover:text-accent"
-          >
-            Print receipt
-          </button>
+          {!done.codCollected ? (
+            <button
+              onClick={() =>
+                fetch("/api/print", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    station: "RECEIPT",
+                    content: saleToTicketText(done),
+                  }),
+                }).catch(() => undefined)
+              }
+              className="flex-1 rounded-lg border border-line py-2.5 text-sm text-text-body transition hover:border-accent hover:text-accent"
+            >
+              Print receipt
+            </button>
+          ) : null}
           <button
             onClick={() => router.push("/delivery")}
             className="flex-1 rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong"
@@ -134,17 +155,22 @@ export default function DeliveryOrderPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-6">
+    <div className="mx-auto max-w-5xl px-4 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-6 sm:px-6 sm:pb-6">
       <ModuleHeader
         title={`Delivery ${order.customer || order.id}`}
-        subtitle={newItems > 0 ? `${newItems} item(s) not sent` : "Ready"}
+        subtitle={
+          order.receiptNo
+            ? `${order.receiptNo}${newItems > 0 ? ` · ${newItems} not sent` : " · Ready"}`
+            : newItems > 0
+              ? `${newItems} item(s) not sent`
+              : "Ready"
+        }
       />
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_360px]">
-        {/* Details + menu */}
         <div className="space-y-4">
           <div className="rounded-xl border border-line bg-surface-1 p-4">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field
                 label="Customer"
                 value={order.customer}
@@ -161,13 +187,13 @@ export default function DeliveryOrderPage() {
               value={order.address}
               onCommit={(v) => saveMeta({ address: v })}
             />
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="text-sm">
                 <span className="mb-1 block text-text-dim">Driver</span>
                 <select
                   value={order.driver}
                   onChange={(e) => saveMeta({ driver: e.target.value })}
-                  className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+                  className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-text-strong outline-none focus:border-accent"
                 >
                   <option value="">— unassigned —</option>
                   {drivers.map((d) => (
@@ -179,29 +205,46 @@ export default function DeliveryOrderPage() {
               </label>
               <div className="text-sm">
                 <span className="mb-1 block text-text-dim">Status</span>
-                <div className="flex flex-wrap gap-1">
-                  {STATUSES.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => saveMeta({ status: s })}
-                      className={`rounded-full px-2.5 py-1 text-xs capitalize transition ${
-                        order.status === s
-                          ? "bg-accent text-accent-ink"
-                          : "border border-line text-text-dim hover:text-text-body"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap">
+                  {STATUSES.map((s, i) => {
+                    const isCurrent = order.status === s;
+                    const isNext = i === statusIdx + 1;
+                    const disabled = !isCurrent && !isNext;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          if (isNext) void saveMeta({ status: s });
+                        }}
+                        className={`rounded-lg px-3 py-2 text-left text-xs capitalize transition sm:rounded-full sm:px-2.5 sm:py-1 sm:text-center ${
+                          isCurrent
+                            ? "bg-accent text-accent-ink"
+                            : isNext
+                              ? "border border-accent/50 text-accent hover:bg-accent/10"
+                              : "border border-line text-text-dim opacity-40"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
+            {isStorefront ? (
+              <p className="mt-3 text-xs text-text-dim">
+                Storefront order
+                {order.saleId ? ` · sale ${order.saleId}` : ""}
+                {" · "}stock already taken at checkout
+              </p>
+            ) : null}
           </div>
 
-          <ProductPicker onPick={addItem} />
+          {!isStorefront ? <ProductPicker onPick={addItem} /> : null}
         </div>
 
-        {/* Order */}
         <section className="flex h-fit flex-col rounded-xl border border-line bg-surface-1">
           <div className="border-b border-line px-5 py-3.5">
             <h2 className="font-semibold text-text-strong">Order</h2>
@@ -230,39 +273,79 @@ export default function DeliveryOrderPage() {
                       {formatMoney(l.unitPrice * l.quantity)}
                     </p>
                   </div>
-                  <div className="mt-2 flex items-center gap-1">
-                    <StepBtn label="−" onClick={() => setQty(l.productId, l.quantity - 1)} />
-                    <span className="w-8 text-center text-sm font-semibold text-text-strong">
-                      {l.quantity}
-                    </span>
-                    <StepBtn label="+" onClick={() => setQty(l.productId, l.quantity + 1)} />
-                  </div>
+                  {!isStorefront ? (
+                    <div className="mt-2 flex items-center gap-1">
+                      <StepBtn
+                        label="−"
+                        onClick={() => setQty(l.productId, l.quantity - 1)}
+                      />
+                      <span className="w-8 text-center text-sm font-semibold text-text-strong">
+                        {l.quantity}
+                      </span>
+                      <StepBtn
+                        label="+"
+                        onClick={() => setQty(l.productId, l.quantity + 1)}
+                      />
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-text-dim">Qty {l.quantity}</p>
+                  )}
                 </div>
               ))
             )}
           </div>
-          <div className="space-y-2 border-t border-line px-5 py-4">
+          {/* Desktop actions */}
+          <div className="hidden space-y-2 border-t border-line px-5 py-4 sm:block">
             {status && <p className="text-xs text-text-dim">{status}</p>}
             <div className="flex items-center justify-between">
               <p className="font-semibold text-text-strong">Total</p>
               <p className="text-xl font-bold text-accent">{formatMoney(total)}</p>
             </div>
-            <button
-              onClick={send}
-              disabled={newItems === 0}
-              className="w-full rounded-lg border border-line py-2 text-sm text-text-body transition hover:border-accent hover:text-accent disabled:opacity-40"
-            >
-              Send to Kitchen
-            </button>
+            {!isStorefront ? (
+              <button
+                onClick={send}
+                disabled={newItems === 0}
+                className="w-full rounded-lg border border-line py-2.5 text-sm text-text-body transition hover:border-accent hover:text-accent disabled:opacity-40"
+              >
+                Send to Kitchen
+              </button>
+            ) : null}
             <button
               onClick={settle}
               disabled={lines.length === 0}
               className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong disabled:opacity-40"
             >
-              Settle &amp; pay
+              {isStorefront ? "Mark delivered / COD collected" : "Settle & pay"}
             </button>
           </div>
         </section>
+      </div>
+
+      {/* Mobile sticky actions + safe-area */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface-1/95 px-4 pt-3 backdrop-blur sm:hidden pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]">
+        {status && <p className="mb-2 text-xs text-text-dim">{status}</p>}
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-sm font-semibold text-text-strong">Total</p>
+          <p className="text-lg font-bold text-accent">{formatMoney(total)}</p>
+        </div>
+        <div className="flex gap-2">
+          {!isStorefront ? (
+            <button
+              onClick={send}
+              disabled={newItems === 0}
+              className="flex-1 rounded-lg border border-line py-3 text-sm text-text-body disabled:opacity-40"
+            >
+              Send KOT
+            </button>
+          ) : null}
+          <button
+            onClick={settle}
+            disabled={lines.length === 0}
+            className="flex-[1.4] rounded-lg bg-accent py-3 text-sm font-semibold text-accent-ink disabled:opacity-40"
+          >
+            {isStorefront ? "Mark delivered / COD collected" : "Settle & pay"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -286,7 +369,7 @@ function Field({
         value={v}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => v !== value && onCommit(v)}
-        className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+        className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-text-strong outline-none focus:border-accent"
       />
     </label>
   );
@@ -296,7 +379,7 @@ function StepBtn({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="h-7 w-7 rounded-md border border-line bg-surface-1 text-text-body transition hover:border-accent hover:text-accent"
+      className="h-9 w-9 rounded-md border border-line bg-surface-1 text-text-body transition hover:border-accent hover:text-accent"
     >
       {label}
     </button>
@@ -332,7 +415,7 @@ function ProductPicker({ onPick }: { onPick: (p: Product) => void }) {
           <button
             key={p.id}
             onClick={() => onPick(p)}
-            className="flex flex-col justify-between rounded-lg border border-line bg-surface-2 p-2.5 text-left transition hover:border-accent/60"
+            className="flex min-h-[4.5rem] flex-col justify-between rounded-lg border border-line bg-surface-2 p-2.5 text-left transition hover:border-accent/60"
           >
             <p className="line-clamp-2 text-xs font-medium text-text-strong">
               {p.name}

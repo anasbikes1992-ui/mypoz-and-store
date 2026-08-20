@@ -392,7 +392,9 @@ export async function placeStorefrontOrder(
   key: StorefrontKey,
   input: StoreOrderInput,
 ): Promise<{
+  /** Stable web-order entity id (WEB-*). */
   id: string;
+  saleId: string;
   receiptNo: string;
   total: number;
   boardId: string | null;
@@ -762,50 +764,60 @@ export async function placeStorefrontOrder(
     }
   }
 
-  await saveStorefrontWebOrder(
+  const webOrder = await saveStorefrontWebOrder(
     {
-    receiptNo,
-    saleId,
-    slug: key.slug || "main-store",
-    customerName: input.customerName,
-    customerMobile: input.customerMobile,
-    customerEmail: input.customerEmail ?? null,
-    customerId: input.customerId ?? null,
-    address: input.address,
-    pickupNote: input.pickupNote ?? "",
-    paymentMethod: input.paymentMethod,
-    paymentReference: input.paymentReference ?? "",
-    fulfilment: input.fulfilment,
-    lines: resolvedLines.map((l) => ({
-      productId: l.productId,
-      name: l.name,
-      quantity: l.quantity,
-      unitPrice: l.unitPrice,
-      variantId: l.variantId,
-    })),
-    total,
-    deliveryFee: quote.deliveryFee,
-    codFee: quote.codFee,
-    finalDiscount,
-    source: "ONLINE_STORE",
-    fulfillmentStatus: input.fulfilment === "pickup" ? "ready" : "pending",
-    boardId,
-    boardKind,
-    pendingPayment: isCardPending,
-    ...(input.paymentMethod === "bank_transfer"
-      ? {
-          ...(input.paymentProofUrl ? { paymentProofUrl: input.paymentProofUrl } : {}),
-          paymentProofStatus: initialPaymentProofStatus(
-            input.paymentMethod,
-            input.paymentProofUrl,
-          ),
-        }
-      : {}),
+      receiptNo,
+      saleId,
+      slug: key.slug || "main-store",
+      customerName: input.customerName,
+      customerMobile: input.customerMobile,
+      customerEmail: input.customerEmail ?? null,
+      customerId: input.customerId ?? null,
+      address: input.address,
+      pickupNote: input.pickupNote ?? "",
+      paymentMethod: input.paymentMethod,
+      paymentReference: input.paymentReference ?? "",
+      fulfilment: input.fulfilment,
+      lines: resolvedLines.map((l) => ({
+        productId: l.productId,
+        name: l.name,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        variantId: l.variantId,
+      })),
+      total,
+      deliveryFee: quote.deliveryFee,
+      codFee: quote.codFee,
+      finalDiscount,
+      source: "ONLINE_STORE",
+      fulfillmentStatus: input.fulfilment === "pickup" ? "ready" : "pending",
+      boardId,
+      boardKind,
+      pendingPayment: isCardPending,
+      ...(input.paymentMethod === "bank_transfer"
+        ? {
+            ...(input.paymentProofUrl
+              ? { paymentProofUrl: input.paymentProofUrl }
+              : {}),
+            paymentProofStatus: initialPaymentProofStatus(
+              input.paymentMethod,
+              input.paymentProofUrl,
+            ),
+          }
+        : {}),
     },
     { host: key.host, slug: key.slug },
   );
 
-  return { id: saleId, receiptNo, total, boardId, boardKind, pendingPayment: isCardPending };
+  return {
+    id: webOrder.id,
+    saleId,
+    receiptNo: webOrder.receiptNo || receiptNo,
+    total,
+    boardId,
+    boardKind,
+    pendingPayment: isCardPending,
+  };
 }
 
 /**

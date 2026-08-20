@@ -2,12 +2,24 @@ import "server-only";
 import { randomUUID } from "crypto";
 import { findById } from "./product-repo";
 import { recordStore } from "./persistence/record-store";
+import {
+  findStorefrontOrderBySaleOrReceipt,
+  updateStorefrontWebOrder,
+} from "./storefront-orders-store";
 
 /**
  * Delivery orders — customer + address + driver + status, with the same
- * item/send engine as restaurant orders. Settling converts to a sale.
+ * item/send engine as restaurant orders. Settling converts to a sale
+ * (manual) or marks the existing storefront sale delivered (no re-sale).
  */
 export type DeliveryStatus = "new" | "preparing" | "out" | "delivered";
+
+export const DELIVERY_STATUSES = [
+  "new",
+  "preparing",
+  "out",
+  "delivered",
+] as const satisfies readonly DeliveryStatus[];
 
 export interface DeliveryLine {
   productId: string;
@@ -31,6 +43,8 @@ export interface DeliveryOrder {
   source?: "manual" | "storefront";
   saleId?: string | null;
   receiptNo?: string | null;
+  /** Set when storefront COD was collected on settle (no second sale). */
+  codCollectedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +56,27 @@ const store = recordStore<DeliveryOrder>({
 
 export function orderTotal(o: DeliveryOrder): number {
   return o.lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+}
+
+/** Require sequential forward: new → preparing → out → delivered. */
+export function assertDeliveryStatusTransition(
+  from: DeliveryStatus,
+  to: DeliveryStatus,
+): void {
+  if (from === to) return;
+  const fi = DELIVERY_STATUSES.indexOf(from);
+  const ti = DELIVERY_STATUSES.indexOf(to);
+  if (fi < 0 || ti < 0) {
+    throw new Error(`Invalid delivery status: ${from} → ${to}`);
+  }
+  if (ti !== fi + 1) {
+    const next = DELIVERY_STATUSES[fi + 1];
+    throw new Error(
+      next
+        ? `Invalid status transition: ${from} → ${to}. Next allowed: ${next}`
+        : `Order is already ${from}`,
+    );
+  }
 }
 
 export async function listActive(): Promise<DeliveryOrder[]> {
@@ -122,9 +157,16 @@ async function mutate(
 
 export async function updateMeta(
   id: string,
-  meta: Partial<Pick<DeliveryOrder, "customer" | "phone" | "address" | "driver" | "status">>,
+  meta: Partial<
+    Pick<DeliveryOrder, "customer" | "phone" | "address" | "driver" | "status">
+  >,
 ): Promise<DeliveryOrder | null> {
-  return mutate(id, (o) => ({ ...o, ...meta }));
+  return mutate(id, (o) => {
+    if (meta.status !== undefined && meta.status !== o.status) {
+      assertDeliveryStatusTransition(o.status, meta.status);
+    }
+    return { ...o, ...meta };
+  });
 }
 
 export async function addItem(
@@ -187,4 +229,60 @@ export async function markSent(
 
 export async function removeOrder(id: string): Promise<void> {
   await store.remove(id);
+}
+
+export function isStorefrontLinked(order: DeliveryOrder): boolean {
+  return order.source === "storefront" && Boolean(order.saleId);
+}
+
+/**
+ * Mark storefront delivery delivered + COD collected without creating another sale
+ * (stock already decremented by storefront_create_order).
+ */
+export async function settleStorefrontDelivery(id: string): Promise<{
+  id: string;
+  receiptNo: string | null;
+  saleId: string;
+  total: number;
+  status: "delivered";
+  codCollected: true;
+}> {
+  const order = await getOrder(id);
+  if (!order) throw new Error("Order not found");
+  if (!isStorefrontLinked(order)) {
+    throw new Error("Not a storefront-linked delivery order");
+  }
+  if (order.lines.length === 0) throw new Error("Empty order");
+
+  const saleId = String(order.saleId);
+  const now = new Date().toISOString();
+
+  const updated = await mutate(id, (o) => ({
+    ...o,
+    status: "delivered" as const,
+    codCollectedAt: now,
+  }));
+  if (!updated) throw new Error("Order not found");
+
+  const web = await findStorefrontOrderBySaleOrReceipt(
+    saleId,
+    order.receiptNo ?? undefined,
+  );
+  if (web) {
+    await updateStorefrontWebOrder(web.id, {
+      fulfillmentStatus: "delivered",
+    });
+  }
+
+  const total = orderTotal(updated);
+  await removeOrder(id);
+
+  return {
+    id: saleId,
+    receiptNo: order.receiptNo ?? web?.receiptNo ?? null,
+    saleId,
+    total,
+    status: "delivered",
+    codCollected: true,
+  };
 }

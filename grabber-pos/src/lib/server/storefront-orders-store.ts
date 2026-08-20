@@ -90,8 +90,19 @@ export async function saveStorefrontWebOrder(
   ctx?: { host?: string | null; slug?: string | null },
 ): Promise<StorefrontWebOrder> {
   assertNoLocalFallbackForPublicOrders();
+  const receiptNo = String(order.receiptNo || "").trim();
+  if (!receiptNo) {
+    throw new Error("ORDER: receiptNo is required for storefront web orders");
+  }
+  // Always persist saleId alongside receiptNo (card-pending uses receipt as stand-in).
+  const saleId =
+    order.saleId != null && String(order.saleId).trim()
+      ? String(order.saleId)
+      : receiptNo;
   const row: StorefrontWebOrder = {
     ...order,
+    receiptNo,
+    saleId,
     id: order.id ?? `WEB-${randomUUID().slice(0, 8).toUpperCase()}`,
     createdAt: order.createdAt ?? new Date().toISOString(),
   };

@@ -84,6 +84,8 @@ export function defaultStoreConfig(partial: Partial<StoreConfig> = {}): StoreCon
   const base: StoreConfig = storeConfigSchema.parse({
     name,
     slug,
+    slugAliases:
+      slug === "anaz-store" ? ["main-store", "shopping-station"] : [],
     description: "Official online store",
     status: "draft",
     themeId: "local",

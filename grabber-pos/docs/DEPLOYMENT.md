@@ -2,10 +2,35 @@
 
 ## Web app (Vercel)
 
-The web app is a standard Next.js 16 project and deploys to Vercel unchanged.
-It can also live inside the Grabber AI Studio monorepo as `apps/pos`.
+**Sole live host:** [`mypoz-and-store-ui`](https://mypoz-and-store-ui.vercel.app)  
+Production URL: `https://mypoz-and-store-ui.vercel.app`
+
+A second Vercel project named `mypoz-and-store` may still exist — leave it undeployed / unused. **Do not delete** it without an explicit OK. Do not point Meta webhooks, `NEXT_PUBLIC_APP_URL`, or client bookmarks at that host.
+
+### Root Directory (important)
+
+| Setting | Correct value | Wrong |
+|---------|---------------|--------|
+| Vercel → Project Settings → Root Directory | `grabber-pos` | `grabber-pos/grabber-pos`, empty when the Git root is the monorepo |
+
+The Git repository root is the monorepo (`MyPoz & Store`). The Next.js app lives in the `grabber-pos/` folder — that is the Root Directory on **`mypoz-and-store-ui`**. There is no nested `grabber-pos/grabber-pos`.
+
+### Local CLI link
+
+From `grabber-pos/`:
+
+```bash
+# If TLS fails on this machine: set NODE_OPTIONS=--use-system-ca
+npx vercel link --project mypoz-and-store-ui --yes
+```
+
+`.vercel/project.json` must show `"projectName": "mypoz-and-store-ui"`. The `.vercel/` folder is gitignored.
+
+Launch sequence (checkout smoke → WA paste → catalogue): [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).
 
 ### Environment variables (Vercel project settings)
+
+Set these on **`mypoz-and-store-ui`** only (parity with production).
 
 | Variable | Scope | Notes |
 |----------|-------|-------|

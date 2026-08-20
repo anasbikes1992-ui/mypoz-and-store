@@ -6,6 +6,8 @@ import {
   setQty,
   markSent,
   removeOrder,
+  isStorefrontLinked,
+  settleStorefrontDelivery,
 } from "@/lib/server/delivery-store";
 import { getRepository } from "@/lib/server/repositories";
 import { printTicket } from "@/lib/server/ticket-printer";
@@ -81,6 +83,26 @@ export async function POST(
       case "settle": {
         const order = await getOrder(id);
         if (!order || order.lines.length === 0) return fail("Empty order");
+
+        // Storefront COD already decremented stock via storefront_create_order —
+        // mark delivered / COD collected without creating another sale.
+        if (isStorefrontLinked(order)) {
+          const settled = await settleStorefrontDelivery(id);
+          return NextResponse.json({
+            success: true,
+            data: {
+              id: settled.saleId,
+              receiptNo: settled.receiptNo,
+              total: settled.total,
+              status: "completed",
+              paymentMethod: "cash",
+              codCollected: true,
+              source: "storefront",
+            },
+            error: null,
+          });
+        }
+
         const repo = await getRepository();
         const sale = await repo.createSale({
           lines: order.lines.map((l) => ({

@@ -120,7 +120,7 @@ export function OnlineOrderAlerts() {
           Dismiss
         </button>
         <Link
-          href={`/commerce/orders/${toast.id}`}
+          href={`/commerce/orders/${toast.receiptNo || toast.id}`}
           className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink"
           onClick={() => setToast(null)}
         >

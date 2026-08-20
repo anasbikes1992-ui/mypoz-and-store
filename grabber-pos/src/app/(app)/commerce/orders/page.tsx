@@ -80,7 +80,7 @@ export default async function CommerceOrdersPage({
                 <tr key={o.id} className="border-t border-line">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/commerce/orders/${o.id}`}
+                      href={`/commerce/orders/${o.receiptNo || o.id}`}
                       className="font-mono text-xs text-accent hover:underline"
                     >
                       {o.receiptNo}

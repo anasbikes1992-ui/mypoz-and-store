@@ -17,9 +17,39 @@ export function ProductImportExport({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [result, setResult] = useState<
     { ok: true; summary: ImportSummary } | { ok: false; error: string } | null
   >(null);
+
+  async function handleExport() {
+    setExporting(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/products/export");
+      const type = res.headers.get("content-type") ?? "";
+      if (!res.ok || type.includes("application/json")) {
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || "Export failed");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `grabber-products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setResult({
+        ok: false,
+        error: err instanceof Error ? err.message : "Export failed",
+      });
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -58,14 +88,14 @@ export function ProductImportExport({
         >
           {busy ? "Importing…" : "Import Excel / CSV"}
         </button>
-        {/* API download endpoints, not pages — next/link would break the download. */}
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a
-          href="/api/products/export"
-          className="rounded-lg border border-line px-3.5 py-2 text-sm text-text-body transition hover:border-accent hover:text-accent"
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={busy || exporting}
+          className="rounded-lg border border-line px-3.5 py-2 text-sm text-text-body transition hover:border-accent hover:text-accent disabled:opacity-50"
         >
-          Export Excel
-        </a>
+          {exporting ? "Exporting…" : "Export Excel"}
+        </button>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/api/products/template"

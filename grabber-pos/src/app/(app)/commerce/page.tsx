@@ -84,9 +84,12 @@ export default async function CommerceOverviewPage() {
               {orders.slice(0, 8).map((o) => (
                 <li key={o.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-text-strong">
+                    <Link
+                      href={`/commerce/orders/${o.receiptNo || o.id}`}
+                      className="truncate font-medium text-text-strong hover:text-accent"
+                    >
                       {o.receiptNo} · {o.customerName}
-                    </p>
+                    </Link>
                     <p className="text-xs text-text-dim">
                       {o.fulfilment} · {o.paymentMethod}
                       {o.pendingPayment ? " · awaiting payment" : ""}

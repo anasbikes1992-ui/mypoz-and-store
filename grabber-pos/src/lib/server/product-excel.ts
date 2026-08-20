@@ -223,12 +223,20 @@ function toRow(p: Product): Record<string, unknown> {
   return row;
 }
 
-/** Full catalog as an .xlsx buffer. */
-export function exportProductsBuffer(): Buffer {
-  const rows = allProducts().map(toRow);
+/** Full catalog as an .xlsx buffer (local seed or durable Supabase catalogue). */
+export async function exportProductsBuffer(): Promise<Buffer> {
+  const { listAllProductsForExport } = await import("./product-admin-store");
+  const products = await listAllProductsForExport();
+  const rows = products.map(toRow);
   const ws = XLSX.utils.json_to_sheet(rows, {
     header: EXPORT_HEADERS.map(([h]) => h),
   });
+  // json_to_sheet omits headers when rows is empty — force header row.
+  if (rows.length === 0) {
+    XLSX.utils.sheet_add_aoa(ws, [EXPORT_HEADERS.map(([h]) => h)], {
+      origin: "A1",
+    });
+  }
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Products");
   return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;

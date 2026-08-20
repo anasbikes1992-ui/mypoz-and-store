@@ -78,6 +78,24 @@ export const PAYMENT_LABELS: Record<PaymentMode, string> = {
   bank_transfer: "Bank transfer",
 };
 
+/** Customer-facing payment label; cash depends on fulfilment. */
+export function paymentLabel(
+  mode: PaymentMode,
+  fulfilment?: FulfilmentMode | null,
+): string {
+  if (mode === "cash") {
+    return fulfilment === "pickup" ? "Cash at pickup" : "Cash on delivery";
+  }
+  return PAYMENT_LABELS[mode];
+}
+
+/** Short helper under the cash payment option on checkout. */
+export function paymentCashHint(fulfilment: FulfilmentMode): string {
+  return fulfilment === "pickup"
+    ? "Pay at the counter when collecting."
+    : "Pay the courier when delivered.";
+}
+
 export const FULFILMENT_LABELS: Record<FulfilmentMode, string> = {
   pickup: "Click & collect / pickup",
   courier: "Courier delivery",

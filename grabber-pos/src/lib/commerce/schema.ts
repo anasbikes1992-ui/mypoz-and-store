@@ -181,6 +181,8 @@ export type TokenOverride = z.infer<typeof tokenOverrideSchema>;
 export const storeConfigSchema = z.object({
   name: z.string().min(1).max(160).default("MyPoz Store"),
   slug: z.string().min(1).max(80).default("main-store"),
+  /** Legacy public slugs that should 308 to `slug` (tenant alias map). */
+  slugAliases: z.array(z.string().min(1).max(80)).max(20).default([]),
   description: z.string().max(500).default(""),
   status: z.enum(STORE_STATUSES).default("draft"),
   themeId: z.enum(COMMERCE_THEME_IDS).default("local"),
