@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getStorefrontInfo } from "@/lib/server/storefront-repo";
 import { readWebsite } from "@/lib/server/website-store";
 import { readPublishedStore } from "@/lib/server/commerce-store";
-import { themeClass } from "@/lib/commerce/themes";
+import { storeTokenStyle, themeClass } from "@/lib/commerce/themes";
 import { storeCopy } from "@/lib/commerce/i18n";
 import { StorefrontAnalytics } from "@/components/storefront/Analytics";
 import { StoreChrome } from "@/components/commerce/storefront/StoreChrome";
@@ -25,9 +25,10 @@ export default async function StoreLayout({
   const [website, store] = await Promise.all([readWebsite(), readPublishedStore()]);
   const t = storeCopy(store.locale);
   const theme = themeClass(store.themeId);
+  const tokenStyle = storeTokenStyle(store.tokens || {});
 
   return (
-    <div className={`${theme} min-h-screen font-sans`}>
+    <div className={`${theme} min-h-screen font-sans`} style={tokenStyle}>
       <CartProvider
         slug={slug}
         businessName={info.businessName}

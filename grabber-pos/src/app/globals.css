@@ -303,18 +303,19 @@ html[data-theme="light"] .theme-marketing .text-hero-gradient {
   --mp-max: 80rem;
 }
 .theme-mypoz-market {
-  --surface-0: oklch(97.5% 0.012 145);
+  /* Shopping Station–style dense market: brand red, clean white shelves */
+  --surface-0: oklch(97.5% 0.01 30);
   --surface-1: oklch(100% 0 0);
-  --surface-2: oklch(95% 0.02 145);
-  --surface-3: oklch(91% 0.03 145);
-  --line: oklch(86% 0.03 145);
-  --text-strong: oklch(22% 0.05 145);
-  --text: oklch(34% 0.04 145);
-  --text-dim: oklch(46% 0.03 145);
-  --accent: oklch(50% 0.16 145);
-  --accent-strong: oklch(42% 0.16 145);
+  --surface-2: oklch(96% 0.015 30);
+  --surface-3: oklch(92% 0.02 30);
+  --line: oklch(88% 0.02 30);
+  --text-strong: oklch(20% 0.03 30);
+  --text: oklch(32% 0.025 30);
+  --text-dim: oklch(48% 0.02 30);
+  --accent: #c81e1e;
+  --accent-strong: #a01818;
   --accent-ink: oklch(99% 0.01 95);
-  --mp-radius: 0.75rem;
+  --mp-radius: 0.5rem;
   --mp-max: 84rem;
 }
 .theme-mypoz-food {
@@ -561,6 +562,14 @@ body {
 }
 .theme-mypoz-market .store-search {
   flex: 1;
+}
+.theme-mypoz-market .store-chrome {
+  background: var(--surface-1);
+  box-shadow: 0 1px 0 var(--line);
+}
+.theme-mypoz-market .store-announce {
+  letter-spacing: 0.01em;
+  text-transform: none;
 }
 .store-announce {
   background: var(--accent);

@@ -88,14 +88,14 @@ export const THEMES: Record<CommerceThemeId, ThemeDefinition> = {
     tagline: "Dense catalogue. Built for weekly shops.",
     idealFor: ["grocery", "supermarkets", "household goods"],
     tokens: {
-      primary: "oklch(48% 0.16 145)",
-      secondary: "oklch(55% 0.14 95)",
-      accent: "oklch(52% 0.16 145)",
-      background: "oklch(98% 0.01 145)",
+      primary: "#c81e1e",
+      secondary: "#111827",
+      accent: "#c81e1e",
+      background: "oklch(98% 0.01 30)",
       surface: "oklch(100% 0 0)",
-      text: "oklch(22% 0.04 145)",
-      muted: "oklch(42% 0.03 145)",
-      border: "oklch(88% 0.03 145)",
+      text: "oklch(22% 0.03 30)",
+      muted: "oklch(45% 0.02 30)",
+      border: "oklch(88% 0.02 30)",
       success: "oklch(50% 0.15 145)",
       warning: "oklch(70% 0.15 85)",
       error: "oklch(55% 0.18 25)",
@@ -192,4 +192,22 @@ export const THEME_LIST = COMMERCE_THEME_IDS.map((id) => THEMES[id]);
 
 export function themeClass(id: CommerceThemeId): string {
   return `theme-storefront theme-mypoz theme-mypoz-${id}`;
+}
+
+/** Apply published store token overrides as CSS variables (brand primary wins over theme pack). */
+export function storeTokenStyle(tokens: {
+  primary?: string;
+  secondary?: string;
+}): Record<string, string> {
+  const style: Record<string, string> = {};
+  const primary = tokens.primary?.trim();
+  if (primary) {
+    style["--accent"] = primary;
+    style["--accent-strong"] = `color-mix(in srgb, ${primary} 82%, black)`;
+  }
+  const secondary = tokens.secondary?.trim();
+  if (secondary) {
+    style["--text-strong"] = secondary;
+  }
+  return style;
 }
