@@ -3,6 +3,10 @@ import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { verifySessionToken } from "@/lib/server/session";
 import { inspectRequest } from "@/lib/server/waf";
 import { apiRateLimit, clientIpFromHeaders } from "@/lib/server/rate-limit";
+import {
+  resolveStoreSlugAlias,
+  rewriteStorePath,
+} from "@/lib/store-slug-aliases";
 
 const DEMO_COOKIE = "pos_session";
 const SID_COOKIE = "mypoz_sid";
@@ -76,6 +80,18 @@ export function proxy(req: NextRequest) {
   ) {
     return NextResponse.next();
   }
+
+  // 308 alias → canonical storefront slug (path-preserving).
+  const storeMatch = pathname.match(/^\/store\/([^/]+)(.*)$/);
+  if (storeMatch) {
+    const canonical = resolveStoreSlugAlias(storeMatch[1]!);
+    if (canonical) {
+      const url = req.nextUrl.clone();
+      url.pathname = rewriteStorePath(pathname, canonical);
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
   const waf = inspectRequest(req);
   if (!waf.ok) return blocked(waf.status, waf.reason);
 
