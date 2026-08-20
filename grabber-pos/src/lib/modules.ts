@@ -35,6 +35,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "play", title: "Play area", subtitle: "Time-based billing", icon: "🎠", href: "/play", status: "active" },
       { key: "layaway", title: "Layaway", subtitle: "Deposits & holds", icon: "🧾", href: "/layaway", status: "active" },
       { key: "click-collect", title: "Click & collect", subtitle: "Pick list", icon: "🧺", href: "/click-collect", status: "active" },
+      { key: "digital", title: "Digital", subtitle: "Non-inventory goods", icon: "💾", href: "/digital", status: "active" },
     ],
   },
   {
@@ -49,6 +50,9 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "stocktake", title: "Stocktake", subtitle: "Count & post variances", icon: "🔢", href: "/stocktake", status: "active" },
       { key: "transfers", title: "Transfers", subtitle: "Branch stock moves", icon: "🔀", href: "/transfers", status: "active" },
       { key: "customers", title: "Customers", subtitle: "Credit · loyalty", icon: "👥", href: "/customers", status: "active" },
+      { key: "loyalty", title: "Loyalty ledger", subtitle: "Points history", icon: "⭐", href: "/loyalty", status: "active" },
+      { key: "memberships", title: "Memberships", subtitle: "Plans & member pricing", icon: "🎖️", href: "/memberships", status: "active" },
+      { key: "crm", title: "CRM lite", subtitle: "Segments & outreach", icon: "📇", href: "/crm", status: "active" },
       { key: "suppliers", title: "Suppliers", subtitle: "Manage suppliers", icon: "🚚", href: "/suppliers", status: "active" },
       { key: "purchases", title: "Purchase orders", subtitle: "Order → receive", icon: "📋", href: "/purchase-orders", status: "active" },
       { key: "grn", title: "Goods Received", subtitle: "Receive stock (GRN)", icon: "🧾", href: "/grn", status: "active" },

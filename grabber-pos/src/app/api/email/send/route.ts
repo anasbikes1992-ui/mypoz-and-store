@@ -28,6 +28,7 @@ const sendSchema = z.object({
     "refund-confirmation",
     "compliance-data-request",
     "new-tenant-welcome",
+    "digital-delivery",
   ]),
   to: z.string().email(),
   data: z.record(z.string(), z.unknown()).optional(),
@@ -165,6 +166,30 @@ export async function POST(req: NextRequest) {
         docsUrl: `${appUrl}/help`,
       }); break;
 
+    case "digital-delivery": {
+      const bodies = (data.bodies as string[]) ?? [];
+      const receiptNo = String(data.receiptNo ?? "");
+      const bodyText =
+        bodies.length > 0
+          ? bodies.join("\n\n")
+          : String(data.body ?? "Your digital purchase is ready.");
+      const htmlBodies = bodyText
+        .split("\n")
+        .map((line) => `<p style="margin:0 0 8px">${line || "&nbsp;"}</p>`)
+        .join("");
+      email = {
+        subject: `${businessName} · Digital delivery${receiptNo ? ` · ${receiptNo}` : ""}`,
+        text: bodyText,
+        html: `<div style="font-family:sans-serif;max-width:560px">
+          <p style="color:${accentColor};font-weight:600">${businessName}</p>
+          <p>Hi ${String(data.customerName ?? "Customer")},</p>
+          ${htmlBodies}
+          <p style="color:#666;font-size:12px;margin-top:24px">Receipt ${receiptNo || "—"} · Total ${String(data.total ?? "")}</p>
+        </div>`,
+      };
+      break;
+    }
+
     default:
       return NextResponse.json({ success: false, error: "Unknown template" }, { status: 400 });
   }
@@ -187,7 +212,7 @@ export async function GET() {
         "order-confirmation", "registration", "licence-invoice",
         "licence-renewed", "licence-expiry-warning", "staff-invite",
         "low-stock-alert", "daily-summary", "refund-confirmation",
-        "compliance-data-request", "new-tenant-welcome",
+        "compliance-data-request", "new-tenant-welcome", "digital-delivery",
       ],
     },
     error: null,

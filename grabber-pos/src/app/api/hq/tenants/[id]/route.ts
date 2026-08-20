@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGmsAdmin } from "@/lib/server/gms-auth";
-import { getHqTenant, updateHqTenant } from "@/lib/server/hq-repo";
+import {
+  deleteHqTenant,
+  getHqTenant,
+  updateHqTenant,
+} from "@/lib/server/hq-repo";
 
 export async function GET(
   _req: NextRequest,
@@ -28,13 +32,16 @@ const putSchema = z.object({
       accentColor: z.string().max(32).optional(),
     })
     .optional(),
-    license: z
-      .object({
-        plan: z.enum(["starter", "business", "enterprise"]).optional(),
-        expiry: z.string().max(20).optional(),
-        extras: z.array(z.string().regex(/^[a-z0-9-]{2,40}$/)).max(40).optional(),
-      })
-      .optional(),
+  license: z
+    .object({
+      plan: z.enum(["starter", "business", "enterprise"]).optional(),
+      expiry: z.string().max(20).optional(),
+      extras: z
+        .array(z.string().regex(/^[a-z0-9-]{2,40}$/))
+        .max(40)
+        .optional(),
+    })
+    .optional(),
   status: z.enum(["active", "suspended"]).optional(),
 });
 
@@ -76,4 +83,26 @@ export async function PUT(
     );
   }
   return NextResponse.json({ success: true, data: updated, error: null });
+}
+
+/** Soft-delete demo pipeline clients only — never hard-deletes organizations. */
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const gate = await requireGmsAdmin();
+  if (!gate.ok) return gate.response;
+  const { id } = await params;
+  const result = await deleteHqTenant(id);
+  if (!result.ok) {
+    return NextResponse.json(
+      { success: false, data: null, error: result.error },
+      { status: 400 },
+    );
+  }
+  return NextResponse.json({
+    success: true,
+    data: { removed: true },
+    error: null,
+  });
 }

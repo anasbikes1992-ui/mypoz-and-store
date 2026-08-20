@@ -170,7 +170,9 @@ export interface Database {
       profiles: Table<{
         id: string;
         org_id: string;
+        full_name: string;
         role: string;
+        is_active: boolean;
       }>;
       product_variants: Table<
         {

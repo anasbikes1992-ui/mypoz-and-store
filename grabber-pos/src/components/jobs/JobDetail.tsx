@@ -34,6 +34,9 @@ interface Job {
   status: string;
   parts: Part[];
   labour: Labour[];
+  deposit?: number;
+  diagnosis?: string;
+  warrantyNote?: string;
 }
 
 export function JobDetail() {
@@ -65,9 +68,11 @@ export function JobDetail() {
 
   const parts = job?.parts ?? [];
   const labour = job?.labour ?? [];
-  const total =
+  const subtotal =
     parts.reduce((s, p) => s + p.unitPrice * p.quantity, 0) +
     labour.reduce((s, l) => s + l.amount, 0);
+  const deposit = Math.max(0, Number(job?.deposit) || 0);
+  const total = Math.max(0, subtotal - Math.min(deposit, subtotal));
 
   async function settle() {
     const j = await act("settle", { paymentMethod: "cash", cashReceived: total });
@@ -134,6 +139,21 @@ export function JobDetail() {
             </div>
             <Field label={cfg.subjectLabel} value={job.subject} onCommit={(v) => act("meta", { meta: { subject: v } })} />
             <Field label="Reported issue" value={job.issue} onCommit={(v) => act("meta", { meta: { issue: v } })} />
+            <Field
+              label="Diagnosis"
+              value={job.diagnosis ?? ""}
+              onCommit={(v) => act("meta", { meta: { diagnosis: v } })}
+            />
+            <Field
+              label="Warranty note"
+              value={job.warrantyNote ?? ""}
+              onCommit={(v) => act("meta", { meta: { warrantyNote: v } })}
+            />
+            <NumField
+              label="Deposit (prepaid)"
+              value={job.deposit ?? 0}
+              onCommit={(v) => act("meta", { meta: { deposit: Number(v) || 0 } })}
+            />
             <div className="mt-3">
               <span className="mb-1 block text-sm text-text-dim">Status</span>
               <div className="flex flex-wrap gap-1">
@@ -236,13 +256,23 @@ export function JobDetail() {
             )}
           </div>
           <div className="space-y-2 border-t border-line px-5 py-4">
+            <div className="flex items-center justify-between text-sm">
+              <p className="text-text-dim">Subtotal</p>
+              <p className="text-text-body">{formatMoney(subtotal)}</p>
+            </div>
+            {deposit > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <p className="text-text-dim">Deposit credited</p>
+                <p className="text-text-body">−{formatMoney(Math.min(deposit, subtotal))}</p>
+              </div>
+            )}
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-text-strong">Total</p>
+              <p className="font-semibold text-text-strong">To pay</p>
               <p className="text-xl font-bold text-accent">{formatMoney(total)}</p>
             </div>
             <button
               onClick={settle}
-              disabled={total <= 0}
+              disabled={subtotal <= 0}
               className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-accent-ink transition hover:bg-accent-strong disabled:opacity-40"
             >
               Collect &amp; pay
@@ -272,6 +302,31 @@ function Field({
         value={v}
         onChange={(e) => setV(e.target.value)}
         onBlur={() => v !== value && onCommit(v)}
+        className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+      />
+    </label>
+  );
+}
+
+function NumField({
+  label,
+  value,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  onCommit: (v: string) => void;
+}) {
+  const [v, setV] = useState(String(value));
+  useEffect(() => setV(String(value)), [value]);
+  return (
+    <label className="mt-3 block text-sm">
+      <span className="mb-1 block text-text-dim">{label}</span>
+      <input
+        type="number"
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={() => Number(v) !== value && onCommit(v)}
         className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
       />
     </label>

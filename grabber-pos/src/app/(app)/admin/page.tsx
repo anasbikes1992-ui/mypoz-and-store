@@ -10,6 +10,7 @@ import {
   planEnabledKeys,
   type PlanTier,
 } from "@/lib/plans";
+import { PLAN_PRICES_LKR } from "@/lib/billing";
 import { MODULE_GROUPS } from "@/lib/modules";
 
 const PLAN_TIERS: PlanTier[] = ["starter", "business", "enterprise"];
@@ -25,6 +26,28 @@ const PLAN_BLURB: Record<PlanTier, string> = {
 
 function allTiles() {
   return MODULE_GROUPS.flatMap((g) => g.tiles);
+}
+
+function submitPayHereForm(checkout: {
+  formAction?: string;
+  formFields?: Record<string, string>;
+}) {
+  if (!checkout.formAction || !checkout.formFields) {
+    throw new Error("Unexpected PayHere checkout response");
+  }
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = checkout.formAction;
+  form.style.display = "none";
+  for (const [k, v] of Object.entries(checkout.formFields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = k;
+    input.value = v;
+    form.appendChild(input);
+  }
+  document.body.appendChild(form);
+  form.submit();
 }
 
 export default function AdminPage() {
@@ -43,6 +66,8 @@ export default function AdminPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [licenceMsg, setLicenceMsg] = useState<string | null>(null);
+  const [licenceBusy, setLicenceBusy] = useState(false);
+  const [payhereReady, setPayhereReady] = useState(false);
   const [usage, setUsage] = useState<{
     salesCount: number;
     todayRevenue: number;
@@ -62,6 +87,13 @@ export default function AdminPage() {
       })
       .catch(() => setError("Could not load the current configuration."))
       .finally(() => setLoading(false));
+
+    fetch("/api/billing")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setPayhereReady(Boolean(j.data?.payhere));
+      })
+      .catch(() => undefined);
 
     Promise.all([
       fetch("/api/sales").then((r) => r.json()),
@@ -88,42 +120,56 @@ export default function AdminPage() {
       .catch(() => undefined);
   }, []);
 
-  const planAmounts: Record<PlanTier, number> = {
-    starter: 2500,
-    business: 7500,
-    enterprise: 15000,
-  };
-
-  async function recordLicencePayment() {
+  async function emailLicenceInvoice() {
+    setLicenceBusy(true);
     setLicenceMsg(null);
     try {
-      const amount = planAmounts[plan];
-      await fetch("/api/audit", {
+      const res = await fetch("/api/billing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "licence.payment",
-          details: `Recorded stub payment ${amount} for ${plan}`,
-          metadata: { plan, amount },
-        }),
+        body: JSON.stringify({ plan, method: "invoice" }),
       });
-      try {
-        await fetch("/api/collections/income", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: `Licence payment · ${PLAN_NAMES[plan]}`,
-            amount,
-            date: new Date().toISOString().slice(0, 10),
-            category: "licence",
-          }),
-        });
-      } catch {
-        // optional
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Invoice failed");
+      setLicenceMsg(
+        `Invoice ${json.data.ticketId} emailed · LKR ${Number(json.data.amountLkr).toLocaleString("en-LK")}`,
+      );
+    } catch (e) {
+      setLicenceMsg(e instanceof Error ? e.message : "Could not email invoice");
+    } finally {
+      setLicenceBusy(false);
+    }
+  }
+
+  async function payLicenceWithPayHere() {
+    setLicenceBusy(true);
+    setLicenceMsg(null);
+    try {
+      const res = await fetch("/api/billing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, method: "payhere" }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "PayHere failed");
+      const checkout = json.data?.checkout as {
+        mode?: string;
+        url?: string;
+        formAction?: string;
+        formFields?: Record<string, string>;
+      };
+      if (checkout?.mode === "redirect" && checkout.url) {
+        window.location.assign(checkout.url);
+        return;
       }
-      setLicenceMsg(`Recorded stub payment of LKR ${amount.toLocaleString()}`);
-    } catch {
-      setLicenceMsg("Could not record payment");
+      if (checkout?.mode === "form") {
+        submitPayHereForm(checkout);
+        return;
+      }
+      throw new Error("Unexpected checkout response");
+    } catch (e) {
+      setLicenceMsg(e instanceof Error ? e.message : "Could not start PayHere");
+      setLicenceBusy(false);
     }
   }
 
@@ -327,25 +373,38 @@ export default function AdminPage() {
       <section className="mt-10 grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-line bg-surface-1 p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim">
-            Licence billing (stub)
+            Licence billing
           </h2>
           <p className="mt-3 text-sm text-text-body">
             Plan amount:{" "}
             <span className="font-semibold text-accent">
-              LKR {planAmounts[plan].toLocaleString()}
+              LKR {PLAN_PRICES_LKR[plan].toLocaleString("en-LK")}
             </span>{" "}
-            / month (demo)
+            / month
           </p>
           <p className="mt-1 text-xs text-text-dim">
-            Fiscal provider: stub · records audit (+ optional income)
+            Email invoice opens an HQ ticket and sends bank instructions.
+            PayHere collects card when merchant keys are configured.
           </p>
-          <button
-            type="button"
-            onClick={() => void recordLicencePayment()}
-            className="mt-4 rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink"
-          >
-            Record payment
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={licenceBusy}
+              onClick={() => void emailLicenceInvoice()}
+              className="rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink disabled:opacity-50"
+            >
+              Email invoice
+            </button>
+            <button
+              type="button"
+              disabled={licenceBusy || !payhereReady}
+              onClick={() => void payLicenceWithPayHere()}
+              className="rounded-xl border border-line bg-surface-2 px-5 py-2.5 text-sm font-semibold text-text-strong disabled:opacity-50"
+              title={payhereReady ? undefined : "Set PAYHERE_MERCHANT_ID and SECRET"}
+            >
+              Pay with PayHere
+            </button>
+          </div>
           {licenceMsg && (
             <p className="mt-2 text-sm text-accent">{licenceMsg}</p>
           )}

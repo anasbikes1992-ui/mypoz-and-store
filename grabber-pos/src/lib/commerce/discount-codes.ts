@@ -10,7 +10,9 @@ export type DiscountCodeRecord = {
   minSubtotal?: number;
   maxUses?: number;
   usedCount?: number;
+  startsAt?: string;
   expiry?: string;
+  description?: string;
   status?: string;
 };
 
@@ -26,6 +28,12 @@ export function computeDiscount(
   const status = (rec.status || "active").toLowerCase();
   if (status !== "active") {
     return { ok: false, error: "This code is not active" };
+  }
+  if (rec.startsAt) {
+    const start = new Date(rec.startsAt);
+    if (!Number.isNaN(start.getTime()) && start.getTime() > now.getTime()) {
+      return { ok: false, error: "This code is not valid yet" };
+    }
   }
   if (rec.expiry) {
     const exp = new Date(rec.expiry);

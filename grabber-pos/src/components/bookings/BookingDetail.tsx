@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Sale } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
@@ -27,8 +27,28 @@ interface Booking {
   startDate: string;
   endDate: string;
   deposit: number;
+  overdueFee?: number;
+  depositDisposition?: "held" | "refunded" | "forfeited";
   status: string;
   extras: Extra[];
+}
+
+function daysOverdue(endDate: string): number {
+  if (!endDate) return 0;
+  const today = new Date().toISOString().slice(0, 10);
+  if (endDate >= today) return 0;
+  const end = new Date(endDate + "T00:00:00");
+  const startOfToday = new Date(today + "T00:00:00");
+  return Math.max(
+    1,
+    Math.round((startOfToday.getTime() - end.getTime()) / 86_400_000),
+  );
+}
+
+function suggestOverdue(rate: number, endDate: string): number {
+  const days = daysOverdue(endDate);
+  if (days <= 0) return 0;
+  return Math.round(days * (Number(rate) || 0) * 0.1);
 }
 
 export function BookingDetail() {
@@ -58,8 +78,12 @@ export function BookingDetail() {
     return j;
   }
 
-  const totals = (() => {
-    if (!b) return { duration: 0, stayCharge: 0, extras: 0, total: 0 };
+  const lateDays = b ? daysOverdue(b.endDate) : 0;
+  const suggested = b ? suggestOverdue(b.rate, b.endDate) : 0;
+  const isPastDue = lateDays > 0 && b?.status === "active";
+
+  const totals = useMemo(() => {
+    if (!b) return { duration: 0, stayCharge: 0, extras: 0, overdue: 0, forfeit: 0, total: 0 };
     let duration = 0;
     if (b.startDate && b.endDate) {
       const days = Math.round(
@@ -70,11 +94,33 @@ export function BookingDetail() {
     }
     const stayCharge = duration * (Number(b.rate) || 0);
     const extras = b.extras.reduce((s, e) => s + e.amount, 0);
-    return { duration, stayCharge, extras, total: stayCharge + extras };
-  })();
+    const overdue =
+      Number(b.overdueFee) > 0
+        ? Number(b.overdueFee)
+        : suggested;
+    const forfeit =
+      b.depositDisposition === "forfeited"
+        ? Math.max(0, Number(b.deposit) || 0)
+        : 0;
+    return {
+      duration,
+      stayCharge,
+      extras,
+      overdue,
+      forfeit,
+      total: stayCharge + extras + overdue + forfeit,
+    };
+  }, [b, suggested]);
 
   async function settle() {
-    const j = await act("settle", { paymentMethod: "cash", cashReceived: totals.total });
+    // Persist suggested overdue before settle if unset.
+    if (b && suggested > 0 && !(Number(b.overdueFee) > 0)) {
+      await act("meta", { meta: { overdueFee: suggested } });
+    }
+    const j = await act("settle", {
+      paymentMethod: "cash",
+      cashReceived: totals.total,
+    });
     if (j.success) setDone(j.data as Sale);
   }
 
@@ -121,6 +167,7 @@ export function BookingDetail() {
     return <p className="p-10 text-center text-sm text-text-dim">Loading…</p>;
   }
   const cfg = BOOKING_CONFIG[b.type];
+  const disposition = b.depositDisposition ?? "held";
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-6">
@@ -128,6 +175,16 @@ export function BookingDetail() {
         title={`${cfg.title} · ${b.subject || b.id}`}
         subtitle={b.customer || "New booking"}
       />
+
+      {isPastDue && (
+        <div className="mt-4 rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+          Overdue by {lateDays} day{lateDays === 1 ? "" : "s"}
+          {suggested > 0
+            ? ` · suggested fee ${formatMoney(suggested)}`
+            : ""}
+          . Apply before settle or it will be added automatically.
+        </div>
+      )}
 
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-xl border border-line bg-surface-1 p-4">
@@ -139,6 +196,11 @@ export function BookingDetail() {
             <DateField label="From" value={b.startDate} onCommit={(v) => act("meta", { meta: { startDate: v } })} />
             <DateField label="To" value={b.endDate} onCommit={(v) => act("meta", { meta: { endDate: v } })} />
             <NumField label="Deposit (refundable)" value={b.deposit} onCommit={(v) => act("meta", { meta: { deposit: v } })} />
+            <NumField
+              label="Overdue fee"
+              value={b.overdueFee ?? 0}
+              onCommit={(v) => act("meta", { meta: { overdueFee: Number(v) || 0 } })}
+            />
           </div>
           <div className="mt-3">
             <span className="mb-1 block text-sm text-text-dim">Status</span>
@@ -158,6 +220,53 @@ export function BookingDetail() {
               ))}
             </div>
           </div>
+
+          {b.deposit > 0 && (
+            <div className="mt-4 border-t border-line pt-4">
+              <p className="mb-2 text-sm font-medium text-text-strong">
+                Deposit · {disposition}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    act("meta", { meta: { depositDisposition: "refunded" } })
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                    disposition === "refunded"
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-line text-text-body hover:border-accent hover:text-accent"
+                  }`}
+                >
+                  Refund deposit
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    act("meta", { meta: { depositDisposition: "forfeited" } })
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                    disposition === "forfeited"
+                      ? "border-danger bg-danger/10 text-danger"
+                      : "border-line text-text-body hover:border-danger hover:text-danger"
+                  }`}
+                >
+                  Forfeit deposit
+                </button>
+                {disposition !== "held" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      act("meta", { meta: { depositDisposition: "held" } })
+                    }
+                    className="rounded-lg border border-line px-3 py-1.5 text-xs text-text-dim transition hover:text-text-body"
+                  >
+                    Reset to held
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Extras */}
           <div className="mt-4 border-t border-line pt-4">
@@ -214,8 +323,18 @@ export function BookingDetail() {
           <h2 className="mb-3 font-semibold text-text-strong">Summary</h2>
           <Row label={`${totals.duration} ${cfg.unit} × ${formatMoney(b.rate)}`} value={formatMoney(totals.stayCharge)} />
           {totals.extras > 0 && <Row label="Extras" value={formatMoney(totals.extras)} />}
-          {b.deposit > 0 && (
-            <Row label="Deposit (held)" value={formatMoney(b.deposit)} muted />
+          {totals.overdue > 0 && (
+            <Row label="Overdue fee" value={formatMoney(totals.overdue)} />
+          )}
+          {totals.forfeit > 0 && (
+            <Row label="Deposit forfeited" value={formatMoney(totals.forfeit)} />
+          )}
+          {b.deposit > 0 && disposition !== "forfeited" && (
+            <Row
+              label={`Deposit (${disposition})`}
+              value={formatMoney(b.deposit)}
+              muted
+            />
           )}
           <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
             <p className="font-semibold text-text-strong">To pay</p>

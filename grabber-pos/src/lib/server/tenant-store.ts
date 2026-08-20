@@ -22,7 +22,11 @@ export async function readTenant(): Promise<TenantConfig> {
   const raw = await store.read(DEFAULT_TENANT);
   return {
     brand: { ...DEFAULT_TENANT.brand, ...raw.brand },
-    license: { ...DEFAULT_TENANT.license, ...raw.license },
+    license: {
+      ...DEFAULT_TENANT.license,
+      ...raw.license,
+      suspended: Boolean(raw.license?.suspended ?? DEFAULT_TENANT.license.suspended),
+    },
   };
 }
 
@@ -47,6 +51,10 @@ export async function writeTenant(input: {
       extras: Array.isArray(input.license?.extras)
         ? input.license.extras
         : current.license.extras,
+      suspended:
+        input.license?.suspended !== undefined
+          ? Boolean(input.license.suspended)
+          : current.license.suspended,
     },
   };
   await store.write(next);

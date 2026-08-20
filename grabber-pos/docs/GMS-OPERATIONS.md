@@ -5,7 +5,8 @@ fleet. Day-to-day work happens in **`/hq`** — not in a tenant's `/admin`.
 
 Companion guides: [RESELLER-GUIDE.md](RESELLER-GUIDE.md) (commercials & handover),
 [PRODUCTION.md](PRODUCTION.md) (cutover), [CUSTOMER-STOREFRONT.md](CUSTOMER-STOREFRONT.md)
-(what you coach shop owners to do).
+(what you coach shop owners to do), [HQ-PLAYBOOK.md](HQ-PLAYBOOK.md) (day-to-day HQ),
+[CLIENT-PLAYBOOK.md](CLIENT-PLAYBOOK.md) (hand to shop owners), [WHATSAPP.md](WHATSAPP.md).
 
 ---
 
@@ -37,9 +38,22 @@ Open **`/hq`** → Command center.
 | Open tickets | Command center + **Tickets** | Guide / escalate (inbox is a stub, not a full helpdesk) |
 | Data source line | Command center footer | Must read `reseller_licences (service-role)` in production. If it says demo fallback, set `SUPABASE_SERVICE_ROLE_KEY` |
 
-Per tenant (`/hq/tenants` → detail): branches, users, sales counts, white-label
-brand, plan/expiry. Use this when a client reports “wrong logo” or “modules
-locked.”
+Per tenant (`/hq/tenants` → detail): period sales, stock health, branches,
+users, storefront, WhatsApp, white-label brand, plan/expiry, and licence
+suspend. Use this when a client reports “wrong logo,” “modules locked,” or
+needs a password reset.
+
+### Password reset (client staff)
+
+On **tenant detail → Users & password reset** (live orgs only):
+
+1. **Email reset** — generates a Supabase recovery link and emails it via Resend
+   when configured; otherwise shows a one-time link for you to copy.
+2. **Temp password** — forces a new temporary password, shown once in HQ. Share
+   it securely; it is not stored afterward.
+
+First-time owners still need `scripts/upsert-admin.mjs` to attach a login to an
+org. Password tools only work after that Auth user exists.
 
 ---
 

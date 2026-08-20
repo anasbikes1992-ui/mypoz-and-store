@@ -40,7 +40,7 @@ engine specialized per vertical. This is the platform's defining feature.
 | Click & collect | Pick list (+ web orders) | retail | ✅ `/click-collect` |
 | Public storefront | Online catalog + checkout | retail | ✅ `/store/[slug]` + `/website` |
 | Register / Other Mode | Misc/other sale | any | ⬜ (cash **Register** at `/register` is shift/Z — not this mode) |
-| Digital Mode | Digital-goods sale | any | ⬜ |
+| Digital Mode | Digital-goods sale | any | ✅ `/digital` |
 | **Offline Mode** | Bill without internet, sync later | all | 🟡 web SW + offline queue; Flutter offline POS separate |
 
 > The **billing engine** (below) is shared; each mode adds its own entities and
@@ -92,11 +92,11 @@ Transfers ✅ · Barcode labels ✅.
 
 **Sales & billing**
 Sales history ✅ `/sales` · Quotations ✅ · Manual Payments ✅ · Gift Vouchers ✅ ·
-Layaway ✅ · Click & collect ✅ · Digital Mode ⬜ · standalone “Bills” module ⬜
+Layaway ✅ · Click & collect ✅ · Digital Mode ✅ · Memberships ✅ · CRM lite 🟡 · standalone “Bills” module ⬜
 (covered by Sales) · Points (loyalty) 🟡 (via customers / redeem on POS).
 
 **Customers**
-Customers ✅ · Appointments ✅ · SMS templates ✅ · Points 🟡.
+Customers ✅ · Appointments ✅ · SMS templates ✅ · Points 🟡 · Memberships ✅ · CRM lite 🟡.
 
 **Staff / HR**
 Employees ✅ · Attendance ✅ · Salary ✅ · Users & admins ✅ · Permissions ✅ ·
@@ -112,7 +112,7 @@ Hire Purchase ✅ · Rent 🟡 · Restaurant + KDS ✅ · Reloads ✅.
 **Reports & system**
 Dashboard ✅ · Reports ✅ · Alerts ✅ · Audit log ✅ · Settings ✅ · Help & guides ✅ ·
 Customer display ✅ `/display` · Privacy purge ✅ · Super-admin / licensing ✅ `/admin` ·
-Website CMS ✅ `/website` · GMS HQ ✅ `/hq` ·
+Website CMS ✅ `/website` · GMS HQ ✅ `/hq` (god-view monitor + CRUD) ·
 Drivers & Softwares (downloads hub) ⬜ · Agreement (dedicated screen) 🟡 (licence in admin) ·
 Clear Data (full wipe) ⬜ (PII purge only).
 
@@ -150,7 +150,7 @@ To sell to clients, the platform needs:
 - **White-label** — per-org business name, logo, colors, receipt branding. ✅ `/admin` + `/hq` tenant brand
 - **Licensing** — plan tiers, feature flags, expiry; server-side sell block. ✅ stub + enforce
 - **Tenant super-admin** — branding / licence / clients for one workspace. ✅ `/admin`
-- **GMS fleet HQ** — tenants, licence monitor, onboard, tickets stub, docs. ✅ `/hq`
+- **GMS fleet HQ** — tenants god-view monitor, licence suspend, onboard, durable tickets, WhatsApp attach/detach, HQ password reset, Jarvis agentic tools, docs. ✅ `/hq`
 - **Client onboarding** — wizard + Excel import + docs. 🟡 (wizard present; deepen as needed)
 - **Storefront** — Website CMS + public shop + catalog feeds. ✅ `/website`, `/store/[slug]`
 
@@ -175,7 +175,7 @@ salary, users/roles + permissions UI.
 
 **P4 Reports & dashboard** ✅ — dashboard, reports module, alerts, exports (deepen charts as needed).
 
-**P5 Verticals** 🟡 — Restaurant/KDS/delivery/reloads/hire/play ✅-ish; repair/service/rooms/rent thin boards; Digital + Register/Other modes still ⬜.
+**P5 Verticals** 🟡 — Restaurant/KDS/delivery/reloads/hire/play ✅-ish; repair/service/rooms/rent thin boards; Digital ✅; Register/Other modes still ⬜. Memberships ✅ · CRM lite 🟡.
 
 **P6 Reselling** 🟡 — `/admin` branding & licence + gating; `/hq` fleet portal shipped; onboarding wizard present; Agreement polish open.
 
@@ -200,7 +200,7 @@ PRODUCTION / DEPLOYMENT / FEATURE-PLAN / PRODUCT-GAP / CREDENTIALS — in `docs/
 
 ## 9. Still worth a look (optional, to refine)
 
-Polish thin vertical boards (repair / service / rooms / rent), Digital mode if
-needed, Agreement / Drivers hub, live payment/courier APIs if required, and
-collection → first-class schema where reporting demands it. Not blocking
+Polish thin vertical boards (repair / service / rooms / rent), Agreement / Drivers hub,
+live payment/courier APIs if required, and collection → first-class schema where
+reporting demands it. Digital Mode ✅ · Memberships ✅ · CRM lite 🟡. Not blocking
 production cutover once credentials are in.

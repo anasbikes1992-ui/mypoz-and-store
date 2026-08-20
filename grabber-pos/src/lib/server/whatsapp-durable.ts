@@ -403,3 +403,33 @@ export async function attachWhatsAppToOrg(
   );
   if (error) throw new Error(error.message);
 }
+
+/** Clear phone + token for an org; keep locale. No-op if no WhatsApp doc. */
+export async function detachWhatsAppFromOrg(orgId: string): Promise<void> {
+  if (!useServiceLedger()) return;
+  const db = createServiceSupabase();
+  const { data: existing } = await db
+    .from("app_documents")
+    .select("data")
+    .eq("org_id", orgId)
+    .eq("key", "whatsapp")
+    .maybeSingle<{ data: Record<string, unknown> }>();
+  if (!existing?.data) return;
+  const cur = existing.data;
+  const next = {
+    ...cur,
+    phoneNumberId: "",
+    accessToken: "",
+    locale: String(cur.locale ?? "en"),
+    updatedAt: new Date().toISOString(),
+  };
+  const { error } = await db.from("app_documents").upsert(
+    {
+      org_id: orgId,
+      key: "whatsapp",
+      data: asJson(next),
+    },
+    { onConflict: "org_id,key" },
+  );
+  if (error) throw new Error(error.message);
+}

@@ -9,7 +9,13 @@ import { recordStore } from "./persistence/record-store";
  * a status. Collecting settles it into a sale.
  */
 export type JobType = "repair" | "service";
-export type JobStatus = "received" | "in-progress" | "ready" | "collected";
+/** `in-progress` kept for backward compatibility with existing jobs. */
+export type JobStatus =
+  | "received"
+  | "diagnose"
+  | "in-progress"
+  | "ready"
+  | "collected";
 
 export interface JobPart {
   productId: string;
@@ -32,6 +38,10 @@ export interface Job {
   status: JobStatus;
   parts: JobPart[];
   labour: JobLabour[];
+  /** Prepaid deposit credited at settle via finalDiscount. */
+  deposit: number;
+  diagnosis: string;
+  warrantyNote: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +78,9 @@ export async function createJob(type: JobType): Promise<Job> {
     status: "received",
     parts: [],
     labour: [],
+    deposit: 0,
+    diagnosis: "",
+    warrantyNote: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -82,9 +95,31 @@ async function mutate(id: string, fn: (j: Job) => Job): Promise<Job | null> {
 
 export async function updateMeta(
   id: string,
-  meta: Partial<Pick<Job, "customer" | "phone" | "subject" | "issue" | "status">>,
+  meta: Partial<
+    Pick<
+      Job,
+      | "customer"
+      | "phone"
+      | "subject"
+      | "issue"
+      | "status"
+      | "deposit"
+      | "diagnosis"
+      | "warrantyNote"
+    >
+  >,
 ): Promise<Job | null> {
-  return mutate(id, (j) => ({ ...j, ...meta }));
+  return mutate(id, (j) => ({
+    ...j,
+    ...meta,
+    deposit:
+      meta.deposit != null ? Math.max(0, Number(meta.deposit) || 0) : j.deposit ?? 0,
+    diagnosis: meta.diagnosis != null ? String(meta.diagnosis) : j.diagnosis ?? "",
+    warrantyNote:
+      meta.warrantyNote != null
+        ? String(meta.warrantyNote)
+        : j.warrantyNote ?? "",
+  }));
 }
 
 export async function addPart(

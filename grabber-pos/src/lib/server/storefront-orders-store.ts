@@ -39,6 +39,10 @@ export interface StorefrontWebOrder {
   boardKind: "click-collect" | "delivery" | null;
   /** True when card checkout is waiting for gateway webhook. */
   pendingPayment?: boolean;
+  /** Bank-slip / transfer proof (data URL or https). */
+  paymentProofUrl?: string;
+  paymentProofStatus?: "none" | "submitted" | "approved" | "rejected";
+  paymentProofNote?: string;
   createdAt: string;
 }
 

@@ -25,6 +25,7 @@ interface Conversation {
   lastMessage: string;
   lastSaleId?: string;
   needsStaffReply?: boolean;
+  assignedTo?: string;
   updatedAt: string;
 }
 
@@ -33,6 +34,11 @@ interface ThreadMessage {
   direction: "in" | "out";
   body: string;
   createdAt: string;
+}
+
+interface EmployeeRow {
+  id: string;
+  name?: string;
 }
 
 export default function WhatsAppPage() {
@@ -46,9 +52,11 @@ export default function WhatsAppPage() {
     webhookPath: string;
   } | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [thread, setThread] = useState<ThreadMessage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [assignBusy, setAssignBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
@@ -56,6 +64,7 @@ export default function WhatsAppPage() {
   const [locale, setLocale] = useState("en");
   const [locationText, setLocationText] = useState("");
   const [offersText, setOffersText] = useState("");
+  const [assignDraft, setAssignDraft] = useState("");
 
   function loadInbox() {
     fetch("/api/whatsapp/inbox")
@@ -82,20 +91,44 @@ export default function WhatsAppPage() {
       })
       .catch(() => undefined);
     loadInbox();
+    fetch("/api/collections/employees")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && Array.isArray(j.data)) {
+          setEmployees(j.data as EmployeeRow[]);
+        } else if (j.success && Array.isArray(j.data?.items)) {
+          setEmployees(j.data.items as EmployeeRow[]);
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (!activeId) {
       setThread([]);
+      setAssignDraft("");
       return;
     }
+    const active = conversations.find((c) => c.id === activeId);
+    setAssignDraft(active?.assignedTo ?? "");
     fetch(`/api/whatsapp/inbox?id=${encodeURIComponent(activeId)}`)
       .then((r) => r.json())
       .then((j) => {
-        if (j.success) setThread(j.data.messages);
+        if (j.success) {
+          setThread(j.data.messages);
+          const convo = j.data.conversation as Conversation | undefined;
+          if (convo) {
+            setAssignDraft(convo.assignedTo ?? "");
+            setConversations((prev) =>
+              prev.map((c) => (c.id === convo.id ? { ...c, ...convo } : c)),
+            );
+          }
+        }
       })
       .catch(() => undefined);
   }, [activeId]);
+
+  const active = conversations.find((c) => c.id === activeId) ?? null;
 
   async function saveSettings() {
     setBusy(true);
@@ -123,6 +156,35 @@ export default function WhatsAppPage() {
       setMsg(e instanceof Error ? e.message : "Could not save");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function assignStaff(assignTo: string) {
+    if (!activeId) return;
+    setAssignBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/whatsapp/inbox", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: activeId, assignTo }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Assign failed");
+      const updated = json.data as Conversation;
+      setConversations((prev) =>
+        prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
+      );
+      setAssignDraft(updated.assignedTo ?? "");
+      setMsg(
+        updated.assignedTo
+          ? `Assigned to ${updated.assignedTo}`
+          : "Assignment cleared",
+      );
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Could not assign");
+    } finally {
+      setAssignBusy(false);
     }
   }
 
@@ -246,51 +308,140 @@ export default function WhatsAppPage() {
             <p className="px-4 py-8 text-sm text-text-dim">No conversations yet.</p>
           ) : (
             <ul className="max-h-[28rem] overflow-y-auto">
-              {conversations.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveId(c.id)}
-                    className={`w-full border-b border-line px-4 py-3 text-left ${
-                      activeId === c.id ? "bg-accent/10" : "hover:bg-surface-2"
-                    }`}
-                  >
-                    <p className="truncate text-sm font-medium text-text-strong">
-                      {c.name || c.phone}
-                      {c.needsStaffReply ? (
-                        <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-warn">
-                          Staff
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="truncate text-xs text-text-dim">{c.lastMessage}</p>
-                  </button>
-                </li>
-              ))}
+              {conversations.map((c) => {
+                const needsStaff = Boolean(c.needsStaffReply);
+                const unassigned = needsStaff && !c.assignedTo;
+                return (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveId(c.id)}
+                      className={`w-full border-b border-line px-4 py-3 text-left ${
+                        activeId === c.id
+                          ? "bg-accent/10"
+                          : unassigned
+                            ? "bg-warn/10 hover:bg-warn/15"
+                            : "hover:bg-surface-2"
+                      }`}
+                    >
+                      <p className="truncate text-sm font-medium text-text-strong">
+                        {c.name || c.phone}
+                        {needsStaff ? (
+                          <span
+                            className={`ml-2 text-[10px] font-semibold uppercase tracking-wide ${
+                              unassigned ? "text-warn" : "text-accent"
+                            }`}
+                          >
+                            {unassigned ? "Needs staff" : "Staff"}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="truncate text-xs text-text-dim">
+                        {c.assignedTo ? `Assigned to ${c.assignedTo} · ` : ""}
+                        {c.lastMessage}
+                      </p>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
         <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface-1">
-          {!activeId ? (
+          {!activeId || !active ? (
             <EmptyState
               title="Select a conversation"
               body="Inbound Cloud API messages appear here. Checkout creates a sale with source WHATSAPP."
             />
           ) : (
-            <ul className="flex-1 space-y-2 overflow-y-auto p-4">
-              {thread.map((m) => (
-                <li
-                  key={m.id}
-                  className={`max-w-[80%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${
-                    m.direction === "out"
-                      ? "ml-auto bg-accent/15 text-text-strong"
-                      : "bg-surface-2 text-text-body"
-                  }`}
-                >
-                  {m.body}
-                </li>
-              ))}
-            </ul>
+            <>
+              {active.needsStaffReply ? (
+                <div className="border-b border-line px-4 py-3">
+                  {active.assignedTo ? (
+                    <p className="mb-2 text-xs font-medium text-accent">
+                      Assigned to {active.assignedTo}
+                    </p>
+                  ) : (
+                    <p className="mb-2 text-xs font-medium text-warn">
+                      Needs staff reply — unassigned
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-end gap-2">
+                    {employees.length > 0 ? (
+                      <label className="min-w-[10rem] flex-1 text-sm">
+                        <span className="mb-1 block text-text-dim">Assign</span>
+                        <select
+                          value={
+                            employees.some((e) => (e.name || e.id) === assignDraft)
+                              ? assignDraft
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setAssignDraft(v);
+                            if (v) void assignStaff(v);
+                          }}
+                          disabled={assignBusy}
+                          className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent disabled:opacity-50"
+                        >
+                          <option value="">Select employee…</option>
+                          {employees.map((e) => {
+                            const label = e.name || e.id;
+                            return (
+                              <option key={e.id} value={label}>
+                                {label}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
+                    ) : null}
+                    <label className="min-w-[10rem] flex-1 text-sm">
+                      <span className="mb-1 block text-text-dim">
+                        {employees.length > 0 ? "Or type a name" : "Assign to"}
+                      </span>
+                      <input
+                        value={assignDraft}
+                        onChange={(e) => setAssignDraft(e.target.value)}
+                        placeholder="Staff name"
+                        disabled={assignBusy}
+                        className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent disabled:opacity-50"
+                      />
+                    </label>
+                    <Button
+                      disabled={assignBusy || !assignDraft.trim()}
+                      onClick={() => void assignStaff(assignDraft.trim())}
+                    >
+                      {assignBusy ? "Saving…" : "Assign"}
+                    </Button>
+                    {active.assignedTo ? (
+                      <button
+                        type="button"
+                        disabled={assignBusy}
+                        onClick={() => void assignStaff("")}
+                        className="text-xs text-text-dim hover:text-accent disabled:opacity-50"
+                      >
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+              <ul className="flex-1 space-y-2 overflow-y-auto p-4">
+                {thread.map((m) => (
+                  <li
+                    key={m.id}
+                    className={`max-w-[80%] whitespace-pre-wrap rounded-xl px-3 py-2 text-sm ${
+                      m.direction === "out"
+                        ? "ml-auto bg-accent/15 text-text-strong"
+                        : "bg-surface-2 text-text-body"
+                    }`}
+                  >
+                    {m.body}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
       </section>

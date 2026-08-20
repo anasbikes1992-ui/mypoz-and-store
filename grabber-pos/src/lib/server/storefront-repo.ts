@@ -16,6 +16,7 @@ import {
 } from "./storefront-orders-store";
 import { readPublishedStore } from "./commerce-store";
 import { quoteDelivery } from "@/lib/commerce/delivery";
+import { initialPaymentProofStatus } from "@/lib/commerce/payment-proof";
 import { upsertPosCustomer } from "./pos-customer-link";
 import {
   slugify,
@@ -378,6 +379,8 @@ export interface StoreOrderInput {
   pickupNote?: string;
   paymentMethod: PaymentMode;
   paymentReference?: string;
+  /** Bank slip proof — data URL or https URL. */
+  paymentProofUrl?: string;
   fulfilment: FulfilmentMode;
   deliveryZoneId?: string | null;
   clientUuid: string;
@@ -789,6 +792,15 @@ export async function placeStorefrontOrder(
     boardId,
     boardKind,
     pendingPayment: isCardPending,
+    ...(input.paymentMethod === "bank_transfer"
+      ? {
+          ...(input.paymentProofUrl ? { paymentProofUrl: input.paymentProofUrl } : {}),
+          paymentProofStatus: initialPaymentProofStatus(
+            input.paymentMethod,
+            input.paymentProofUrl,
+          ),
+        }
+      : {}),
     },
     { host: key.host, slug: key.slug },
   );

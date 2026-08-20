@@ -9,11 +9,21 @@
 ## Cutover checklist
 
 - [x] Migrations `0001`–`0018` applied (`list_migrations` shows 19+ entries)
-- [ ] Vercel env vars set (see below); production redeployed
-- [ ] `/api/health` → `ok`, `backend: supabase`, `gatewayLedger: service-role`
-- [ ] Auth Site URL + redirect allowlist configured in Supabase dashboard
-- [ ] First owner provisioned via `node --env-file=.env.local scripts/upsert-admin.mjs`
-- [ ] Smoke: `/login`, `/welcome`, `/dashboard`
+- [x] Vercel env vars set (Supabase URL/anon/service_role + `NEXT_PUBLIC_APP_URL` + `GMS_ADMIN_EMAILS`); production redeployed
+- [ ] `/api/health` → `ok`, `backend: supabase`, `gatewayLedger: service-role` (open in an authenticated browser if Deployment Protection is on)
+- [ ] Auth Site URL + redirect allowlist configured in Supabase dashboard (see below)
+- [x] HQ Super Admin + sample tenant owner provisioned (login verified via Auth API)
+- [ ] Smoke: `/login`, `/welcome`, `/dashboard`, one POS sale, optional `/store/<slug>` order
+- [ ] WhatsApp: Meta credentials + webhook + one inbound `hi` test (optional for soft launch)
+- [ ] Resend / PayHere (or bank-transfer proof) configured if you sell those flows
+
+### Local go-live smoke
+
+```bash
+# Requires NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY in .env.local
+node --env-file=.env.local scripts/go-live-smoke.mjs
+node --env-file=.env.local scripts/upsert-admin.mjs
+```
 
 ## Vercel environment variables (names only)
 
@@ -25,7 +35,9 @@ Set these in [Vercel → mypoz-and-store-ui → Settings → Environment Variabl
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → publishable key (`sb_publishable_…`) or legacy anon JWT for **veavfkjgtkbnggukzjds** |
 | `SUPABASE_SERVICE_ROLE_KEY` | Same project → service_role key (server-only; dashboard only) |
 | `NEXT_PUBLIC_APP_URL` | `https://mypoz-and-store-ui.vercel.app` |
-| `SUPABASE_DB_PASSWORD` | Optional locally; used by `scripts/apply-sql.mjs` only |
+| `GMS_ADMIN_EMAILS` | Comma-separated HQ emails (e.g. `anasbikes1992@gmail.com`) |
+| `SUPABASE_DB_PASSWORD` | Optional locally; used by SQL provision scripts |
+| `WHATSAPP_*` / `RESEND_*` / `PAYHERE_*` | Optional — see `.env.example` |
 
 ## Supabase Auth redirect URLs
 

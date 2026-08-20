@@ -54,6 +54,8 @@ export function CheckoutPage({
     store.delivery.zones[0]?.id ?? "",
   );
   const [paymentReference, setPaymentReference] = useState("");
+  const [paymentProofUrl, setPaymentProofUrl] = useState("");
+  const [paymentProofName, setPaymentProofName] = useState("");
   const [discountCode, setDiscountCode] = useState("");
   const [discount, setDiscount] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -114,6 +116,10 @@ export function CheckoutPage({
           paymentMethod,
           paymentReference:
             paymentMethod === "bank_transfer" ? paymentReference : undefined,
+          paymentProofUrl:
+            paymentMethod === "bank_transfer" && paymentProofUrl
+              ? paymentProofUrl
+              : undefined,
           fulfilment,
           deliveryZoneId: isPickup ? undefined : deliveryZoneId || undefined,
           clientUuid: crypto.randomUUID(),
@@ -421,13 +427,63 @@ export function CheckoutPage({
         </fieldset>
 
         {paymentMethod === "bank_transfer" && (
-          <input
-            required
-            value={paymentReference}
-            onChange={(e) => setPaymentReference(e.target.value)}
-            placeholder="Transfer reference"
-            className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
-          />
+          <div className="space-y-2">
+            <input
+              required
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+              placeholder="Transfer reference"
+              className="w-full rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm"
+            />
+            <label className="block text-xs font-semibold text-text-dim">
+              Bank slip (image, optional)
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="mt-1 block w-full text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  if (!file) {
+                    setPaymentProofUrl("");
+                    setPaymentProofName("");
+                    return;
+                  }
+                  if (!file.type.startsWith("image/")) {
+                    setError("Please upload an image of your bank slip");
+                    e.target.value = "";
+                    return;
+                  }
+                  if (file.size > 1_100_000) {
+                    setError("Bank slip image must be under ~1 MB");
+                    e.target.value = "";
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const result = String(reader.result || "");
+                    if (result.length > 1_500_000) {
+                      setError("Bank slip image is too large after encoding");
+                      setPaymentProofUrl("");
+                      setPaymentProofName("");
+                      return;
+                    }
+                    setError(null);
+                    setPaymentProofUrl(result);
+                    setPaymentProofName(file.name);
+                  };
+                  reader.onerror = () => {
+                    setError("Could not read bank slip image");
+                    setPaymentProofUrl("");
+                    setPaymentProofName("");
+                  };
+                  reader.readAsDataURL(file);
+                }}
+              />
+            </label>
+            {paymentProofName ? (
+              <p className="text-xs text-text-dim">Attached: {paymentProofName}</p>
+            ) : null}
+          </div>
         )}
 
         <div className="flex gap-2">

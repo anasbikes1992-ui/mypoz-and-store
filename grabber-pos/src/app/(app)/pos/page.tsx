@@ -49,6 +49,54 @@ function PosWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const packageId = params.get("packageId");
+    if (!packageId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/packages/${packageId}/expand`);
+        const json = await res.json();
+        if (!json.success || cancelled) return;
+        const lines = json.data.lines as {
+          productId: string;
+          name: string;
+          quantity: number;
+          unitPrice: number;
+        }[];
+        for (const line of lines) {
+          addProduct({
+            id: line.productId,
+            name: `${line.name} (pack)`,
+            nameLocal: null,
+            barcodes: [],
+            brand: null,
+            stockDate: null,
+            costPrice: 0,
+            salePrice: line.unitPrice,
+            wholesalePrice: null,
+            maxDiscount: 0,
+            singleDiscount: 0,
+            quantity: 9999,
+            category: "Package",
+            expireDate: null,
+            warrantyMonths: 0,
+            supplier: null,
+          });
+          if (line.quantity > 1) {
+            useCartStore.getState().setQuantity(line.productId, line.quantity);
+          }
+        }
+      } catch {
+        /* ignore — cashier can add manually */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handlePick(product: Product) {
     try {
       const res = await fetch(`/api/products/${product.id}/variants`);

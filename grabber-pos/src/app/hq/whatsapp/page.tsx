@@ -72,6 +72,28 @@ export default function HqWhatsAppPage() {
     }
   }
 
+  async function detach(targetOrgId: string) {
+    if (!confirm("Detach WhatsApp credentials from this client?")) return;
+    setBusy(true);
+    setMsg(null);
+    setError(null);
+    try {
+      const res = await fetch("/api/hq/whatsapp", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId: targetOrgId, detach: true }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error);
+      setMsg("WhatsApp detached.");
+      load();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Could not detach");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-text-strong">WhatsApp fleet</h1>
@@ -241,10 +263,22 @@ Reply YES and I’ll send the login.`}
                   /store/{c.slug} · {c.locale}
                 </p>
               </div>
-              <p className="text-xs text-text-dim">
-                {c.phoneNumberIdSet ? "Number set" : "No number"}
-                {c.tokenSet ? " · token" : ""}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-text-dim">
+                  {c.phoneNumberIdSet ? "Number set" : "No number"}
+                  {c.tokenSet ? " · token" : ""}
+                </p>
+                {(c.phoneNumberIdSet || c.tokenSet) && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void detach(c.orgId)}
+                    className="rounded-lg px-2.5 py-1 text-[11px] text-danger hover:bg-danger/10 disabled:opacity-50"
+                  >
+                    Detach
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

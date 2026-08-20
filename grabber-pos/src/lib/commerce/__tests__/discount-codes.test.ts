@@ -39,4 +39,38 @@ describe("discount codes", () => {
       ).ok,
     ).toBe(false);
   });
+
+  it("rejects codes before startsAt", () => {
+    const r = computeDiscount(
+      {
+        code: "SOON",
+        kind: "fixed",
+        amount: 10,
+        status: "active",
+        startsAt: "2026-06-01",
+      },
+      100,
+      new Date("2026-01-01"),
+    );
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toMatch(/not valid yet/i);
+  });
+
+  it("accepts codes after startsAt and before expiry", () => {
+    const r = computeDiscount(
+      {
+        code: "NOW",
+        kind: "percent",
+        amount: 10,
+        status: "active",
+        startsAt: "2026-01-01",
+        expiry: "2026-12-31",
+        description: "Spring sale",
+      },
+      1000,
+      new Date("2026-06-15"),
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.discount).toBe(100);
+  });
 });

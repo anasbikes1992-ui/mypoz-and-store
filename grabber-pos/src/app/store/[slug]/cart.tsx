@@ -258,6 +258,8 @@ function CartDrawer({
     website.fulfilmentModes[0] || "courier",
   );
   const [paymentReference, setPaymentReference] = useState("");
+  const [paymentProofUrl, setPaymentProofUrl] = useState("");
+  const [paymentProofName, setPaymentProofName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -287,6 +289,10 @@ function CartDrawer({
           paymentMethod,
           paymentReference:
             paymentMethod === "bank_transfer" ? paymentReference : undefined,
+          paymentProofUrl:
+            paymentMethod === "bank_transfer" && paymentProofUrl
+              ? paymentProofUrl
+              : undefined,
           fulfilment,
           clientUuid: crypto.randomUUID(),
           lines: lines.map((l) => ({
@@ -564,6 +570,54 @@ function CartDrawer({
                     placeholder="Transfer reference"
                     className="w-full rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-text-strong outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
                   />
+                  <label className="block text-xs font-semibold text-text-dim">
+                    Bank slip (image, optional)
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="mt-1 block w-full text-sm"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        if (!file) {
+                          setPaymentProofUrl("");
+                          setPaymentProofName("");
+                          return;
+                        }
+                        if (!file.type.startsWith("image/")) {
+                          setError("Please upload an image of your bank slip");
+                          e.target.value = "";
+                          return;
+                        }
+                        if (file.size > 1_100_000) {
+                          setError("Bank slip image must be under ~1 MB");
+                          e.target.value = "";
+                          return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const result = String(reader.result || "");
+                          if (result.length > 1_500_000) {
+                            setError("Bank slip image is too large after encoding");
+                            setPaymentProofUrl("");
+                            setPaymentProofName("");
+                            return;
+                          }
+                          setError(null);
+                          setPaymentProofUrl(result);
+                          setPaymentProofName(file.name);
+                        };
+                        reader.onerror = () => {
+                          setError("Could not read bank slip image");
+                          setPaymentProofUrl("");
+                          setPaymentProofName("");
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {paymentProofName ? (
+                    <p className="text-xs text-text-dim">Attached: {paymentProofName}</p>
+                  ) : null}
                 </>
               )}
 

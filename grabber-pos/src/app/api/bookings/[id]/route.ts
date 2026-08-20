@@ -6,10 +6,14 @@ import {
   removeExtra,
   removeBooking,
   bookingTotals,
+  suggestedOverdueFee,
 } from "@/lib/server/booking-store";
 import { createSale } from "@/lib/server/sales-repo";
 import { BOOKING_CONFIG } from "@/lib/bookings-config";
-import type { BookingStatus } from "@/lib/server/booking-store";
+import type {
+  BookingStatus,
+  DepositDisposition,
+} from "@/lib/server/booking-store";
 import type { SaleLine } from "@/lib/types";
 
 export async function GET(
@@ -65,8 +69,19 @@ export async function POST(
         if (!body.extraId) return fail("extraId is required");
         return ok(await removeExtra(id, body.extraId));
       case "settle": {
-        const booking = await getBooking(id);
+        let booking = await getBooking(id);
         if (!booking) return fail("Booking not found", 404);
+
+        // Auto-suggest overdue when past endDate and fee not yet set.
+        const suggested = suggestedOverdueFee(booking);
+        if (
+          suggested > 0 &&
+          !(Number(booking.overdueFee) > 0)
+        ) {
+          booking =
+            (await updateMeta(id, { overdueFee: suggested })) ?? booking;
+        }
+
         const totals = bookingTotals(booking);
         if (totals.total <= 0) return fail("Nothing to bill — set dates and rate");
 
@@ -89,6 +104,29 @@ export async function POST(
             lineTotal: e.amount,
           })),
         ];
+        if (totals.overdue > 0) {
+          lines.push({
+            productId: "",
+            name: "Overdue fee",
+            unitPrice: totals.overdue,
+            quantity: 1,
+            discount: 0,
+            lineTotal: totals.overdue,
+          });
+        }
+        if (totals.forfeit > 0) {
+          lines.push({
+            productId: "",
+            name: "Deposit forfeited",
+            unitPrice: totals.forfeit,
+            quantity: 1,
+            discount: 0,
+            lineTotal: totals.forfeit,
+          });
+        }
+
+        const disposition: DepositDisposition =
+          booking.depositDisposition ?? "held";
         const method = body.paymentMethod ?? "cash";
         const cash =
           method === "cash" ? (Number(body.cashReceived) || totals.total) : null;
@@ -104,7 +142,10 @@ export async function POST(
           isWholesale: false,
           customerName: booking.customer || null,
           customerMobile: booking.phone || null,
-          employee: null,
+          employee:
+            booking.deposit > 0
+              ? `Deposit ${disposition}${booking.deposit ? ` (${booking.deposit})` : ""}`
+              : null,
           cashReceived: cash,
           change: cash != null ? cash - totals.total : null,
         });

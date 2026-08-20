@@ -30,7 +30,7 @@ interface Body {
     | "addLabour"
     | "removeLabour"
     | "settle";
-  meta?: Record<string, string>;
+  meta?: Record<string, string | number>;
   productId?: string;
   quantity?: number;
   description?: string;
@@ -82,6 +82,10 @@ export async function POST(
         const totals = jobTotals(job);
         if (totals.total <= 0) return fail("Nothing to bill");
 
+        const deposit = Math.max(0, Number(job.deposit) || 0);
+        const finalDiscount = Math.min(deposit, totals.total);
+        const payable = totals.total - finalDiscount;
+
         const lines: SaleLine[] = [
           ...job.parts.map((p) => ({
             productId: p.productId,
@@ -100,24 +104,44 @@ export async function POST(
             lineTotal: l.amount,
           })),
         ];
+        if (job.diagnosis?.trim()) {
+          lines.push({
+            productId: "",
+            name: `Diagnosis: ${job.diagnosis.trim()}`,
+            unitPrice: 0,
+            quantity: 1,
+            discount: 0,
+            lineTotal: 0,
+          });
+        }
+        if (job.warrantyNote?.trim()) {
+          lines.push({
+            productId: "",
+            name: `Warranty: ${job.warrantyNote.trim()}`,
+            unitPrice: 0,
+            quantity: 1,
+            discount: 0,
+            lineTotal: 0,
+          });
+        }
         const method = body.paymentMethod ?? "cash";
         const cash =
-          method === "cash" ? (Number(body.cashReceived) || totals.total) : null;
+          method === "cash" ? (Number(body.cashReceived) || payable) : null;
 
         const sale = await createSale({
           lines,
           subtotal: totals.total,
           discountTotal: 0,
-          finalDiscount: 0,
+          finalDiscount,
           serviceCharge: 0,
-          total: totals.total,
+          total: payable,
           paymentMethod: method,
           isWholesale: false,
           customerName: job.customer || null,
           customerMobile: job.phone || null,
-          employee: null,
+          employee: deposit > 0 ? `Deposit credited ${deposit}` : null,
           cashReceived: cash,
-          change: cash != null ? cash - totals.total : null,
+          change: cash != null ? cash - payable : null,
         });
         await removeJob(id);
         return NextResponse.json({ success: true, data: sale, error: null });

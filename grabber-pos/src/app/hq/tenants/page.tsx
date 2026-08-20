@@ -13,6 +13,17 @@ const STATUS_CLASS: Record<string, string> = {
   unknown: "bg-surface-3 text-text-dim",
 };
 
+function shortDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function HqTenantsPage() {
   const [tenants, setTenants] = useState<HqTenant[]>([]);
   const [source, setSource] = useState<string>("");
@@ -70,9 +81,8 @@ export default function HqTenantsPage() {
       />
 
       <p className="mt-3 max-w-2xl text-xs text-text-dim">
-        If a tenant can sign in but has no org or empty catalog, run the documented
-        upsert-admin provisioning script in that environment. HQ does not mint
-        passwords.
+        Open a tenant for god&apos;s-view monitoring. Password reset and temporary
+        passwords are available on the tenant detail page for live org members.
       </p>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
@@ -83,7 +93,8 @@ export default function HqTenantsPage() {
             <tr>
               <th className="px-4 py-3 font-medium">Tenant</th>
               <th className="px-4 py-3 font-medium">Plan</th>
-              <th className="px-4 py-3 font-medium">Expiry</th>
+              <th className="px-4 py-3 font-medium">Onboarded</th>
+              <th className="px-4 py-3 font-medium">Sales total</th>
               <th className="px-4 py-3 font-medium">Usage</th>
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>
@@ -104,12 +115,20 @@ export default function HqTenantsPage() {
                   <p className="mt-0.5 font-mono text-[11px] text-text-dim">
                     {t.id}
                   </p>
+                  {t.extras.length > 0 && (
+                    <p className="mt-0.5 text-[11px] text-text-dim">
+                      {t.extras.length} extra{t.extras.length === 1 ? "" : "s"}
+                    </p>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-text-body">
                   {PLAN_NAMES[t.plan as PlanTier] ?? t.plan}
                 </td>
                 <td className="px-4 py-3 text-text-body">
-                  {t.expiry || "Perpetual"}
+                  {shortDate(t.onboardedAt)}
+                </td>
+                <td className="px-4 py-3 text-text-strong">
+                  {t.salesTotal.toLocaleString()}
                 </td>
                 <td className="px-4 py-3 text-text-dim">
                   {t.branches} br · {t.users} users · {t.salesCount} sales
@@ -128,7 +147,7 @@ export default function HqTenantsPage() {
             {!error && filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-8 text-center text-sm text-text-dim"
                 >
                   No tenants yet — onboard one to start the pipeline.

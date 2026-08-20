@@ -4,6 +4,9 @@ For cashiers, managers and owners. Covers the live web screens — retail POS pl
 the other sale modes and back-office modules below. Plan-gated tiles show a
 **🔒 Upgrade** badge until your licence unlocks them.
 
+Quick start for shop owners: [CLIENT-PLAYBOOK.md](CLIENT-PLAYBOOK.md).
+GMS operators: [HQ-PLAYBOOK.md](HQ-PLAYBOOK.md).
+
 ## Signing in
 
 1. Open the app (desktop browser, or the installed app).

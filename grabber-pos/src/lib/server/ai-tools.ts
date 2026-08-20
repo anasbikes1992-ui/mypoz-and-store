@@ -1,6 +1,15 @@
 import "server-only";
 import { getRepository } from "@/lib/server/repositories";
-import { listHqTenants } from "@/lib/server/hq-repo";
+import {
+  getHqSummary,
+  getHqTenant,
+  listHqTenants,
+  listHqTickets,
+} from "@/lib/server/hq-repo";
+import {
+  getHqFleetPulse,
+  getHqTenantMonitor,
+} from "@/lib/server/hq-monitor";
 import type { AgentId } from "@/lib/ai/agents";
 import {
   demandHint,
@@ -91,8 +100,17 @@ export const HQ_TOOLS = [
   {
     type: "function" as const,
     function: {
+      name: "fleet_pulse",
+      description:
+        "Command-center rollup: tenant count, sales total, quiet shops, low-stock orgs, WA attached, live storefronts, open tickets.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
       name: "tenant_health",
-      description: "Fleet tenant count, expired licences, and per-shop sales totals.",
+      description: "Fleet tenant list with plan, status, sales counts/totals.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -101,6 +119,44 @@ export const HQ_TOOLS = [
     function: {
       name: "quiet_shops",
       description: "Tenants with zero recorded sales_count — likely empty or inactive.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "tenant_monitor",
+      description:
+        "God's-view for one org: 7d/30d sales, stock health, branches, users, storefront, WhatsApp flags, open online orders.",
+      parameters: {
+        type: "object",
+        properties: {
+          orgId: {
+            type: "string",
+            description: "Organization UUID from tenant_health",
+          },
+          nameHint: {
+            type: "string",
+            description: "Optional shop name substring if orgId unknown",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "open_tickets",
+      description: "Open (non-resolved) HQ support tickets.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "whatsapp_fleet_hint",
+      description:
+        "How WhatsApp Cloud API is wired for the fleet (env + per-org attach). Does not reveal secrets.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -116,6 +172,17 @@ export const HQ_TOOLS = [
 
 export function toolsFor(agent: AgentId) {
   return agent === "hq-ops" ? HQ_TOOLS : OWNER_TOOLS;
+}
+
+async function resolveOrgId(args: Record<string, unknown>): Promise<string | null> {
+  const orgId = typeof args.orgId === "string" ? args.orgId.trim() : "";
+  if (orgId) return orgId;
+  const hint =
+    typeof args.nameHint === "string" ? args.nameHint.trim().toLowerCase() : "";
+  if (!hint) return null;
+  const { tenants } = await listHqTenants();
+  const hit = tenants.find((t) => t.name.toLowerCase().includes(hint));
+  return hit?.id ?? null;
 }
 
 export async function runTool(
@@ -136,6 +203,29 @@ export async function runTool(
   const limit = Number(args.limit) || undefined;
 
   if (plane === "hq") {
+    if (name === "fleet_pulse") {
+      const [summary, pulse] = await Promise.all([
+        getHqSummary(),
+        getHqFleetPulse(),
+      ]);
+      return JSON.stringify({
+        summary: {
+          tenantCount: summary.tenantCount,
+          salesTotal: summary.salesTotal,
+          expiredCount: summary.expiredCount,
+          expiringCount: summary.expiringCount,
+          openTickets: summary.openTickets,
+          source: summary.source,
+          serviceRole: summary.serviceRole,
+        },
+        pulse: {
+          quietShopCount: pulse.quietShopCount,
+          lowStockOrgs: pulse.lowStockOrgs,
+          waAttachedCount: pulse.waAttachedCount,
+          storefrontLiveCount: pulse.storefrontLiveCount,
+        },
+      });
+    }
     if (name === "tenant_health") {
       const { tenants, source: src, serviceRole } = await listHqTenants();
       return JSON.stringify({
@@ -145,6 +235,7 @@ export async function runTool(
         expired: tenants.filter((t) => t.status === "expired").length,
         expiring: tenants.filter((t) => t.status === "expiring").length,
         names: tenants.slice(0, 20).map((t) => ({
+          id: t.id,
           name: t.name,
           plan: t.plan,
           status: t.status,
@@ -157,8 +248,76 @@ export async function runTool(
       const { tenants } = await listHqTenants();
       const quiet = tenants
         .filter((t) => Number(t.salesCount) === 0)
-        .map((t) => ({ name: t.name, plan: t.plan, status: t.status }));
+        .map((t) => ({
+          id: t.id,
+          name: t.name,
+          plan: t.plan,
+          status: t.status,
+        }));
       return JSON.stringify({ quiet, count: quiet.length });
+    }
+    if (name === "tenant_monitor") {
+      const orgId = await resolveOrgId(args);
+      if (!orgId) {
+        return JSON.stringify({
+          error: "Provide orgId or nameHint matching a tenant",
+        });
+      }
+      const [tenant, monitor] = await Promise.all([
+        getHqTenant(orgId),
+        getHqTenantMonitor(orgId),
+      ]);
+      return JSON.stringify({
+        tenant: tenant
+          ? {
+              id: tenant.id,
+              name: tenant.name,
+              plan: tenant.plan,
+              status: tenant.status,
+              expiry: tenant.expiry,
+            }
+          : null,
+        monitor: {
+          slug: monitor.slug,
+          period: monitor.period,
+          stock: monitor.stock,
+          branchCount: monitor.branches.length,
+          userCount: monitor.users.length,
+          storefront: monitor.storefront,
+          whatsapp: monitor.whatsapp,
+          openOnlineOrders: monitor.openOnlineOrders,
+          quiet: monitor.quiet,
+        },
+      });
+    }
+    if (name === "open_tickets") {
+      const tickets = await listHqTickets();
+      const open = tickets
+        .filter((t) => t.status !== "resolved")
+        .slice(0, 25)
+        .map((t) => ({
+          id: t.id,
+          subject: t.subject,
+          status: t.status,
+          priority: t.priority,
+          tenantId: t.tenantId,
+        }));
+      return JSON.stringify({ open, count: open.length });
+    }
+    if (name === "whatsapp_fleet_hint") {
+      const pulse = await getHqFleetPulse();
+      return JSON.stringify({
+        waAttachedCount: pulse.waAttachedCount,
+        envNeeded: [
+          "WHATSAPP_TOKEN",
+          "WHATSAPP_PHONE_NUMBER_ID",
+          "WHATSAPP_VERIFY_TOKEN",
+          "WHATSAPP_APP_SECRET",
+        ],
+        webhook: "/api/whatsapp/webhook",
+        hqUi: "/hq/whatsapp",
+        note: "Use Meta app that already has WhatsApp product (GRABBER). Development mode limits senders to test numbers until Live + Business verification.",
+      });
     }
     if (name === "backup_hint") {
       return JSON.stringify({

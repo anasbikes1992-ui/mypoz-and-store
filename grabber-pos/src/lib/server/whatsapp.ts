@@ -142,9 +142,10 @@ export async function notifyWhatsAppOrderStatus(opts: {
 }): Promise<void> {
   if (!opts.to.trim()) return;
   try {
+    const label = opts.status.replaceAll("_", " ");
     await sendWhatsAppText({
       to: opts.to,
-      body: `Order ${opts.receipt}: ${opts.status.replaceAll("_", " ")}.`,
+      body: `Order ${opts.receipt} update: your order is now ${label}. Reply if you need help.`,
     });
   } catch {
     // Status ping is best-effort — never block fulfillment.

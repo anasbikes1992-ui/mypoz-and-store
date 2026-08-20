@@ -1089,6 +1089,11 @@ export function BillPanel() {
                     <div>
                       <p className="text-sm font-medium text-text-strong">
                         {store.customerName || "Customer"}
+                        {store.memberDiscountPercent != null && (
+                          <span className="ml-2 rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                            Member −{store.memberDiscountPercent}%
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-text-dim">
                         {store.customerMobile} · {store.customerPoints} points

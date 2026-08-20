@@ -17,14 +17,56 @@ import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createServiceSupabase } from "@/lib/supabase/server";
 import {
   createEntity,
+  deleteEntity,
   listCollection,
   updateEntity,
 } from "@/lib/server/collection-store";
 import { readTenant, writeTenant } from "@/lib/server/tenant-store";
+import { getHqFleetPulse } from "@/lib/server/hq-monitor";
 import { dataFile, readJsonFile, writeJsonFile } from "@/lib/server/persistence/local-json";
 
 const TICKETS_FILE = dataFile("hq-tickets.json");
+const TICKETS_ROW_KEY = "hq-tickets";
 const LOCAL_TENANT_ID = "local";
+
+async function ticketsFromTable(): Promise<HqTicket[] | null> {
+  if (!isSupabaseEnabled || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const db = createServiceSupabase();
+    const { data, error } = await db
+      .from("platform_settings")
+      .select("data")
+      .eq("key", TICKETS_ROW_KEY)
+      .maybeSingle();
+    if (error) return null;
+    if (!data?.data) return [];
+    return Array.isArray(data.data)
+      ? (data.data as unknown as HqTicket[])
+      : [];
+  } catch {
+    return null;
+  }
+}
+
+async function ticketsToTable(items: HqTicket[]): Promise<boolean> {
+  if (!isSupabaseEnabled || !process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
+  try {
+    const db = createServiceSupabase();
+    const { error } = await db.from("platform_settings").upsert({
+      key: TICKETS_ROW_KEY,
+      data: items as unknown as import("@/lib/supabase/database.types").Json,
+      updated_at: new Date().toISOString(),
+    });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+async function persistTickets(items: HqTicket[]): Promise<void> {
+  const saved = await ticketsToTable(items);
+  if (!saved) await writeJsonFile(TICKETS_FILE, items);
+}
 
 type ResellerLicenceRow = {
   org_id: string;
@@ -74,6 +116,31 @@ function fromResellerRow(row: ResellerLicenceRow): HqTenant {
   };
 }
 
+async function loadSuspendedByOrg(
+  orgIds: string[],
+): Promise<Map<string, boolean>> {
+  const map = new Map<string, boolean>();
+  if (!orgIds.length || !process.env.SUPABASE_SERVICE_ROLE_KEY) return map;
+  try {
+    const db = createServiceSupabase();
+    const { data } = await db
+      .from("app_documents")
+      .select("org_id, data")
+      .eq("key", "tenant")
+      .in("org_id", orgIds);
+    for (const row of data ?? []) {
+      const suspended = Boolean(
+        (row.data as { license?: { suspended?: boolean } } | null)?.license
+          ?.suspended,
+      );
+      if (suspended) map.set(row.org_id as string, true);
+    }
+  } catch {
+    // ignore — treat as not suspended
+  }
+  return map;
+}
+
 async function tryResellerLicences(): Promise<HqTenant[] | null> {
   if (!isSupabaseEnabled || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
   try {
@@ -81,7 +148,14 @@ async function tryResellerLicences(): Promise<HqTenant[] | null> {
     const { data, error } = await db.from("reseller_licences").select("*");
     if (error) return null;
     const rows = (data ?? []) as unknown as ResellerLicenceRow[];
-    return rows.map(fromResellerRow);
+    const suspendedMap = await loadSuspendedByOrg(rows.map((r) => r.org_id));
+    return rows.map((row) => {
+      const base = fromResellerRow(row);
+      if (suspendedMap.get(row.org_id)) {
+        return { ...base, status: licenceStatus(base.expiry, true) };
+      }
+      return base;
+    });
   } catch {
     return null;
   }
@@ -105,7 +179,10 @@ async function demoFleet(): Promise<HqTenant[]> {
       logoUrl: tenant.brand.logoUrl,
       accentColor: tenant.brand.accentColor,
     },
-    status: licenceStatus(tenant.license.expiry || null),
+    status: licenceStatus(
+      tenant.license.expiry || null,
+      Boolean(tenant.license.suspended),
+    ),
     source: "local_tenant",
     extras: Array.isArray(tenant.license.extras) ? tenant.license.extras : [],
   };
@@ -173,11 +250,17 @@ export async function getHqTenant(id: string): Promise<HqTenant | null> {
       .eq("org_id", id)
       .eq("key", "tenant")
       .maybeSingle();
-    const extras = (data?.data as { license?: { extras?: unknown } } | null)
-      ?.license?.extras;
-    if (Array.isArray(extras)) {
-      return { ...found, extras: extras.map(String).filter((k) => /^[a-z0-9-]{2,40}$/.test(k)) };
-    }
+    const license = (data?.data as { license?: { extras?: unknown; suspended?: boolean } } | null)
+      ?.license;
+    const extras = license?.extras;
+    const suspended = Boolean(license?.suspended);
+    return {
+      ...found,
+      extras: Array.isArray(extras)
+        ? extras.map(String).filter((k) => /^[a-z0-9-]{2,40}$/.test(k))
+        : found.extras,
+      status: licenceStatus(found.expiry, suspended),
+    };
   } catch {
     // keep listed extras
   }
@@ -187,14 +270,21 @@ export async function getHqTenant(id: string): Promise<HqTenant | null> {
 export async function getHqSummary(): Promise<HqSummary> {
   const { tenants, source, serviceRole } = await listHqTenants();
   const tickets = await listHqTickets();
+  const pulse = await getHqFleetPulse();
+  const salesFromTenants = tenants.reduce((s, t) => s + t.salesTotal, 0);
   return {
     tenantCount: tenants.length,
     expiredCount: tenants.filter((t) => t.status === "expired").length,
     expiringCount: tenants.filter((t) => t.status === "expiring").length,
-    salesTotal: tenants.reduce((s, t) => s + t.salesTotal, 0),
+    salesTotal:
+      pulse.salesTotalLifetime > 0 ? pulse.salesTotalLifetime : salesFromTenants,
     openTickets: tickets.filter((t) => t.status !== "resolved").length,
     source,
     serviceRole,
+    quietShopCount: pulse.quietShopCount,
+    lowStockOrgs: pulse.lowStockOrgs,
+    waAttachedCount: pulse.waAttachedCount,
+    storefrontLiveCount: pulse.storefrontLiveCount,
   };
 }
 
@@ -210,6 +300,7 @@ export async function updateHqTenant(
   if (!existing) return null;
 
   if (existing.source === "local_tenant" || id === LOCAL_TENANT_ID) {
+    const current = await readTenant();
     await writeTenant({
       brand: {
         businessName: input.brand?.businessName,
@@ -220,6 +311,12 @@ export async function updateHqTenant(
         plan: input.license?.plan,
         expiry: input.license?.expiry,
         extras: input.license?.extras,
+        suspended:
+          input.status === "suspended"
+            ? true
+            : input.status === "active"
+              ? false
+              : current.license.suspended,
       },
     });
     return getHqTenant(LOCAL_TENANT_ID);
@@ -248,6 +345,12 @@ export async function updateHqTenant(
       .maybeSingle();
 
     const current = (doc?.data ?? DEFAULT_TENANT) as TenantConfig;
+    const suspended =
+      input.status === "suspended"
+        ? true
+        : input.status === "active"
+          ? false
+          : Boolean(current.license?.suspended);
     const next: TenantConfig = {
       brand: {
         businessName:
@@ -268,6 +371,7 @@ export async function updateHqTenant(
           : Array.isArray(current.license?.extras)
             ? current.license.extras
             : [],
+        suspended,
       },
     };
 
@@ -292,6 +396,23 @@ export async function updateHqTenant(
   } catch {
     return null;
   }
+}
+
+/** Soft-remove a demo pipeline client only — never deletes organizations. */
+export async function deleteHqTenant(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const existing = await getHqTenant(id);
+  if (!existing) return { ok: false, error: "Tenant not found" };
+  if (existing.source !== "clients") {
+    return {
+      ok: false,
+      error: "Remove from pipeline is only for demo clients — organizations are never deleted",
+    };
+  }
+  const removed = await deleteEntity("clients", id);
+  if (!removed) return { ok: false, error: "Could not remove client" };
+  return { ok: true };
 }
 
 export type OnboardInput = {
@@ -392,7 +513,9 @@ export async function onboardHqTenant(input: OnboardInput): Promise<{
 }
 
 export async function listHqTickets(): Promise<HqTicket[]> {
-  const items = await readJsonFile<HqTicket[]>(TICKETS_FILE, []);
+  const remote = await ticketsFromTable();
+  const items =
+    remote ?? (await readJsonFile<HqTicket[]>(TICKETS_FILE, []));
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -419,7 +542,7 @@ export async function createHqTicket(input: {
   };
   const items = await listHqTickets();
   items.unshift(ticket);
-  await writeJsonFile(TICKETS_FILE, items);
+  await persistTickets(items);
   return ticket;
 }
 
@@ -436,8 +559,16 @@ export async function updateHqTicket(
     updatedAt: new Date().toISOString(),
   };
   items[idx] = next;
-  await writeJsonFile(TICKETS_FILE, items);
+  await persistTickets(items);
   return next;
+}
+
+export async function deleteHqTicket(id: string): Promise<boolean> {
+  const items = await listHqTickets();
+  const next = items.filter((t) => t.id !== id);
+  if (next.length === items.length) return false;
+  await persistTickets(next);
+  return true;
 }
 
 export function hqDocBySlug(slug: string) {

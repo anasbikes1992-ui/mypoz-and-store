@@ -9,6 +9,7 @@ import { recordStore } from "./persistence/record-store";
  */
 export type BookingType = "room" | "rent";
 export type BookingStatus = "booked" | "active" | "closed";
+export type DepositDisposition = "held" | "refunded" | "forfeited";
 
 export interface BookingExtra {
   id: string;
@@ -26,6 +27,9 @@ export interface Booking {
   startDate: string;
   endDate: string;
   deposit: number;
+  /** Late fee billed on settle (days late × rate × 0.1 when auto-suggested). */
+  overdueFee: number;
+  depositDisposition: DepositDisposition;
   status: BookingStatus;
   extras: BookingExtra[];
   createdAt: string;
@@ -36,6 +40,29 @@ const store = recordStore<Booking>({
   collection: "bookings",
   file: "bookings.json",
 });
+
+/** Days past endDate (0 if not late). */
+export function daysOverdue(b: Pick<Booking, "endDate">, today = new Date()): number {
+  if (!b.endDate) return 0;
+  const todayStr = today.toISOString().slice(0, 10);
+  if (b.endDate >= todayStr) return 0;
+  const end = new Date(b.endDate + "T00:00:00");
+  const startOfToday = new Date(todayStr + "T00:00:00");
+  return Math.max(
+    1,
+    Math.round((startOfToday.getTime() - end.getTime()) / 86_400_000),
+  );
+}
+
+/** Suggested overdue: days late × rate × 0.1. */
+export function suggestedOverdueFee(
+  b: Pick<Booking, "endDate" | "rate">,
+  today = new Date(),
+): number {
+  const days = daysOverdue(b, today);
+  if (days <= 0) return 0;
+  return Math.round(days * (Number(b.rate) || 0) * 0.1);
+}
 
 export function bookingTotals(b: Booking) {
   let duration = 0;
@@ -48,7 +75,19 @@ export function bookingTotals(b: Booking) {
   }
   const stayCharge = duration * (Number(b.rate) || 0);
   const extras = b.extras.reduce((s, e) => s + e.amount, 0);
-  return { duration, stayCharge, extras, total: stayCharge + extras };
+  const overdue = Math.max(0, Number(b.overdueFee) || 0);
+  const forfeit =
+    b.depositDisposition === "forfeited"
+      ? Math.max(0, Number(b.deposit) || 0)
+      : 0;
+  return {
+    duration,
+    stayCharge,
+    extras,
+    overdue,
+    forfeit,
+    total: stayCharge + extras + overdue + forfeit,
+  };
 }
 
 export async function listBookings(type: BookingType): Promise<Booking[]> {
@@ -73,6 +112,8 @@ export async function createBooking(type: BookingType): Promise<Booking> {
     startDate: today,
     endDate: "",
     deposit: 0,
+    overdueFee: 0,
+    depositDisposition: "held",
     status: "booked",
     extras: [],
     createdAt: new Date().toISOString(),
@@ -95,7 +136,16 @@ export async function updateMeta(
   meta: Partial<
     Pick<
       Booking,
-      "customer" | "phone" | "subject" | "rate" | "startDate" | "endDate" | "deposit" | "status"
+      | "customer"
+      | "phone"
+      | "subject"
+      | "rate"
+      | "startDate"
+      | "endDate"
+      | "deposit"
+      | "status"
+      | "overdueFee"
+      | "depositDisposition"
     >
   >,
 ): Promise<Booking | null> {
@@ -104,6 +154,12 @@ export async function updateMeta(
     ...meta,
     rate: meta.rate != null ? Number(meta.rate) || 0 : b.rate,
     deposit: meta.deposit != null ? Number(meta.deposit) || 0 : b.deposit,
+    overdueFee:
+      meta.overdueFee != null
+        ? Math.max(0, Number(meta.overdueFee) || 0)
+        : b.overdueFee ?? 0,
+    depositDisposition:
+      meta.depositDisposition ?? b.depositDisposition ?? "held",
   }));
 }
 

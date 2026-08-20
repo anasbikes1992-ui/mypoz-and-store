@@ -148,7 +148,9 @@ export const COLLECTIONS: Record<string, CollectionConfig> = {
       { key: "minSubtotal", label: "Min subtotal", type: "number", money: true },
       { key: "maxUses", label: "Max uses", type: "number" },
       { key: "usedCount", label: "Used", type: "number", inList: true },
+      { key: "startsAt", label: "Starts", type: "date", inList: true },
       { key: "expiry", label: "Expiry", type: "date", inList: true },
+      { key: "description", label: "Description", type: "textarea", full: true },
       { key: "status", label: "Status", type: "select", inList: true, options: ["active", "paused"] },
     ],
     schema: z.object({
@@ -158,7 +160,9 @@ export const COLLECTIONS: Record<string, CollectionConfig> = {
       minSubtotal: z.coerce.number().min(0).default(0),
       maxUses: z.coerce.number().min(0).default(0),
       usedCount: z.coerce.number().min(0).default(0),
+      startsAt: optionalText(20),
       expiry: optionalText(20),
+      description: optionalText(500),
       status: z.enum(["active", "paused"]).default("active"),
     }),
   },
@@ -324,15 +328,110 @@ export const COLLECTIONS: Record<string, CollectionConfig> = {
     subtitle: "Product packs & variants",
     fields: [
       { key: "name", label: "Name", type: "text", required: true, inList: true },
-      { key: "productId", label: "Product ID", type: "text", required: true, inList: true },
-      { key: "qty", label: "Qty per pack", type: "number", required: true, inList: true },
+      { key: "productId", label: "Product ID", type: "text", inList: true },
+      { key: "qty", label: "Qty per pack", type: "number", inList: true },
       { key: "price", label: "Pack price", type: "number", required: true, money: true, inList: true },
+      {
+        key: "items",
+        label: "Items JSON (optional multi)",
+        type: "textarea",
+        full: true,
+      },
+    ],
+    schema: z
+      .object({
+        name: text().min(1, "Name is required"),
+        productId: optionalText(80),
+        qty: z.coerce.number().min(1).optional().default(1),
+        price: z.coerce.number().min(0, "Price is required"),
+        items: z.preprocess((v) => {
+          if (v == null || v === "") return undefined;
+          if (typeof v === "string") {
+            const trimmed = v.trim();
+            if (!trimmed) return undefined;
+            try {
+              return JSON.parse(trimmed);
+            } catch {
+              return v;
+            }
+          }
+          return v;
+        }, z
+          .array(
+            z.object({
+              productId: z.string().min(1),
+              qty: z.coerce.number().min(1),
+            }),
+          )
+          .optional()),
+      })
+      .refine(
+        (d) =>
+          (Array.isArray(d.items) && d.items.length > 0) ||
+          Boolean(d.productId?.trim()),
+        { message: "Provide productId+qty or items JSON", path: ["productId"] },
+      ),
+  },
+  digital_goods: {
+    name: "digital_goods",
+    singular: "Digital good",
+    plural: "Digital goods",
+    icon: "💾",
+    subtitle: "Non-inventory digital products",
+    fields: [
+      { key: "name", label: "Name", type: "text", required: true, inList: true },
+      { key: "sku", label: "SKU", type: "text", inList: true },
+      { key: "price", label: "Price", type: "number", required: true, money: true, inList: true },
+      {
+        key: "deliveryChannel",
+        label: "Delivery",
+        type: "select",
+        options: ["email", "whatsapp"],
+        inList: true,
+      },
+      { key: "bodyTemplate", label: "Delivery message", type: "textarea", full: true },
     ],
     schema: z.object({
       name: text().min(1, "Name is required"),
-      productId: text(80).min(1, "Product ID is required"),
-      qty: z.coerce.number().min(1, "Qty must be at least 1"),
+      sku: optionalText(80),
       price: z.coerce.number().min(0, "Price is required"),
+      deliveryChannel: z.enum(["email", "whatsapp"]).default("whatsapp"),
+      bodyTemplate: optionalText(2000),
+    }),
+  },
+  memberships: {
+    name: "memberships",
+    singular: "Membership",
+    plural: "Memberships",
+    icon: "🎖️",
+    subtitle: "Member plans & pricing",
+    fields: [
+      { key: "name", label: "Name", type: "text", required: true, inList: true },
+      { key: "customerId", label: "Customer ID", type: "text", required: true, inList: true },
+      { key: "planName", label: "Plan", type: "text", required: true, inList: true },
+      { key: "price", label: "Price", type: "number", required: true, money: true, inList: true },
+      { key: "periodDays", label: "Period (days)", type: "number", required: true, inList: true },
+      { key: "startDate", label: "Start", type: "date", inList: true },
+      { key: "endDate", label: "End", type: "date", inList: true },
+      {
+        key: "status",
+        label: "Status",
+        type: "select",
+        options: ["active", "expired", "paused"],
+        inList: true,
+      },
+      { key: "memberPricePercent", label: "Member discount %", type: "number", inList: true },
+    ],
+    schema: z.object({
+      name: text().min(1, "Name is required"),
+      customerId: text(80).min(1, "Customer ID is required"),
+      planName: text(120).min(1, "Plan is required"),
+      price: z.coerce.number().min(0, "Price is required"),
+      periodDays: z.coerce.number().min(1).default(30),
+      startDate: optionalText(20),
+      endDate: optionalText(20),
+      status: z.enum(["active", "expired", "paused"]).default("active"),
+      memberPricePercent: z.coerce.number().min(0).max(100).default(0),
     }),
   },
   variants: {

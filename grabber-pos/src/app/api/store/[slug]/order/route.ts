@@ -10,6 +10,10 @@ import {
   demoCustomerCookieName,
   type PublicStoreCustomer,
 } from "@/lib/server/storefront-customers-store";
+import {
+  isValidPaymentProofUrl,
+  PAYMENT_PROOF_MAX_CHARS,
+} from "@/lib/commerce/payment-proof";
 
 const orderSchema = z.object({
   customerName: z.string().trim().min(2, "Name is required").max(120),
@@ -23,6 +27,14 @@ const orderSchema = z.object({
   pickupNote: z.string().trim().max(300).optional(),
   paymentMethod: z.enum(PAYMENT_MODES),
   paymentReference: z.string().trim().max(120).optional(),
+  paymentProofUrl: z
+    .string()
+    .trim()
+    .max(PAYMENT_PROOF_MAX_CHARS)
+    .optional()
+    .refine((v) => !v || isValidPaymentProofUrl(v), {
+      message: "Payment proof must be an image data URL or https link",
+    }),
   fulfilment: z.enum(FULFILMENT_MODES),
   deliveryZoneId: z.string().trim().max(64).optional(),
   clientUuid: z.string().trim().min(8).max(64),
@@ -120,6 +132,8 @@ export async function POST(
         address: data.address,
         pickupNote: data.pickupNote,
         paymentReference: data.paymentReference,
+        paymentProofUrl:
+          data.paymentMethod === "bank_transfer" ? data.paymentProofUrl : undefined,
         discountCode: data.discountCode,
       },
     );

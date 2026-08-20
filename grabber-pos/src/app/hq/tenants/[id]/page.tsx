@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { COMMERCE_THEME_IDS } from "@/lib/commerce/schema";
-import type { HqTenant } from "@/lib/hq";
+import type { HqTenant, HqTenantMonitor } from "@/lib/hq";
 import { HQ_EXTRA_KEYS, type HqTenantOps } from "@/lib/hq-config";
 import { PLAN_NAMES, type PlanTier } from "@/lib/plans";
 
@@ -18,6 +18,7 @@ export default function HqTenantDetailPage() {
   const id = decodeURIComponent(String(params.id ?? ""));
 
   const [tenant, setTenant] = useState<HqTenant | null>(null);
+  const [monitor, setMonitor] = useState<HqTenantMonitor | null>(null);
   const [businessName, setBusinessName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [accentColor, setAccentColor] = useState("");
@@ -29,6 +30,7 @@ export default function HqTenantDetailPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [passwordNote, setPasswordNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -44,11 +46,18 @@ export default function HqTenantDetailPage() {
         setPlan((t.plan as PlanTier) || "starter");
         setExpiry(t.expiry || "");
         setExtras(t.extras || []);
-        return fetch(`/api/hq/tenants/${encodeURIComponent(id)}/ops`);
+        return Promise.all([
+          fetch(`/api/hq/tenants/${encodeURIComponent(id)}/ops`).then((r) =>
+            r.json(),
+          ),
+          fetch(`/api/hq/tenants/${encodeURIComponent(id)}/monitor`).then((r) =>
+            r.json(),
+          ),
+        ]);
       })
-      .then((r) => (r && "json" in r ? r.json() : null))
-      .then((j) => {
-        if (j?.success) setOps(j.data as HqTenantOps);
+      .then(([opsJ, monJ]) => {
+        if (opsJ?.success) setOps(opsJ.data as HqTenantOps);
+        if (monJ?.success) setMonitor(monJ.data as HqTenantMonitor);
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load"),
@@ -80,6 +89,112 @@ export default function HqTenantDetailPage() {
     }
   }
 
+  async function setSuspended(suspended: boolean) {
+    setSaving(true);
+    setMsg(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/hq/tenants/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: suspended ? "suspended" : "active",
+        }),
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || "Status update failed");
+      setTenant(j.data);
+      setMsg(suspended ? "Tenant suspended" : "Tenant unsuspended");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Status update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeFromPipeline() {
+    if (
+      !confirm(
+        "Remove from pipeline (demo clients only)? Organizations are never deleted.",
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/hq/tenants/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || "Remove failed");
+      window.location.href = "/hq/tenants";
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Remove failed");
+      setSaving(false);
+    }
+  }
+
+  async function passwordOp(userId: string, action: "set" | "send_reset") {
+    if (
+      action === "set" &&
+      !confirm(
+        "Set a new temporary password for this user? Show it to them once — it will not be stored in HQ.",
+      )
+    ) {
+      return;
+    }
+    if (
+      action === "send_reset" &&
+      !confirm("Send (or generate) a password reset link for this user?")
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    setPasswordNote(null);
+    try {
+      const res = await fetch(
+        `/api/hq/tenants/${encodeURIComponent(id)}/users/password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, action }),
+        },
+      );
+      const j = await res.json();
+      if (!j.success) throw new Error(j.error || "Password op failed");
+      const d = j.data as {
+        action: string;
+        email: string;
+        fullName: string;
+        temporaryPassword?: string;
+        loginUrl?: string;
+        emailed?: boolean;
+        resetUrl?: string | null;
+      };
+      if (d.action === "set" && d.temporaryPassword) {
+        setPasswordNote(
+          `Temporary password for ${d.fullName} (${d.email}):\n${d.temporaryPassword}\n\nLogin: ${d.loginUrl ?? "/login"}\nShow this once to the client, then dismiss.`,
+        );
+        setMsg("Temporary password set");
+      } else if (d.emailed) {
+        setMsg(`Reset email sent to ${d.email}`);
+      } else if (d.resetUrl) {
+        setPasswordNote(
+          `Email not configured — copy this one-time reset link for ${d.email}:\n${d.resetUrl}`,
+        );
+        setMsg("Reset link generated (copy below)");
+      } else {
+        setMsg(`Password reset processed for ${d.email}`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Password op failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading) {
     return <p className="text-sm text-text-dim">Loading tenant…</p>;
   }
@@ -95,6 +210,8 @@ export default function HqTenantDetailPage() {
     );
   }
 
+  const isSuspended = tenant.status === "suspended";
+
   return (
     <div>
       <Link
@@ -103,13 +220,291 @@ export default function HqTenantDetailPage() {
       >
         ← Tenants
       </Link>
-      <h1 className="mt-2 text-2xl font-semibold text-text-strong">
-        {tenant.name}
-      </h1>
-      <p className="mt-1 text-sm text-text-dim">
-        Source: {tenant.source} · status{" "}
-        <span className="capitalize">{tenant.status}</span>
-      </p>
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-strong">
+            {tenant.name}
+          </h1>
+          <p className="mt-1 text-sm text-text-dim">
+            Source: {tenant.source} · status{" "}
+            <span className="capitalize">{tenant.status}</span>
+            {monitor?.slug ? ` · /${monitor.slug}` : ""}
+            {monitor?.onboardedAt
+              ? ` · onboarded ${shortDate(monitor.onboardedAt)}`
+              : tenant.onboardedAt
+                ? ` · onboarded ${shortDate(tenant.onboardedAt)}`
+                : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => void setSuspended(!isSuspended)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+              isSuspended
+                ? "bg-accent text-accent-ink"
+                : "border border-danger/40 text-danger hover:bg-danger/10"
+            }`}
+          >
+            {isSuspended ? "Unsuspend" : "Suspend"}
+          </button>
+          {tenant.source === "clients" && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void removeFromPipeline()}
+              className="rounded-xl border border-line px-4 py-2 text-sm text-text-dim hover:border-danger hover:text-danger disabled:opacity-50"
+              title="Remove from pipeline (demo clients only)"
+            >
+              Remove from pipeline
+            </button>
+          )}
+        </div>
+      </div>
+      {tenant.source === "clients" && (
+        <p className="mt-2 text-xs text-text-dim">
+          Remove from pipeline (demo clients only) — organizations are never
+          hard-deleted.
+        </p>
+      )}
+
+      {/* God's view */}
+      <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-text-dim">
+          God&apos;s view
+        </h2>
+        {!monitor ? (
+          <p className="mt-3 text-sm text-text-dim">Monitor unavailable.</p>
+        ) : (
+          <div className="mt-4 space-y-6">
+            {monitor.quiet && (
+              <p className="rounded-lg border border-warn/30 bg-warn/10 px-3 py-2 text-sm text-warn">
+                Quiet shop — products on file, no sales in the last 14 days.
+              </p>
+            )}
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-text-dim">
+                Period sales
+              </h3>
+              <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Metric label="Sales 7d" value={String(monitor.period.sales7d)} />
+                <Metric
+                  label="Revenue 7d"
+                  value={monitor.period.revenue7d.toLocaleString()}
+                />
+                <Metric
+                  label="Sales 30d"
+                  value={String(monitor.period.sales30d)}
+                />
+                <Metric
+                  label="Revenue 30d"
+                  value={monitor.period.revenue30d.toLocaleString()}
+                />
+              </div>
+              {monitor.period.bySource.length > 0 && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-xs uppercase text-text-dim">
+                      <tr>
+                        <th className="py-1 pr-4 font-medium">Source</th>
+                        <th className="py-1 pr-4 font-medium">Count</th>
+                        <th className="py-1 font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monitor.period.bySource.map((row) => (
+                        <tr key={row.source} className="border-t border-line">
+                          <td className="py-1.5 pr-4 text-text-body">
+                            {row.source}
+                          </td>
+                          <td className="py-1.5 pr-4 text-text-body">
+                            {row.count}
+                          </td>
+                          <td className="py-1.5 text-text-strong">
+                            {row.total.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-text-dim">
+                Stock health
+              </h3>
+              <div className="mt-2 grid grid-cols-3 gap-3">
+                <Metric
+                  label="Products"
+                  value={String(monitor.stock.productCount)}
+                />
+                <Metric
+                  label="Low stock"
+                  value={String(monitor.stock.lowStock)}
+                />
+                <Metric
+                  label="Out of stock"
+                  value={String(monitor.stock.outOfStock)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div>
+                <h3 className="text-xs font-semibold uppercase text-text-dim">
+                  Branches
+                </h3>
+                {monitor.branches.length === 0 ? (
+                  <p className="mt-2 text-sm text-text-dim">No branches.</p>
+                ) : (
+                  <table className="mt-2 min-w-full text-left text-sm">
+                    <thead className="text-xs uppercase text-text-dim">
+                      <tr>
+                        <th className="py-1 pr-3 font-medium">Name</th>
+                        <th className="py-1 pr-3 font-medium">Code</th>
+                        <th className="py-1 font-medium">Active</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monitor.branches.map((b) => (
+                        <tr key={b.id} className="border-t border-line">
+                          <td className="py-1.5 pr-3">{b.name}</td>
+                          <td className="py-1.5 pr-3 font-mono text-xs">
+                            {b.code}
+                          </td>
+                          <td className="py-1.5">
+                            {b.isActive ? "Yes" : "No"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold uppercase text-text-dim">
+                  Users &amp; password reset
+                </h3>
+                {monitor.users.length === 0 ? (
+                  <p className="mt-2 text-sm text-text-dim">No users.</p>
+                ) : (
+                  <table className="mt-2 min-w-full text-left text-sm">
+                    <thead className="text-xs uppercase text-text-dim">
+                      <tr>
+                        <th className="py-1 pr-3 font-medium">Name</th>
+                        <th className="py-1 pr-3 font-medium">Email</th>
+                        <th className="py-1 pr-3 font-medium">Role</th>
+                        <th className="py-1 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monitor.users.map((u) => (
+                        <tr key={u.id} className="border-t border-line">
+                          <td className="py-1.5 pr-3">
+                            {u.fullName || "—"}
+                            {!u.isActive && (
+                              <span className="ml-1 text-[10px] text-text-dim">
+                                (inactive)
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1.5 pr-3 font-mono text-xs text-text-dim">
+                            {u.email || "—"}
+                          </td>
+                          <td className="py-1.5 pr-3 capitalize">{u.role}</td>
+                          <td className="py-1.5">
+                            <div className="flex flex-wrap gap-1">
+                              <button
+                                type="button"
+                                disabled={saving}
+                                className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-text-body hover:border-accent hover:text-accent disabled:opacity-40"
+                                onClick={() =>
+                                  void passwordOp(u.id, "send_reset")
+                                }
+                              >
+                                Email reset
+                              </button>
+                              <button
+                                type="button"
+                                disabled={saving}
+                                className="rounded-md border border-line px-2 py-0.5 text-[11px] font-medium text-text-body hover:border-accent hover:text-accent disabled:opacity-40"
+                                onClick={() => void passwordOp(u.id, "set")}
+                              >
+                                Temp password
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {passwordNote && (
+                  <div className="mt-3 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-text-body">
+                    <pre className="whitespace-pre-wrap font-sans">
+                      {passwordNote}
+                    </pre>
+                    <button
+                      type="button"
+                      className="mt-2 text-accent underline"
+                      onClick={() => setPasswordNote(null)}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-line bg-surface-2 p-3">
+                <p className="text-[10px] uppercase text-text-dim">Storefront</p>
+                {monitor.storefront ? (
+                  <>
+                    <p className="mt-1 text-sm font-semibold text-text-strong">
+                      /{monitor.storefront.slug ?? "—"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-text-dim">
+                      {monitor.storefront.enabled ? "Enabled" : "Disabled"}
+                      {monitor.storefront.status
+                        ? ` · ${monitor.storefront.status}`
+                        : ""}
+                      {monitor.storefront.domain
+                        ? ` · ${monitor.storefront.domain}`
+                        : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-sm text-text-dim">None</p>
+                )}
+              </div>
+              <div className="rounded-xl border border-line bg-surface-2 p-3">
+                <p className="text-[10px] uppercase text-text-dim">WhatsApp</p>
+                <p className="mt-1 text-sm font-semibold text-text-strong">
+                  {monitor.whatsapp.phoneNumberIdSet
+                    ? "Number attached"
+                    : "No number"}
+                </p>
+                <p className="mt-0.5 text-xs text-text-dim">
+                  {monitor.whatsapp.tokenSet ? "Token set" : "No token"} ·{" "}
+                  {monitor.whatsapp.locale}
+                </p>
+              </div>
+              <div className="rounded-xl border border-line bg-surface-2 p-3">
+                <p className="text-[10px] uppercase text-text-dim">
+                  Online orders pending
+                </p>
+                <p className="mt-1 text-lg font-semibold text-text-strong">
+                  {monitor.openOnlineOrders}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-line bg-surface-1 p-6">
@@ -269,9 +664,9 @@ export default function HqTenantDetailPage() {
                   })
                 }
               >
-                {COMMERCE_THEME_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {id}
+                {COMMERCE_THEME_IDS.map((tid) => (
+                  <option key={tid} value={tid}>
+                    {tid}
                   </option>
                 ))}
               </select>
@@ -376,6 +771,16 @@ export default function HqTenantDetailPage() {
       )}
     </div>
   );
+}
+
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

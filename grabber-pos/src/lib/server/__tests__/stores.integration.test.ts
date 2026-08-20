@@ -37,11 +37,24 @@ describe("job store", () => {
   it("creates, updates and re-reads a repair job", async () => {
     const job = await jobs.createJob("repair");
     expect(job.id).toMatch(/^RJ-/);
+    expect(job.deposit).toBe(0);
+    expect(job.status).toBe("received");
 
-    await jobs.updateMeta(job.id, { customer: "Ravi", subject: "Phone" });
+    await jobs.updateMeta(job.id, {
+      customer: "Ravi",
+      subject: "Phone",
+      status: "diagnose",
+      deposit: 500,
+      diagnosis: "Screen cracked",
+      warrantyNote: "90 days labour",
+    });
     const read = await jobs.getJob(job.id);
     expect(read?.customer).toBe("Ravi");
     expect(read?.subject).toBe("Phone");
+    expect(read?.status).toBe("diagnose");
+    expect(read?.deposit).toBe(500);
+    expect(read?.diagnosis).toBe("Screen cracked");
+    expect(read?.warrantyNote).toBe("90 days labour");
   });
 
   it("keeps repair and service jobs in separate boards", async () => {
@@ -78,6 +91,31 @@ describe("booking store", () => {
     expect(totals.duration).toBe(3);
     expect(totals.stayCharge).toBe(15000);
     expect(totals.total).toBe(15000); // deposit tracked, not billed
+  });
+
+  it("applies overdue fee and forfeited deposit to total", async () => {
+    const booking = await bookings.createBooking("rent");
+    await bookings.updateMeta(booking.id, {
+      rate: 1000,
+      startDate: "2026-01-01",
+      endDate: "2026-01-03",
+      deposit: 2000,
+      overdueFee: 300,
+      depositDisposition: "forfeited",
+    });
+    const totals = bookings.bookingTotals((await bookings.getBooking(booking.id))!);
+    expect(totals.overdue).toBe(300);
+    expect(totals.forfeit).toBe(2000);
+    expect(totals.total).toBe(totals.stayCharge + 300 + 2000);
+  });
+
+  it("suggests overdue from days late × rate × 0.1", () => {
+    const fee = bookings.suggestedOverdueFee(
+      { endDate: "2026-01-01", rate: 1000 },
+      new Date("2026-01-04T12:00:00"),
+    );
+    // 3 days late × 1000 × 0.1
+    expect(fee).toBe(300);
   });
 });
 

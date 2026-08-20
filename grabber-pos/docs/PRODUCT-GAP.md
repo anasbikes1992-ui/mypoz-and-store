@@ -27,7 +27,7 @@ Legend: ✅ shipped · 🟡 partial / thin · ⬜ not built · 💡 idea (not co
 | Licence enforcement | Server-side block on sell paths |
 | Docs | PRODUCTION, ARCHITECTURE, USER, RESELLER, GMS-OPERATIONS, CUSTOMER-STOREFRONT, FEATURE-PLAN, DESIGN, PRODUCT, CREDENTIALS |
 | Website CMS + storefront | `/website` themes/banners/SEO/checkout modes; `/store/[slug]` orders → C&C/Delivery; customer accounts |
-| GMS HQ | `/hq` fleet portal (tenants, licences, onboard, tickets stub, docs) |
+| GMS HQ | `/hq` god-view (monitor, suspend, tickets, WA attach/detach, password reset) |
 
 ---
 
@@ -115,6 +115,11 @@ No P1 gaps remain open. All prior backlog rows below are closed.
 
 Next work is production cutover (real Supabase / WhatsApp / printers) and optional
 polish of thin vertical boards — see FEATURE-PLAN §7 P5–P8.
+
+**Sprint 4 product ideas (partial)**  
+- Digital Mode ✅ `/digital` (catalog + custom-line settle + WA/email delivery)  
+- Memberships ✅ collection + POS member badge · CRM lite 🟡 `/crm` (segments, no mass send)  
+- Coupons schedule ✅ `startsAt` + `description` on discount codes  
 
 ---
 

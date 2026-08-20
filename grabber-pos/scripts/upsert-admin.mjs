@@ -199,7 +199,7 @@ async function main() {
         role: "owner",
         email: EMAIL,
         project: refMasked,
-        login: "https://grabber-poz.vercel.app/login",
+        login: "https://mypoz-and-store-ui.vercel.app/login",
       },
       null,
       2,

@@ -10,6 +10,8 @@ export interface License {
   expiry: string;
   /** Extra module keys enabled on top of the plan (per-client add-ons). */
   extras: string[];
+  /** HQ suspend flag — blocks tenant as suspended even if expiry is future. */
+  suspended?: boolean;
 }
 export interface TenantConfig {
   brand: Brand;

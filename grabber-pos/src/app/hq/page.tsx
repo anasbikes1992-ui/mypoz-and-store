@@ -49,10 +49,14 @@ export default function HqHomePage() {
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Stat
           label="Tenants"
           value={summary ? String(summary.tenantCount) : "…"}
+        />
+        <Stat
+          label="Sales total"
+          value={summary ? summary.salesTotal.toLocaleString() : "…"}
         />
         <Stat
           label="Expired licences"
@@ -67,6 +71,44 @@ export default function HqHomePage() {
         <Stat
           label="Open tickets"
           value={summary ? String(summary.openTickets) : "…"}
+        />
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Link
+          href="/hq/tenants"
+          className="rounded-2xl border border-line bg-surface-1 p-4 transition hover:border-accent/50"
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-dim">
+            Quiet shops
+          </p>
+          <p
+            className={`mt-1 text-2xl font-semibold ${
+              summary && (summary.quietShopCount ?? 0) > 0
+                ? "text-warn"
+                : "text-text-strong"
+            }`}
+          >
+            {summary ? String(summary.quietShopCount ?? 0) : "…"}
+          </p>
+          <p className="mt-1 text-xs text-text-dim">
+            Products on file, no sales in 14d — open tenants
+          </p>
+        </Link>
+        <Stat
+          label="Low-stock orgs"
+          value={summary ? String(summary.lowStockOrgs ?? 0) : "…"}
+          tone={
+            summary && (summary.lowStockOrgs ?? 0) > 0 ? "warn" : undefined
+          }
+        />
+        <Stat
+          label="WA attached"
+          value={summary ? String(summary.waAttachedCount ?? 0) : "…"}
+        />
+        <Stat
+          label="Live storefronts"
+          value={summary ? String(summary.storefrontLiveCount ?? 0) : "…"}
         />
       </div>
 
@@ -93,7 +135,7 @@ export default function HqHomePage() {
         <StatusCard
           label="Tenant admin"
           value="Owner role required"
-          hint="If login works but the org is empty, run the documented upsert-admin provisioning script. Do not invent credentials here."
+          hint="If login works but the org is empty, run upsert-admin. For forgotten logins, use Email reset / Temp password on the tenant detail page."
         />
       </div>
 
@@ -135,7 +177,7 @@ export default function HqHomePage() {
         <QuickLink
           href="/hq/tickets"
           title="Support tickets"
-          body="Stub inbox for guiding buyers — not a full helpdesk yet."
+          body="Open and resolve buyer and tenant support requests."
         />
         <QuickLink
           href="/hq/docs"

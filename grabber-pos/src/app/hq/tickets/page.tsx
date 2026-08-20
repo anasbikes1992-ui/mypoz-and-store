@@ -74,14 +74,26 @@ export default function HqTicketsPage() {
     if (j.success) await reload();
   }
 
+  async function removeTicket(id: string) {
+    if (!confirm("Delete this ticket?")) return;
+    const res = await fetch("/api/hq/tickets", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const j = await res.json();
+    if (j.success) await reload();
+    else setError(j.error || "Delete failed");
+  }
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-text-strong">
         Support tickets
       </h1>
       <p className="mt-1 text-sm text-text-dim">
-        Lightweight stub for guiding buyers — not a full helpdesk. Stored in{" "}
-        <code className="text-text-body">data/hq-tickets.json</code> for now.
+        Track buyer and tenant requests. Open tickets stay visible until
+        resolved; durable when the platform settings store is available.
       </p>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
@@ -172,6 +184,13 @@ export default function HqTicketsPage() {
                     {s.replace("_", " ")}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => void removeTicket(t.id)}
+                  className="rounded-lg px-2.5 py-1 text-[11px] text-danger hover:bg-danger/10"
+                >
+                  Delete
+                </button>
               </div>
             </div>
             {t.body && (

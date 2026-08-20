@@ -5,6 +5,7 @@ import { CommerceNav } from "@/components/commerce/admin/CommerceNav";
 import { listStorefrontWebOrders } from "@/lib/server/storefront-orders-store";
 import { formatMoney, formatDateTime } from "@/lib/format";
 import { FulfillmentActions } from "@/components/commerce/admin/FulfillmentActions";
+import { PaymentProofActions } from "@/components/commerce/admin/PaymentProofActions";
 
 export default async function CommerceOrderDetailPage({
   params,
@@ -68,6 +69,9 @@ export default async function CommerceOrderDetailPage({
               <dd>
                 {order.paymentMethod}
                 {order.pendingPayment ? " (awaiting gateway)" : ""}
+                {order.paymentProofStatus && order.paymentProofStatus !== "none"
+                  ? ` · proof ${order.paymentProofStatus}`
+                  : ""}
               </dd>
             </div>
             <div className="flex justify-between">
@@ -86,6 +90,17 @@ export default async function CommerceOrderDetailPage({
               fulfilment={order.fulfilment}
             />
           </div>
+          {order.paymentMethod === "bank_transfer" ? (
+            <div className="mt-4 border-t border-line pt-4">
+              <h3 className="mb-2 text-sm font-semibold">Bank transfer proof</h3>
+              <PaymentProofActions
+                orderId={order.id}
+                status={order.paymentProofStatus}
+                proofUrl={order.paymentProofUrl}
+                note={order.paymentProofNote}
+              />
+            </div>
+          ) : null}
         </section>
 
         <section className="rounded-3xl border border-line bg-surface-1 p-5 lg:col-span-2">

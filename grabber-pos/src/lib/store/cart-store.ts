@@ -25,6 +25,8 @@ interface CartState {
   /** Selected loyalty customer (null for walk-in). */
   customerId: string | null;
   customerPoints: number;
+  /** Active membership discount % when set. */
+  memberDiscountPercent: number | null;
   redeemPoints: number;
 
   addProduct: (product: Product) => void;
@@ -54,6 +56,7 @@ interface CartState {
     name: string;
     mobile: string;
     points: number;
+    memberDiscountPercent?: number | null;
   }) => void;
   clearCustomer: () => void;
   setRedeemPoints: (v: number) => void;
@@ -95,6 +98,7 @@ export const useCartStore = create<CartState>((set) => ({
   employee: "",
   customerId: null,
   customerPoints: 0,
+  memberDiscountPercent: null,
   redeemPoints: 0,
 
   addProduct: (product) =>
@@ -212,6 +216,7 @@ export const useCartStore = create<CartState>((set) => ({
       employee: "",
       customerId: null,
       customerPoints: 0,
+      memberDiscountPercent: null,
       redeemPoints: 0,
     }),
 
@@ -226,6 +231,7 @@ export const useCartStore = create<CartState>((set) => ({
       employee: bill.employee,
       customerId: bill.customerId,
       customerPoints: bill.customerPoints,
+      memberDiscountPercent: null,
       redeemPoints: 0,
     }),
 
@@ -241,6 +247,10 @@ export const useCartStore = create<CartState>((set) => ({
       customerName: c.name,
       customerMobile: c.mobile,
       customerPoints: c.points,
+      memberDiscountPercent:
+        c.memberDiscountPercent != null && c.memberDiscountPercent > 0
+          ? c.memberDiscountPercent
+          : null,
       redeemPoints: 0,
     }),
   clearCustomer: () =>
@@ -249,6 +259,7 @@ export const useCartStore = create<CartState>((set) => ({
       customerName: "",
       customerMobile: "",
       customerPoints: 0,
+      memberDiscountPercent: null,
       redeemPoints: 0,
     }),
   setRedeemPoints: (v) => set({ redeemPoints: Math.max(0, Math.floor(v || 0)) }),

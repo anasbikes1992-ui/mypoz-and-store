@@ -26,6 +26,8 @@ export interface WhatsAppConversation {
   lastMessage: string;
   lastSaleId?: string;
   needsStaffReply?: boolean;
+  /** Employee/user name or id for staff handoff. */
+  assignedTo?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -141,11 +143,39 @@ export async function upsertConversation(
     ...existing,
     ...input,
     payload: input.payload ?? existing?.payload ?? emptyBotPayload(),
+    assignedTo:
+      input.assignedTo !== undefined
+        ? input.assignedTo.trim() || undefined
+        : existing?.assignedTo,
     createdAt: existing?.createdAt ?? input.createdAt ?? now,
     updatedAt: now,
   };
   if (tenant) return putCollection(tenant, CONVERSATIONS, row);
   return conversations.put(row);
+}
+
+export async function assignConversation(
+  id: string,
+  assignTo: string,
+  phoneNumberId?: string,
+): Promise<WhatsAppConversation | null> {
+  const existing = await getConversation(id, phoneNumberId);
+  if (!existing) return null;
+  return upsertConversation(
+    {
+      id: existing.id,
+      waId: existing.waId,
+      phone: existing.phone,
+      name: existing.name,
+      state: existing.state,
+      payload: existing.payload,
+      lastMessage: existing.lastMessage,
+      lastSaleId: existing.lastSaleId,
+      needsStaffReply: existing.needsStaffReply,
+      assignedTo: assignTo.trim(),
+    },
+    phoneNumberId,
+  );
 }
 
 export async function appendMessage(

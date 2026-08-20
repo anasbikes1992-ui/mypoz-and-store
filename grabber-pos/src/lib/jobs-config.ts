@@ -27,6 +27,7 @@ export const JOB_CONFIG: Record<JobType, JobConfig> = {
 
 export const JOB_STATUSES = [
   "received",
+  "diagnose",
   "in-progress",
   "ready",
   "collected",
@@ -34,6 +35,7 @@ export const JOB_STATUSES = [
 
 export const JOB_STATUS_TONE: Record<string, string> = {
   received: "bg-info/15 text-info",
+  diagnose: "bg-warn/15 text-warn",
   "in-progress": "bg-warn/15 text-warn",
   ready: "bg-accent/15 text-accent",
   collected: "bg-surface-3 text-text-dim",

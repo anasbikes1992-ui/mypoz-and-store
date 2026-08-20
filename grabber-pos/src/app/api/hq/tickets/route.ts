@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireGmsAdmin } from "@/lib/server/gms-auth";
 import {
   createHqTicket,
+  deleteHqTicket,
   listHqTickets,
   updateHqTicket,
 } from "@/lib/server/hq-repo";
@@ -95,4 +96,37 @@ export async function PATCH(req: NextRequest) {
     );
   }
   return NextResponse.json({ success: true, data: updated, error: null });
+}
+
+export async function DELETE(req: NextRequest) {
+  const gate = await requireGmsAdmin();
+  if (!gate.ok) return gate.response;
+
+  const urlId = req.nextUrl.searchParams.get("id");
+  let bodyId: string | undefined;
+  try {
+    const body = (await req.json()) as { id?: string };
+    bodyId = body?.id;
+  } catch {
+    // query-only delete is fine
+  }
+  const id = (bodyId || urlId || "").trim();
+  if (!id) {
+    return NextResponse.json(
+      { success: false, data: null, error: "id required" },
+      { status: 400 },
+    );
+  }
+  const ok = await deleteHqTicket(id);
+  if (!ok) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Ticket not found" },
+      { status: 404 },
+    );
+  }
+  return NextResponse.json({
+    success: true,
+    data: { deleted: true },
+    error: null,
+  });
 }

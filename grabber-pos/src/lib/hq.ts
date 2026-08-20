@@ -43,6 +43,64 @@ export interface HqSummary {
   openTickets: number;
   source: "reseller_licences" | "demo_fallback";
   serviceRole: boolean;
+  /** Fleet pulse — cheap cross-org aggregates when service-role is set. */
+  quietShopCount?: number;
+  lowStockOrgs?: number;
+  waAttachedCount?: number;
+  storefrontLiveCount?: number;
+}
+
+export interface HqTenantMonitor {
+  orgId: string;
+  slug: string | null;
+  onboardedAt: string | null;
+  period: {
+    sales7d: number;
+    sales30d: number;
+    revenue7d: number;
+    revenue30d: number;
+    bySource: { source: string; count: number; total: number }[];
+  };
+  stock: {
+    productCount: number;
+    lowStock: number;
+    outOfStock: number;
+  };
+  branches: {
+    id: string;
+    name: string;
+    code: string;
+    isActive: boolean;
+    currency: string;
+  }[];
+  users: {
+    id: string;
+    fullName: string;
+    role: string;
+    isActive: boolean;
+    email: string | null;
+  }[];
+  storefront: {
+    slug: string | null;
+    domain: string | null;
+    enabled: boolean;
+    status: string | null;
+  } | null;
+  whatsapp: {
+    phoneNumberIdSet: boolean;
+    tokenSet: boolean;
+    locale: string;
+  };
+  openOnlineOrders: number;
+  quiet: boolean;
+}
+
+export interface HqFleetPulse {
+  salesTotalLifetime: number;
+  quietShopCount: number;
+  lowStockOrgs: number;
+  waAttachedCount: number;
+  storefrontLiveCount: number;
 }
 
 export interface HqTicket {
@@ -78,6 +136,18 @@ export const HQ_DOC_PAGES = [
     title: "Operating manual",
     blurb: "Super admin vs client owner vs staff — HQ, POS, store, WhatsApp.",
     docPath: "docs/MYPOZ_OPERATING_MANUAL.md",
+  },
+  {
+    slug: "hq-playbook",
+    title: "HQ playbook",
+    blurb: "Daily GMS operator checklist — onboard, monitor, password reset.",
+    docPath: "docs/HQ-PLAYBOOK.md",
+  },
+  {
+    slug: "client-playbook",
+    title: "Client playbook",
+    blurb: "Hand this to shop owners — first day, POS, store, WhatsApp.",
+    docPath: "docs/CLIENT-PLAYBOOK.md",
   },
   {
     slug: "whatsapp",

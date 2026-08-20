@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireGmsAdmin } from "@/lib/server/gms-auth";
 import {
   attachWhatsAppToOrg,
+  detachWhatsAppFromOrg,
   listWhatsAppFleet,
 } from "@/lib/server/whatsapp-durable";
 
@@ -40,6 +41,7 @@ const attachSchema = z.object({
   phoneNumberId: z.string().max(80).optional(),
   accessToken: z.string().max(400).optional(),
   locale: z.enum(["en", "si", "ta"]).optional(),
+  detach: z.boolean().optional(),
 });
 
 export async function PUT(req: NextRequest) {
@@ -61,6 +63,45 @@ export async function PUT(req: NextRequest) {
       { status: 400 },
     );
   }
+  if (parsed.data.detach) {
+    await detachWhatsAppFromOrg(parsed.data.orgId);
+    return NextResponse.json({
+      success: true,
+      data: { detached: true },
+      error: null,
+    });
+  }
   await attachWhatsAppToOrg(parsed.data.orgId, parsed.data);
-  return NextResponse.json({ success: true, data: { saved: true }, error: null });
+  return NextResponse.json({
+    success: true,
+    data: { saved: true },
+    error: null,
+  });
+}
+
+export async function DELETE(req: NextRequest) {
+  const gate = await requireGmsAdmin();
+  if (!gate.ok) return gate.response;
+  let orgId = req.nextUrl.searchParams.get("orgId") ?? "";
+  if (!orgId) {
+    try {
+      const body = (await req.json()) as { orgId?: string };
+      orgId = body?.orgId ?? "";
+    } catch {
+      // query-only
+    }
+  }
+  const parsed = z.string().uuid().safeParse(orgId);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { success: false, data: null, error: "orgId required" },
+      { status: 400 },
+    );
+  }
+  await detachWhatsAppFromOrg(parsed.data);
+  return NextResponse.json({
+    success: true,
+    data: { detached: true },
+    error: null,
+  });
 }
