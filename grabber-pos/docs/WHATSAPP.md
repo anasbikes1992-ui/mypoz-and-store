@@ -29,6 +29,28 @@ Switch to **Live** + complete Business verification when ready for customers.
 6. Create a permanent access token / system user token → `WHATSAPP_TOKEN`
    (this is the var still missing on Vercel if you only set phone/secret/verify)
 
+### Vercel checklist (P1)
+
+| Variable | Notes |
+|----------|--------|
+| `WHATSAPP_TOKEN` | **Required** — permanent system user token from GRABBER app |
+| `WHATSAPP_PHONE_NUMBER_ID` | From WhatsApp → API Setup |
+| `WHATSAPP_VERIFY_TOKEN` | Same string as Meta webhook verify token |
+| `WHATSAPP_APP_SECRET` | App settings → Basic |
+| `OPENAI_API_KEY` | Jarvis HQ / tenant AI |
+
+After changing env: **Redeploy** Production. Then HQ → `/hq/whatsapp` → select
+**Anaz Store** → paste phone number id → Save.
+
+Password rotation (after secrets are available locally):
+
+```bash
+npx vercel env pull .env.vercel.pull --environment=production --yes
+node --env-file=.env.vercel.pull scripts/rotate-chat-passwords.mjs
+```
+
+Remove unused: `UPSERT_ADMIN_EMAIL`, `UPSERT_ADMIN_PASSWORD`, `GMS_ADMIN_PASSWORD`.
+
 ### Vercel env hygiene
 
 - Keep: Supabase trio, `NEXT_PUBLIC_APP_URL`, `GMS_ADMIN_EMAILS`, WhatsApp four, `OPENAI_API_KEY`
@@ -36,7 +58,21 @@ Switch to **Live** + complete Business verification when ready for customers.
 
 ---
 
-## Features shipped
+## Multi-tenant: who configures WhatsApp?
+
+| Layer | Who | What they do |
+|-------|-----|--------------|
+| **Meta (once per phone number)** | GMS / client with their own WABA | Create/verify WABA, register number, webhook can stay on the shared MyPoz URL |
+| **MyPoz HQ** | GMS | Attach `phoneNumberId` (+ optional token) to the tenant on `/hq/whatsapp` |
+| **Client admin** | Shop owner | `/whatsapp` — locale, offers, location text, inbox; can paste org token override |
+
+**New orgs do not repeat the full Meta Developer dance for every shop** if GMS owns the numbers: HQ attaches each number to the right org.  
+If a **client brings their own** WhatsApp Business number, *they* (or GMS) complete Meta registration for *that* number, then paste phone id/token in **client `/whatsapp`** or ask HQ to attach.
+
+Shared webhook: `https://mypoz-and-store-ui.vercel.app/api/whatsapp/webhook` — routes by `phone_number_id`.
+
+---
+
 
 - Inbound webhook (verify + signed POST)
 - Numbered text bot (en / si / ta): order, menu, offers, location, track, staff

@@ -90,11 +90,13 @@ export function CatalogView({
           <option value="price-desc">Price · high</option>
         </select>
       </div>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setCat("all")}
-          className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+          className={`shrink-0 border px-2.5 py-1.5 text-[11px] font-semibold ${
+            store.themeId === "market" ? "rounded-[var(--mp-radius)]" : "rounded-full"
+          } ${
             cat === "all" ? "border-accent bg-accent text-accent-ink" : "border-line text-text-dim"
           }`}
         >
@@ -105,11 +107,14 @@ export function CatalogView({
             key={c.name}
             type="button"
             onClick={() => setCat(c.name)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+            className={`shrink-0 border px-2.5 py-1.5 text-[11px] font-semibold ${
+              store.themeId === "market" ? "rounded-[var(--mp-radius)]" : "rounded-full"
+            } ${
               cat === c.name ? "border-accent bg-accent text-accent-ink" : "border-line text-text-dim"
             }`}
           >
             {c.name}
+            <span className="ml-1 text-[10px] opacity-70">{c.count}</span>
           </button>
         ))}
       </div>
@@ -118,7 +123,7 @@ export function CatalogView({
           {empty || t.emptyProducts}
         </p>
       ) : (
-        <div className={`mt-6 grid gap-3 sm:gap-4 ${cols}`}>
+        <div className={`mt-6 grid ${store.themeId === "market" ? "gap-2 sm:gap-2.5" : "gap-3 sm:gap-4"} ${cols}`}>
           {filtered.map((p) => (
             <ProductCard key={p.id} slug={slug} product={p} style={card} t={t} />
           ))}

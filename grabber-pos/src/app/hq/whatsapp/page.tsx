@@ -35,7 +35,10 @@ export default function HqWhatsAppPage() {
       .then((j) => {
         if (!j.success) throw new Error(j.error || "Failed");
         setData(j.data);
-        if (!orgId && j.data.tenants?.[0]?.orgId) setOrgId(j.data.tenants[0].orgId);
+        const anaz = j.data.tenants?.find((t: { slug: string }) => t.slug === "anaz-store");
+        if (!orgId) {
+          setOrgId(anaz?.orgId || j.data.tenants?.[0]?.orgId || "");
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed"));
   }
@@ -137,6 +140,15 @@ Reply YES and I’ll send the login.`}
         <Stat label="Verify token" value={yn(data?.envVerifyToken)} />
         <Stat label="App secret" value={yn(data?.envAppSecret)} />
       </div>
+
+      {!data?.envToken ? (
+        <p className="mt-4 rounded-xl border border-warn/40 bg-surface-2 px-3 py-2 text-sm text-text-body">
+          <span className="font-semibold text-text-strong">WHATSAPP_TOKEN</span> is
+          missing on Vercel. Webhook verify may work, but send/receive and bot
+          replies will fail until you add a permanent Meta system-user token,
+          then redeploy.
+        </p>
+      ) : null}
 
       <p className="mt-4 text-xs text-text-dim">
         Shared webhook:{" "}

@@ -108,6 +108,14 @@ async function main() {
       max_discount: p.maxDiscount,
       single_discount: p.singleDiscount,
       warranty_months: p.warrantyMonths ?? 0,
+      description: p.description ?? null,
+      image_url: p.imageUrl ?? p.image_url ?? null,
+      online_visible: p.onlineVisible !== false,
+      online_price: p.onlinePrice ?? p.salePrice ?? null,
+      compare_at_price: p.compareAtPrice ?? null,
+      featured: Boolean(p.featured),
+      online_status: p.onlineStatus ?? "published",
+      tags: Array.isArray(p.tags) ? p.tags : [],
     }));
     const { data: inserted } = await db.from("products").insert(rows).select("id, sku");
     const idBySku = new Map(inserted.map((r) => [r.sku, r.id]));

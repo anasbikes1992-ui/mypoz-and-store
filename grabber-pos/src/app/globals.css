@@ -571,6 +571,19 @@ body {
   letter-spacing: 0.01em;
   text-transform: none;
 }
+/* Dense supermarket shelf: tighter cards, price-first */
+.theme-mypoz-market article.group {
+  border-color: color-mix(in oklch, var(--line) 90%, var(--accent) 10%);
+}
+.theme-mypoz-market article.group .font-semibold.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.theme-mypoz-market article.group button {
+  min-height: 2rem;
+  padding-inline: 0.65rem;
+  font-size: 0.7rem;
+}
 .store-announce {
   background: var(--accent);
   color: var(--accent-ink);
