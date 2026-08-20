@@ -12,8 +12,8 @@ export default function PrivacyPolicyPage() {
       <p>
         Grabber Mobility Solutions (Pvt) Ltd (“MyPoz”) operates the MyPoz POS,
         online store, and WhatsApp ordering service at{" "}
-        <a className="text-accent hover:underline" href="https://mypoz-and-store.vercel.app/welcome">
-          mypoz-and-store.vercel.app
+        <a className="text-accent hover:underline" href="https://mypoz-and-store-ui.vercel.app/welcome">
+          mypoz-and-store-ui.vercel.app
         </a>
         .
       </p>

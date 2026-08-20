@@ -8,6 +8,7 @@ describe("domain DNS helpers", () => {
 
   it("accepts Vercel CNAME targets", () => {
     expect(cnamePointsAtVercel(["cname.vercel-dns.com."])).toBe(true);
+    expect(cnamePointsAtVercel(["mypoz-and-store-ui.vercel.app"])).toBe(true);
     expect(cnamePointsAtVercel(["mypoz-and-store.vercel.app"])).toBe(true);
     expect(cnamePointsAtVercel(["example.com"])).toBe(false);
   });

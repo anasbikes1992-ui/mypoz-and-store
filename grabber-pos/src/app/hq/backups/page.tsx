@@ -40,7 +40,7 @@ export default function HqBackupsPage() {
           WAL archiving is on. Daily restore points are a Supabase plan feature.
         </p>
         <a
-          href="https://supabase.com/dashboard/project/vtawrxmkahpgwgydibox/settings/infrastructure"
+          href="https://supabase.com/dashboard/project/veavfkjgtkbnggukzjds/settings/infrastructure"
           className="mt-3 inline-block text-sm text-accent"
           target="_blank"
           rel="noreferrer"

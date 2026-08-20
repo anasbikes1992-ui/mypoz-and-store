@@ -132,7 +132,7 @@ export async function POST(
           const [settings, tenant] = await Promise.all([readSettings(), readTenant()]);
           const businessName = settings.businessName || tenant.brand.businessName || "MyPoz Store";
           const accentColor = tenant.brand.accentColor || "#2563eb";
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store.vercel.app";
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store-ui.vercel.app";
           const email = orderConfirmationEmail({
             businessName, accentColor,
             receiptNo: order.receiptNo,

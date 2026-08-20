@@ -25,7 +25,7 @@ const CSV = process.env.SHOPPING_STATION_CSV || "C:\\Users\\pc\\Downloads\\Produ
 const SITE = "https://shoppingstation.lk";
 const CRED_FILE = join(root, "data", "shopping-station-owner.json");
 const IMAGE_DIR = join(root, "data", "shopping-station-images");
-const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || "vtawrxmkahpgwgydibox";
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || "veavfkjgtkbnggukzjds";
 
 const FEATURED_HINTS = [
   "nutella",
@@ -671,8 +671,8 @@ async function main() {
           password,
           orgId,
           slug: SLUG,
-          storeUrl: `https://mypoz-and-store.vercel.app/store/${SLUG}`,
-          loginUrl: "https://mypoz-and-store.vercel.app/login",
+          storeUrl: `https://mypoz-and-store-ui.vercel.app/store/${SLUG}`,
+          loginUrl: "https://mypoz-and-store-ui.vercel.app/login",
         },
         null,
         2,
@@ -921,7 +921,7 @@ async function main() {
           imagesDownloaded: downloaded,
           imagesFailed: failed,
           banners: bannerUrls.length,
-          store: `https://mypoz-and-store.vercel.app/store/${SLUG}`,
+          store: `https://mypoz-and-store-ui.vercel.app/store/${SLUG}`,
           credentialsFile: "grabber-pos/data/shopping-station-owner.json",
         },
         null,

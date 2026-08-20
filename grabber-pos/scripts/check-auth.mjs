@@ -1,10 +1,10 @@
 /**
  * Production Supabase auth + schema audit (read-only).
- * Usage: SUPABASE_PROJECT_REF=vtawrxmkahpgwgydibox node --env-file=.env.local scripts/check-auth.mjs
+ * Usage: SUPABASE_PROJECT_REF=veavfkjgtkbnggukzjds node --env-file=.env.local scripts/check-auth.mjs
  */
 import postgres from "postgres";
 
-const ref = process.env.SUPABASE_PROJECT_REF || "vtawrxmkahpgwgydibox";
+const ref = process.env.SUPABASE_PROJECT_REF || "veavfkjgtkbnggukzjds";
 const password = process.env.SUPABASE_DB_PASSWORD;
 if (!password) {
   console.error("Missing SUPABASE_DB_PASSWORD");

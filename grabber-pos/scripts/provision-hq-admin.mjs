@@ -10,7 +10,7 @@ import postgres from "postgres";
 const email = (process.env.UPSERT_ADMIN_EMAIL ?? "").trim().toLowerCase();
 const password = process.env.UPSERT_ADMIN_PASSWORD ?? "";
 const dbPassword = process.env.SUPABASE_DB_PASSWORD;
-const ref = process.env.SUPABASE_PROJECT_REF || "vtawrxmkahpgwgydibox";
+const ref = process.env.SUPABASE_PROJECT_REF || "veavfkjgtkbnggukzjds";
 
 if (!email || !password) {
   console.error("Set UPSERT_ADMIN_EMAIL and UPSERT_ADMIN_PASSWORD");
@@ -172,7 +172,7 @@ console.log(
     confirmed: check[0]?.confirmed,
     app_role: check[0]?.app_role,
     profile_role: "owner",
-    login: "https://mypoz-and-store.vercel.app/login then /hq",
+    login: "https://mypoz-and-store-ui.vercel.app/login then /hq",
   }),
 );
 

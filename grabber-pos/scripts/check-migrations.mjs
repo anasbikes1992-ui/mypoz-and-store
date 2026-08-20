@@ -4,7 +4,7 @@
  */
 import postgres from "postgres";
 
-const ref = process.env.SUPABASE_PROJECT_REF || "vtawrxmkahpgwgydibox";
+const ref = process.env.SUPABASE_PROJECT_REF || "veavfkjgtkbnggukzjds";
 const password = process.env.SUPABASE_DB_PASSWORD;
 if (!password) {
   console.error("Missing SUPABASE_DB_PASSWORD");

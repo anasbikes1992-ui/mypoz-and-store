@@ -1,5 +1,5 @@
 /**
- * Apply a SQL file to the Anaz MyPoz project using SUPABASE_DB_PASSWORD.
+ * Apply a SQL file to the MyPoz Supabase project using SUPABASE_DB_PASSWORD.
  * Usage: node --env-file=.env.local scripts/apply-sql.mjs supabase/migrations/0014_whatsapp_orders.sql
  * Never logs the password.
  */
@@ -14,7 +14,7 @@ if (!file) {
 }
 
 const password = process.env.SUPABASE_DB_PASSWORD;
-const ref = process.env.SUPABASE_PROJECT_REF || "vtawrxmkahpgwgydibox";
+const ref = process.env.SUPABASE_PROJECT_REF || "veavfkjgtkbnggukzjds";
 if (!password) {
   console.error("Missing SUPABASE_DB_PASSWORD");
   process.exit(1);
@@ -26,6 +26,11 @@ const hosts = [
     host: `db.${ref}.supabase.co`,
     port: 5432,
     user: "postgres",
+  },
+  {
+    host: "aws-1-ap-northeast-1.pooler.supabase.com",
+    port: 6543,
+    user: `postgres.${ref}`,
   },
   {
     host: "aws-1-ap-southeast-1.pooler.supabase.com",

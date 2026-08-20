@@ -19,7 +19,7 @@ are not backed up, not multi-tenant, and assume one server process.
 ## 1. Provision Supabase
 
 ```bash
-npx supabase link --project-ref vtawrxmkahpgwgydibox
+npx supabase link --project-ref veavfkjgtkbnggukzjds
 npx supabase db push
 ```
 
@@ -63,7 +63,7 @@ Set these in the hosting project (Vercel → Settings → Environment Variables)
 | `WHATSAPP_PHONE_NUMBER_ID` | optional | Sender number id |
 | `WHATSAPP_VERIFY_TOKEN` | WhatsApp webhook | Same string as Meta hub.verify_token |
 | `WHATSAPP_APP_SECRET` | WhatsApp webhook | Meta App secret (HMAC). Rotate if exposed |
-| `NEXT_PUBLIC_APP_URL` | payments / links | `https://mypoz-and-store.vercel.app` |
+| `NEXT_PUBLIC_APP_URL` | payments / links | `https://mypoz-and-store-ui.vercel.app` |
 | `PRINTER_RECEIPT_IP` | optional | ESC/POS receipt + cash-drawer kick |
 | `PRINTER_KOT_IP` | optional | Kitchen order ticket (KOT) |
 | `PRINTER_BOT_IP` | optional | Bar order ticket (BOT) |

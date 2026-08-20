@@ -1,4 +1,4 @@
-import { emailBase, itemRow, row } from "../base";
+import { emailBase, escapeHtml, itemRow, row } from "../base";
 
 export interface OrderConfirmationData {
   businessName: string;
@@ -21,9 +21,13 @@ export interface OrderConfirmationData {
 export function orderConfirmationEmail(d: OrderConfirmationData): { html: string; subject: string; text: string } {
   const subject = `Order confirmed — ${d.receiptNo} | ${d.businessName}`;
 
+  const customerName = escapeHtml(d.customerName);
+  const receiptNo = escapeHtml(d.receiptNo);
+  const address = d.address ? escapeHtml(d.address) : undefined;
+
   const body = `
 <h2>Order Confirmed</h2>
-<p>Hi ${d.customerName}, your order has been placed successfully.</p>
+<p>Hi ${customerName}, your order has been placed successfully.</p>
 
 <table class="table">
   <thead><tr><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Price</th></tr></thead>
@@ -45,10 +49,10 @@ export function orderConfirmationEmail(d: OrderConfirmationData): { html: string
 <hr class="divider" />
 <h2>Delivery details</h2>
 <table class="table"><tbody>
-  ${row("Order no.", `<strong>${d.receiptNo}</strong>`)}
-  ${row("Payment", d.paymentMethod)}
+  ${row("Order no.", `<strong>${receiptNo}</strong>`)}
+  ${row("Payment", escapeHtml(d.paymentMethod))}
   ${row("Fulfilment", d.fulfilment === "pickup" ? "Click &amp; collect / pickup" : "Courier delivery")}
-  ${d.address ? row("Address", d.address) : ""}
+  ${address ? row("Address", address) : ""}
 </tbody></table>
 
 ${d.fulfilment !== "pickup" ? '<div class="info-box">Your order will be dispatched within 1–2 business days. You will receive an update when it ships.</div>' : '<div class="info-box">Your order is ready for pickup. Please bring this email or your order number.</div>'}

@@ -15,6 +15,7 @@ export function cnamePointsAtVercel(records: string[]): boolean {
     const host = r.replace(/\.$/, "").toLowerCase();
     return (
       host.endsWith("vercel-dns.com") ||
+      host === "mypoz-and-store-ui.vercel.app" ||
       host === "mypoz-and-store.vercel.app" ||
       host.endsWith(".vercel.app")
     );

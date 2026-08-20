@@ -3,6 +3,16 @@
  * Clean, minimal, mobile-friendly. No external fonts or images required.
  */
 
+/** Escape text for safe HTML interpolation (user-provided fields). */
+export function escapeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function emailBase({
   title,
   preheader,
@@ -23,7 +33,7 @@ export function emailBase({
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${title}</title>
+<title>${escapeHtml(title)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#18181b;font-size:15px;line-height:1.6}
@@ -53,10 +63,10 @@ export function emailBase({
 </style>
 </head>
 <body>
-${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f4f4f5">${preheader}</div>` : ""}
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f4f4f5">${escapeHtml(preheader)}</div>` : ""}
 <div class="wrap">
   <div class="header">
-    <h1>${businessName}</h1>
+    <h1>${escapeHtml(businessName)}</h1>
   </div>
   <div class="body">
     ${body}
@@ -70,9 +80,9 @@ ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1
 }
 
 export function row(label: string, value: string): string {
-  return `<tr><td style="color:#71717a;width:40%">${label}</td><td style="font-weight:500">${value}</td></tr>`;
+  return `<tr><td style="color:#71717a;width:40%">${escapeHtml(label)}</td><td style="font-weight:500">${value}</td></tr>`;
 }
 
 export function itemRow(name: string, qty: number, price: string): string {
-  return `<tr><td>${name}</td><td style="text-align:center">${qty}</td><td style="text-align:right">${price}</td></tr>`;
+  return `<tr><td>${escapeHtml(name)}</td><td style="text-align:center">${qty}</td><td style="text-align:right">${escapeHtml(price)}</td></tr>`;
 }

@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const tenant = await readTenant();
   const businessName = settings.businessName || tenant.brand.businessName || "MyPoz Store";
   const accentColor = tenant.brand.accentColor || "#2563eb";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store.vercel.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store-ui.vercel.app";
 
   const { template, to, data = {} } = parsed.data;
 

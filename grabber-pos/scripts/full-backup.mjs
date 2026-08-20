@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 import postgres from "postgres";
 
 const password = process.env.SUPABASE_DB_PASSWORD;
-const ref = process.env.SUPABASE_PROJECT_REF || "vtawrxmkahpgwgydibox";
+const ref = process.env.SUPABASE_PROJECT_REF || "veavfkjgtkbnggukzjds";
 if (!password) {
   console.error("Missing SUPABASE_DB_PASSWORD");
   process.exit(1);

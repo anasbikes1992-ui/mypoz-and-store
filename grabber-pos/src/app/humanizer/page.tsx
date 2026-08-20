@@ -37,7 +37,7 @@ export default function HumanizerPage() {
       <p>Touch-first retail terminal. Scan barcodes, add products, apply discounts, split payments (cash + card), print receipts, and post sales — all in seconds. Works for Retail, Wholesale, Restaurant (table/KDS), Rooms (hotel), Hire Purchase, Layaway, Service jobs, and more.</p>
 
       <h3>🛍️ Online Store (Commerce)</h3>
-      <p>Every product in the POS is also available in the online store — same stock, same prices, updated in real time. Shoppers browse at <code>yourdomain.com</code> or <code>mypoz-and-store.vercel.app/store/your-slug</code>. Orders flow directly into the POS order book. COD, bank transfer, and card gateways (PayHere, WebXPay, OnePay, LankaPay) supported.</p>
+      <p>Every product in the POS is also available in the online store — same stock, same prices, updated in real time. Shoppers browse at <code>yourdomain.com</code> or <code>mypoz-and-store-ui.vercel.app/store/your-slug</code>. Orders flow directly into the POS order book. COD, bank transfer, and card gateways (PayHere, WebXPay, OnePay, LankaPay) supported.</p>
 
       <h3>📦 Inventory</h3>
       <p>Add products with variants (size, colour, weight), barcodes, cost prices, expiry dates, and reorder points. Stock is deducted on every sale — POS or online. Low-stock and expiry alerts keep shelves healthy.</p>

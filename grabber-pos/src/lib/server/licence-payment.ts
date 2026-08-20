@@ -42,7 +42,7 @@ export async function applyLicencePayment(payment: GatewayPaymentRecord): Promis
       const email = settings.email;
       if (!email) return;
       const businessName = settings.businessName || tenant.brand.businessName || "MyPoz Store";
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store.vercel.app";
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store-ui.vercel.app";
       const mail = licenceRenewedEmail({ businessName: "MyPoz", tenantName: businessName, plan: nextPlan, newExpiry: expiry, dashboardUrl: appUrl });
       await sendEmail({ to: email, subject: mail.subject, html: mail.html, text: mail.text, tags: [{ name: "type", value: "licence-renewed" }] });
     } catch { /* never block the licence write */ }

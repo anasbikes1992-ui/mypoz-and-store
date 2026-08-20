@@ -85,7 +85,7 @@ export default function HqConfigPage() {
           </span>
           <input
             className={INPUT}
-            placeholder="https://mypoz-and-store.vercel.app"
+            placeholder="https://mypoz-and-store-ui.vercel.app"
             value={cfg.webhookBaseUrl}
             onChange={(e) => setCfg({ ...cfg, webhookBaseUrl: e.target.value })}
           />

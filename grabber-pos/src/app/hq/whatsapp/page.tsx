@@ -119,7 +119,7 @@ Reply YES and I’ll send the login.`}
       <p className="mt-4 text-xs text-text-dim">
         Shared webhook:{" "}
         <code className="text-text-body">
-          https://mypoz-and-store.vercel.app{data?.webhookPath ?? "/api/whatsapp/webhook"}
+          https://mypoz-and-store-ui.vercel.app{data?.webhookPath ?? "/api/whatsapp/webhook"}
         </code>
       </p>
 
@@ -134,27 +134,27 @@ Reply YES and I’ll send the login.`}
         <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
           <MetaField
             label="App domains"
-            value="mypoz-and-store.vercel.app"
+            value="mypoz-and-store-ui.vercel.app"
           />
           <MetaField
             label="Site URL (Basic / Facebook Login)"
-            value="https://mypoz-and-store.vercel.app/welcome"
+            value="https://mypoz-and-store-ui.vercel.app/welcome"
           />
           <MetaField
             label="Privacy policy URL"
-            value="https://mypoz-and-store.vercel.app/privacy-policy"
+            value="https://mypoz-and-store-ui.vercel.app/privacy-policy"
           />
           <MetaField
             label="Terms of Service URL"
-            value="https://mypoz-and-store.vercel.app/terms-of-service"
+            value="https://mypoz-and-store-ui.vercel.app/terms-of-service"
           />
           <MetaField
             label="Data deletion instructions URL"
-            value="https://mypoz-and-store.vercel.app/data-deletion"
+            value="https://mypoz-and-store-ui.vercel.app/data-deletion"
           />
           <MetaField
             label="WhatsApp webhook callback"
-            value="https://mypoz-and-store.vercel.app/api/whatsapp/webhook"
+            value="https://mypoz-and-store-ui.vercel.app/api/whatsapp/webhook"
           />
         </dl>
         <p className="mt-3 text-xs text-text-dim">

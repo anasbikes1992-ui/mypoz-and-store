@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL =
-  process.env.PLAYWRIGHT_BASE_URL || "https://mypoz-and-store.vercel.app";
+  process.env.PLAYWRIGHT_BASE_URL || "https://mypoz-and-store-ui.vercel.app";
 
 export default defineConfig({
   testDir: "./e2e",

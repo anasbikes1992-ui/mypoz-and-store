@@ -164,7 +164,7 @@ export async function runTool(
       return JSON.stringify({
         hqJson: "/hq/backups and GET /api/hq/backup",
         tenantJson: "GET /api/backup",
-        pitr: "Supabase dashboard for project vtawrxmkahpgwgydibox",
+        pitr: "Supabase dashboard for project veavfkjgtkbnggukzjds",
         secrets: "Tokens and API keys are redacted in JSON exports",
       });
     }
