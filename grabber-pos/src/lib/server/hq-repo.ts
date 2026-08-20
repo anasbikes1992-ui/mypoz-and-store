@@ -24,6 +24,9 @@ import {
 import { readTenant, writeTenant } from "@/lib/server/tenant-store";
 import { getHqFleetPulse } from "@/lib/server/hq-monitor";
 import { dataFile, readJsonFile, writeJsonFile } from "@/lib/server/persistence/local-json";
+import { slugifyOrgName } from "@/lib/org-slug";
+
+export { slugifyOrgName } from "@/lib/org-slug";
 
 const TICKETS_FILE = dataFile("hq-tickets.json");
 const TICKETS_ROW_KEY = "hq-tickets";
@@ -424,14 +427,109 @@ export type OnboardInput = {
   logoUrl?: string;
   /** Apply branding + licence to this workspace (dedicated deploy). */
   applyBranding?: boolean;
-  /** When service-role is available, create a real organization row. */
+  /** When service-role is available, create a real organization + storefront. */
   provisionOrg?: boolean;
 };
+
+async function allocateOrgSlug(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: any,
+  base: string,
+): Promise<string> {
+  const root = base || `org-${randomUUID().slice(0, 8)}`;
+  for (let i = 0; i < 30; i += 1) {
+    const candidate = i === 0 ? root : `${root.slice(0, 40)}-${i}`;
+    const { data } = await db
+      .from("organizations")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+    if (!data) return candidate;
+  }
+  return `${root.slice(0, 36)}-${randomUUID().slice(0, 6)}`;
+}
+
+/**
+ * Full durable tenant shell: org + MAIN branch + register + tenant licence +
+ * published storefront. Owner Auth user is still provisioned via
+ * scripts/provision-tenant-owner.mjs (password never travels through HQ UI).
+ */
+async function provisionDurableTenant(input: {
+  name: string;
+  plan: PlanTier;
+  expiry: string;
+  accentColor?: string;
+  logoUrl?: string;
+}): Promise<{ orgId: string; slug: string }> {
+  if (!isSupabaseEnabled || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY required to provision organizations");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createServiceSupabase() as any;
+  const slug = await allocateOrgSlug(db, slugifyOrgName(input.name));
+
+  const { data: org, error: orgErr } = await db
+    .from("organizations")
+    .insert({ name: input.name.trim(), slug })
+    .select("id")
+    .single();
+  if (orgErr) throw new Error(orgErr.message);
+
+  const orgId = org.id as string;
+
+  const { data: branch, error: branchErr } = await db
+    .from("branches")
+    .insert({ org_id: orgId, name: "Main Branch", code: "MAIN" })
+    .select("id")
+    .single();
+  if (branchErr) throw new Error(branchErr.message);
+
+  const { error: regErr } = await db.from("registers").insert({
+    branch_id: branch.id,
+    name: "Register 1",
+  });
+  if (regErr) throw new Error(regErr.message);
+
+  const { error: tenantErr } = await db.from("app_documents").upsert(
+    {
+      org_id: orgId,
+      key: "tenant",
+      data: {
+        brand: {
+          businessName: input.name.trim(),
+          logoUrl: (input.logoUrl ?? "").trim(),
+          accentColor: (input.accentColor ?? "").trim(),
+        },
+        license: {
+          plan: input.plan,
+          expiry: input.expiry,
+          extras: [],
+          suspended: false,
+        },
+      },
+    },
+    { onConflict: "org_id,key" },
+  );
+  if (tenantErr) throw new Error(tenantErr.message);
+
+  const { error: sfErr } = await db.from("storefronts").insert({
+    org_id: orgId,
+    slug,
+    enabled: true,
+    status: "published",
+    published_at: new Date().toISOString(),
+  });
+  if (sfErr) throw new Error(sfErr.message);
+
+  return { orgId, slug };
+}
 
 export async function onboardHqTenant(input: OnboardInput): Promise<{
   client: Awaited<ReturnType<typeof createEntity>>;
   orgId: string | null;
+  slug: string | null;
   appliedLocal: boolean;
+  provisionError: string | null;
 }> {
   const client = await createEntity("clients", {
     name: input.name.trim(),
@@ -455,61 +553,27 @@ export async function onboardHqTenant(input: OnboardInput): Promise<{
   }
 
   let orgId: string | null = null;
-  if (
-    input.provisionOrg &&
-    isSupabaseEnabled &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  ) {
+  let slug: string | null = null;
+  let provisionError: string | null = null;
+
+  if (input.provisionOrg) {
     try {
-      const db = createServiceSupabase();
-      const slug = input.name
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 48);
-      const { data: org, error } = await db
-        .from("organizations")
-        .insert({
-          name: input.name.trim(),
-          slug: slug || `org-${randomUUID().slice(0, 8)}`,
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
-      orgId = org.id;
-
-      await db.from("branches").insert({
-        org_id: orgId,
-        name: "Main Branch",
-        code: "MAIN",
+      const provisioned = await provisionDurableTenant({
+        name: input.name,
+        plan: input.plan,
+        expiry: input.expiry,
+        accentColor: input.accentColor,
+        logoUrl: input.logoUrl,
       });
-
-      await db.from("app_documents").upsert(
-        {
-          org_id: orgId,
-          key: "tenant",
-          data: {
-            brand: {
-              businessName: input.name.trim(),
-              logoUrl: (input.logoUrl ?? "").trim(),
-              accentColor: (input.accentColor ?? "").trim(),
-            },
-            license: {
-              plan: input.plan,
-              expiry: input.expiry,
-              extras: [],
-            },
-          } as unknown as import("@/lib/supabase/database.types").Json,
-        },
-        { onConflict: "org_id,key" },
-      );
-    } catch {
-      orgId = null;
+      orgId = provisioned.orgId;
+      slug = provisioned.slug;
+    } catch (err) {
+      provisionError =
+        err instanceof Error ? err.message : "Organization provision failed";
     }
   }
 
-  return { client, orgId, appliedLocal };
+  return { client, orgId, slug, appliedLocal, provisionError };
 }
 
 export async function listHqTickets(): Promise<HqTicket[]> {

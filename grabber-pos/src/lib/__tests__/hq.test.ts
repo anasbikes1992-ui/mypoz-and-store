@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { licenceStatus } from "../hq";
+import { slugifyOrgName } from "../org-slug";
 
 describe("licenceStatus", () => {
   it("returns suspended when flag is true regardless of expiry", () => {
@@ -18,5 +19,16 @@ describe("licenceStatus", () => {
 
   it("returns expired when past expiry and not suspended", () => {
     expect(licenceStatus("2020-01-01")).toBe("expired");
+  });
+});
+
+describe("slugifyOrgName", () => {
+  it("normalizes business names for org/storefront slugs", () => {
+    expect(slugifyOrgName("Anaz Store")).toBe("anaz-store");
+    expect(slugifyOrgName("  My Poz & Co! ")).toBe("my-poz-co");
+  });
+
+  it("caps length at 48", () => {
+    expect(slugifyOrgName("a".repeat(80)).length).toBe(48);
   });
 });

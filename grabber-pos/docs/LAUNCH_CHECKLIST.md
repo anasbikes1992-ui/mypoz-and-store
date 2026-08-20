@@ -27,10 +27,12 @@ WhatsApp ops: [WHATSAPP.md](WHATSAPP.md) · HQ attach: `/hq/whatsapp`
 4. **WhatsApp secrets + attach + smoke** (go-live gate — see below)
 
 5. **Catalogue**  
-   Finish Anaz import chunks 10–17 (~1518 products) via existing import scripts / SQL chunks.
+   Anaz catalogue is live at **1518** products (confirm on `/products`). Re-import only if counts drop.
 
 6. **Soft launch Anaz**  
    Optional: run password rotate when service role decryptable (`scripts/rotate-chat-passwords.mjs` after `vercel env pull`).
+
+Product topology (HQ + clients + DB): [PRODUCT_FINALIZE.md](PRODUCT_FINALIZE.md).
 
 ---
 

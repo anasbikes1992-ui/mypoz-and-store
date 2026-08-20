@@ -18,7 +18,8 @@ const onboardSchema = z.object({
   accentColor: z.string().max(32).optional().default(""),
   logoUrl: z.string().max(500).optional().default(""),
   applyBranding: z.boolean().optional().default(false),
-  provisionOrg: z.boolean().optional().default(false),
+  /** HQ default: create durable org + storefront when service role is present. */
+  provisionOrg: z.boolean().optional().default(true),
 });
 
 export async function POST(req: NextRequest) {
@@ -48,5 +49,15 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await onboardHqTenant(parsed.data);
+  if (parsed.data.provisionOrg && result.provisionError) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: result,
+        error: `Client saved, but organization provision failed: ${result.provisionError}`,
+      },
+      { status: 502 },
+    );
+  }
   return NextResponse.json({ success: true, data: result, error: null });
 }

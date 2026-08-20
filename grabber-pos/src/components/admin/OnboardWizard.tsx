@@ -45,11 +45,16 @@ export function OnboardWizard({
   mode?: OnboardWizardMode;
 }) {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Draft>(EMPTY);
+  const [draft, setDraft] = useState<Draft>(() => ({
+    ...EMPTY,
+    // HQ fleet: create durable org + published storefront by default.
+    provisionOrg: mode === "hq",
+  }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [orgSlug, setOrgSlug] = useState<string | null>(null);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -81,6 +86,7 @@ export function OnboardWizard({
           throw new Error(json.error || "Could not add the client");
         }
         setOrgId(json.data?.orgId ?? null);
+        setOrgSlug(json.data?.slug ?? null);
       } else {
         const res = await fetch("/api/collections/clients", {
           method: "POST",
@@ -132,30 +138,31 @@ export function OnboardWizard({
   }
 
   function reset() {
-    setDraft(EMPTY);
+    setDraft({ ...EMPTY, provisionOrg: mode === "hq" });
     setStep(0);
     setDone(false);
     setError(null);
     setOrgId(null);
+    setOrgSlug(null);
   }
 
   if (done) {
     return (
       <div className="rounded-2xl border border-accent/40 bg-accent/5 p-6">
         <p className="text-lg font-semibold text-text-strong">
-          {draft.name} is onboarded 🎉
+          {draft.name} is onboarded
         </p>
         <p className="mt-1 text-sm text-text-dim">
           {PLAN_NAMES[draft.plan]} plan
           {draft.expiry ? ` · expires ${draft.expiry}` : " · no expiry"}
           {draft.applyBranding ? " · branding applied to this workspace" : ""}
-          {orgId ? ` · org ${orgId}` : ""}
+          {orgSlug ? ` · store /store/${orgSlug}` : ""}
         </p>
         <ol className="mt-4 space-y-1.5 text-sm text-text-dim">
-          <li>1. Import their catalog from Products → Import (Excel/CSV).</li>
-          <li>2. Set receipt header, tax and printers in Settings.</li>
-          <li>3. Create staff logins under Users &amp; admins.</li>
-          <li>4. Hand over the owner login and run through the User Guide.</li>
+          <li>1. Create the owner login with scripts/provision-tenant-owner.mjs (same org slug).</li>
+          <li>2. Import their catalog from Products → Import (Excel/CSV).</li>
+          <li>3. Set receipt header, tax and printers in Settings.</li>
+          <li>4. Create staff logins under Users &amp; admins.</li>
           {fleet && (
             <li>5. Track them under HQ → Tenants / Licences.</li>
           )}
@@ -314,9 +321,14 @@ export function OnboardWizard({
                         Create organization (service-role)
                       </span>
                       <span className="mt-0.5 block text-xs text-text-dim">
-                        Inserts an org + main branch + tenant licence document when
-                        SUPABASE_SERVICE_ROLE_KEY is configured. Owner login still
-                        needs the seed script or Auth admin.
+                        Creates organization, main branch, register, tenant
+                        licence, and a published storefront at{" "}
+                        <code className="text-[11px]">/store/&#123;slug&#125;</code>.
+                        Owner login:{" "}
+                        <code className="text-[11px]">
+                          scripts/provision-tenant-owner.mjs
+                        </code>
+                        .
                       </span>
                     </span>
                   </label>
