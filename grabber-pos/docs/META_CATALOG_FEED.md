@@ -1,15 +1,18 @@
 # Meta Commerce catalog feed (ops)
 
-MyPoz does **not** auto-push products into Meta Commerce Manager.
-The WhatsApp **bot menu** reads live POS stock. Meta’s product catalog is a
-separate CSV/feed upload.
+MyPoz **exports** the live POS/online catalog. WhatsApp **bot menus** always
+read POS stock directly. Meta Commerce catalog is filled by CSV upload **or**
+the Graph `items_batch` sync script.
 
 ## Export from Anaz Store
 
 | Format | URL |
 |--------|-----|
 | CSV (Meta-style) | `https://mypoz-and-store-ui.vercel.app/api/store/anaz-store/catalog?format=csv` |
-| JSON | `https://mypoz-and-store-ui.vercel.app/api/store/anaz-store/catalog?format=json` |
+| JSON (full catalog) | `https://mypoz-and-store-ui.vercel.app/api/store/anaz-store/catalog?format=json` |
+| Meta feed CSV | `https://mypoz-and-store-ui.vercel.app/api/store/anaz-store/feed/meta` |
+
+JSON includes `total` + all online_visible products (paginated server-side).
 
 Local smoke:
 
@@ -17,29 +20,37 @@ Local smoke:
 node scripts/whatsapp-smoke.mjs
 ```
 
-## Upload to Meta
+## Push to Meta via API
+
+Catalog created for Anaz: **Anaz Store MyPoz** (`1397856035621959`).
+
+```bash
+# from grabber-pos/ with WHATSAPP_TOKEN + WHATSAPP_APP_SECRET set
+node scripts/sync-meta-catalog.mjs
+# or explicit:
+node scripts/sync-meta-catalog.mjs 1397856035621959 "https://mypoz-and-store-ui.vercel.app/api/store/anaz-store/catalog?format=json"
+```
+
+Then in **Meta WhatsApp Manager → Catalog**, connect **Anaz Store MyPoz**
+to the GRABBER.LK number (API link to SMB WABA may be blocked — use UI).
+
+## Manual CSV upload (fallback)
 
 1. Meta Business Suite → Commerce → Catalog (or WhatsApp → Catalog).
-2. Add items → Upload → CSV.
+2. Add items → Upload → CSV from the export URL above.
 3. Map columns: `id`, `title`, `description`, `availability`, `condition`,
    `price`, `link`, `image_link`, `brand`, `product_type`.
-4. Re-export and re-upload when prices or stock change in bulk (or after a
-   full Shopping Station import).
+4. Re-run sync / re-upload after bulk POS imports.
 
 ## Domain + logo (storefront)
 
 1. **Logo** — Commerce builder → theme tokens `logoUrl`, or HQ/tenant brand
-   `logoUrl`. Until a custom asset exists, the market theme uses the store
-   initial + Shopping Station red (`#c81e1e`).
-2. **Custom domain** — Commerce → Domains: point DNS CNAME to Vercel, then
-   add the host on the storefront row (`custom_domain` / domain field).
-3. Keep public URL working: `/store/anaz-store` on
-   `mypoz-and-store-ui.vercel.app`.
+   `logoUrl`.
+2. **Custom domain** — Commerce → Domains on `mypoz-and-store-ui.vercel.app`.
+3. Storefront: `/store/anaz-store`.
 
 ## Related env (Vercel)
 
-Required for Cloud API send/receive (not for CSV export):
-
-- `WHATSAPP_TOKEN` — **still required if missing**
-- `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`
-- Attach phone id to tenant on `/hq/whatsapp` (Anaz org)
+- `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`
+- Attach phone id on `/hq/whatsapp` (Anaz)
+- Optional: `META_PRODUCT_CATALOG_ID=1397856035621959`
