@@ -4,7 +4,9 @@ import {
   publicWhatsAppSettings,
   readWhatsAppSettings,
   writeWhatsAppSettings,
+  type WhatsAppSettings,
 } from "@/lib/server/whatsapp-inbox-store";
+import { normalizeEnabledPaths } from "@/lib/whatsapp/automation-graph";
 
 const patchSchema = z.object({
   phoneNumberId: z.string().max(80).optional(),
@@ -53,7 +55,21 @@ export async function PUT(req: NextRequest) {
       { status: 400 },
     );
   }
-  const settings = await writeWhatsAppSettings(parsed.data);
+  const data = parsed.data;
+  const patch: Partial<WhatsAppSettings> = {
+    phoneNumberId: data.phoneNumberId,
+    verifyToken: data.verifyToken,
+    accessToken: data.accessToken,
+    locale: data.locale,
+    greeting: data.greeting,
+    locationText: data.locationText,
+    offersText: data.offersText,
+    staffNotify: data.staffNotify,
+  };
+  if (data.enabledPaths) {
+    patch.enabledPaths = normalizeEnabledPaths(data.enabledPaths);
+  }
+  const settings = await writeWhatsAppSettings(patch);
   return NextResponse.json({
     success: true,
     data: publicWhatsAppSettings(settings),
