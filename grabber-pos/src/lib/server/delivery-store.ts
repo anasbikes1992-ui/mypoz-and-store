@@ -6,6 +6,8 @@ import {
   findStorefrontOrderBySaleOrReceipt,
   updateStorefrontWebOrder,
 } from "./storefront-orders-store";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/database.types";
 
 /**
  * Delivery orders — customer + address + driver + status, with the same
@@ -105,22 +107,25 @@ export async function createOrder(): Promise<DeliveryOrder> {
   return store.put(order);
 }
 
-/** Create a filled delivery board row from a public storefront checkout. */
-export async function createOrderFromStorefront(input: {
-  customer: string;
-  phone: string;
-  address: string;
-  note?: string;
-  fulfilment?: string;
-  lines: {
-    productId: string;
-    name: string;
-    unitPrice: number;
-    quantity: number;
-  }[];
-  saleId?: string | null;
-  receiptNo?: string | null;
-}): Promise<DeliveryOrder> {
+export async function createOrderFromStorefront(
+  input: {
+    customer: string;
+    phone: string;
+    address: string;
+    note?: string;
+    fulfilment?: string;
+    lines: {
+      productId: string;
+      name: string;
+      unitPrice: number;
+      quantity: number;
+    }[];
+    saleId?: string | null;
+    receiptNo?: string | null;
+  },
+  /** When set (anonymous storefront), persist via service role — no session RLS. */
+  orgId?: string,
+): Promise<DeliveryOrder> {
   const order: DeliveryOrder = {
     id: "DEL-" + randomUUID().slice(0, 8).toUpperCase(),
     customer: input.customer.trim(),
@@ -143,6 +148,20 @@ export async function createOrderFromStorefront(input: {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+  if (orgId) {
+    const db = createServiceSupabase();
+    const { error } = await db.from("app_collections").upsert(
+      {
+        org_id: orgId,
+        collection: "delivery-orders",
+        entity_id: order.id,
+        data: order as unknown as Json,
+      },
+      { onConflict: "org_id,collection,entity_id" },
+    );
+    if (error) throw new Error(error.message);
+    return order;
+  }
   return store.put(order);
 }
 

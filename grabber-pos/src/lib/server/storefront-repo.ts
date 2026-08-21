@@ -778,37 +778,46 @@ export async function placeStorefrontOrder(
 
   // Do not put card orders on fulfilment boards until webhook confirms PAID.
   if (!isCardPending) {
+    const boardOrgId = useServiceLedger()
+      ? await resolveStorefrontOrgId(key)
+      : undefined;
     if (input.fulfilment === "pickup") {
-      const cc = await createClickCollect({
-        customer: input.customerName,
-        phone: input.customerMobile,
-        items: itemsSummary,
-        note: noteParts.join(" · "),
-        status: "new",
-        source: "storefront",
-        saleId,
-        receiptNo,
-      });
+      const cc = await createClickCollect(
+        {
+          customer: input.customerName,
+          phone: input.customerMobile,
+          items: itemsSummary,
+          note: noteParts.join(" · "),
+          status: "new",
+          source: "storefront",
+          saleId,
+          receiptNo,
+        },
+        boardOrgId,
+      );
       boardId = cc.id;
       boardKind = "click-collect";
     } else {
-      const del = await createOrderFromStorefront({
-        customer: input.customerName,
-        phone: input.customerMobile,
-        address:
-          input.address ||
-          `${input.fulfilment.toUpperCase()} — address TBD`,
-        note: noteParts.join(" · "),
-        fulfilment: input.fulfilment,
-        lines: resolvedLines.map((l) => ({
-          productId: l.productId,
-          name: l.name,
-          unitPrice: l.unitPrice,
-          quantity: l.quantity,
-        })),
-        saleId,
-        receiptNo,
-      });
+      const del = await createOrderFromStorefront(
+        {
+          customer: input.customerName,
+          phone: input.customerMobile,
+          address:
+            input.address ||
+            `${input.fulfilment.toUpperCase()} — address TBD`,
+          note: noteParts.join(" · "),
+          fulfilment: input.fulfilment,
+          lines: resolvedLines.map((l) => ({
+            productId: l.productId,
+            name: l.name,
+            unitPrice: l.unitPrice,
+            quantity: l.quantity,
+          })),
+          saleId,
+          receiptNo,
+        },
+        boardOrgId,
+      );
       boardId = del.id;
       boardKind = "delivery";
     }
@@ -890,35 +899,48 @@ export async function fulfillPendingStorefrontBoards(
   let boardId: string | null = null;
   let boardKind: "click-collect" | "delivery" | null = null;
 
+  const boardOrgId = useServiceLedger()
+    ? await resolveStorefrontOrgId({
+        host: null,
+        slug: order.slug,
+      })
+    : undefined;
+
   if (order.fulfilment === "pickup") {
-    const cc = await createClickCollect({
-      customer: order.customerName,
-      phone: order.customerMobile,
-      items: itemsSummary,
-      note,
-      status: "new",
-      source: "storefront",
-      saleId: order.saleId ?? saleId,
-      receiptNo: order.receiptNo,
-    });
+    const cc = await createClickCollect(
+      {
+        customer: order.customerName,
+        phone: order.customerMobile,
+        items: itemsSummary,
+        note,
+        status: "new",
+        source: "storefront",
+        saleId: order.saleId ?? saleId,
+        receiptNo: order.receiptNo,
+      },
+      boardOrgId,
+    );
     boardId = cc.id;
     boardKind = "click-collect";
   } else {
-    const del = await createOrderFromStorefront({
-      customer: order.customerName,
-      phone: order.customerMobile,
-      address: order.address || `${order.fulfilment.toUpperCase()} — address TBD`,
-      note,
-      fulfilment: order.fulfilment,
-      lines: order.lines.map((l) => ({
-        productId: l.productId,
-        name: l.name,
-        unitPrice: l.unitPrice,
-        quantity: l.quantity,
-      })),
-      saleId: order.saleId ?? saleId,
-      receiptNo: order.receiptNo,
-    });
+    const del = await createOrderFromStorefront(
+      {
+        customer: order.customerName,
+        phone: order.customerMobile,
+        address: order.address || "Address TBD",
+        note,
+        fulfilment: order.fulfilment,
+        lines: order.lines.map((l) => ({
+          productId: l.productId,
+          name: l.name,
+          unitPrice: l.unitPrice,
+          quantity: l.quantity,
+        })),
+        saleId: order.saleId ?? saleId,
+        receiptNo: order.receiptNo,
+      },
+      boardOrgId,
+    );
     boardId = del.id;
     boardKind = "delivery";
   }

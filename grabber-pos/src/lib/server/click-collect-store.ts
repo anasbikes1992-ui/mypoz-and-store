@@ -1,6 +1,8 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import { recordStore } from "./persistence/record-store";
+import { createServiceSupabase } from "@/lib/supabase/server";
+import type { Json } from "@/lib/supabase/database.types";
 
 /** Staff workflow: new → preparing → ready → done (legacy aliases accepted). */
 export type ClickCollectStatus =
@@ -53,16 +55,20 @@ export async function listClickCollect(): Promise<ClickCollectOrder[]> {
   );
 }
 
-export async function createClickCollect(input: {
-  customer: string;
-  phone?: string;
-  items: string;
-  note?: string;
-  status?: ClickCollectStatus;
-  source?: "manual" | "storefront";
-  saleId?: string | null;
-  receiptNo?: string | null;
-}): Promise<ClickCollectOrder> {
+export async function createClickCollect(
+  input: {
+    customer: string;
+    phone?: string;
+    items: string;
+    note?: string;
+    status?: ClickCollectStatus;
+    source?: "manual" | "storefront";
+    saleId?: string | null;
+    receiptNo?: string | null;
+  },
+  /** When set (anonymous storefront), persist via service role — no session RLS. */
+  orgId?: string,
+): Promise<ClickCollectOrder> {
   const order: ClickCollectOrder = {
     id: "CC-" + randomUUID().slice(0, 8).toUpperCase(),
     customer: input.customer.trim(),
@@ -75,6 +81,20 @@ export async function createClickCollect(input: {
     receiptNo: input.receiptNo ?? null,
     createdAt: new Date().toISOString(),
   };
+  if (orgId) {
+    const db = createServiceSupabase();
+    const { error } = await db.from("app_collections").upsert(
+      {
+        org_id: orgId,
+        collection: "click-collect-orders",
+        entity_id: order.id,
+        data: order as unknown as Json,
+      },
+      { onConflict: "org_id,collection,entity_id" },
+    );
+    if (error) throw new Error(error.message);
+    return order;
+  }
   return store.put(order);
 }
 

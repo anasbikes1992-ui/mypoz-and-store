@@ -7,6 +7,7 @@ import {
   withFileLock,
 } from "./local-json";
 import type { Json } from "@/lib/supabase/database.types";
+import { requireSupabase } from "@/lib/supabase/config";
 
 /**
  * Records are plain data objects persisted as jsonb — JSON-serializable by
@@ -101,6 +102,11 @@ export function recordStore<T extends KeyedRecord>(
     async put(item) {
       const db = await resolveDb();
       if (!db) {
+        if (requireSupabase) {
+          throw new Error(
+            "ORDER: cannot persist board without a session or service-role path",
+          );
+        }
         return withFileLock(file, async () => {
           const items = await readLocal();
           const exists = items.some((r) => r.id === item.id);
