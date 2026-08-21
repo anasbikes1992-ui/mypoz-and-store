@@ -69,3 +69,7 @@ supabase/.temp/
 # Secrets and local uploads (never commit)
 docs/CREDENTIALS.md
 /public/uploads/
+
+# Local one-time secrets
+scripts/*.local.json
+
