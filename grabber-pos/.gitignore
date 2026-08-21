@@ -56,8 +56,15 @@ next-env.d.ts
 # supabase CLI scratch state (project ref, versions)
 supabase/.temp/
 
-# IDE / agent
-.cursor/
+# IDE / agent — keep local Cursor state private, but share graphify rule + skills
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
+
+# Graphify knowledge graph (large JSON; regenerate with `graphify update .`)
+/graphify-out/
 
 # Secrets and local uploads (never commit)
 docs/CREDENTIALS.md

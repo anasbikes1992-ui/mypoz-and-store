@@ -138,3 +138,10 @@ lib/
   time-ordered indexes on sales/movements/audit for fast history and reports.
 - **Append-only ledgers**: `stock_movements` and `audit_events` give exact
   reconstruction of inventory and actions without mutating history.
+
+## See also
+
+- [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md) — full product / E2E map
+- [API_SURFACE.md](API_SURFACE.md) — `/api` inventory
+- [SECURITY_AND_AUTH.md](SECURITY_AND_AUTH.md) — proxy, RLS, HQ risks
+- [DATABASE_MAP.md](DATABASE_MAP.md) — migration index

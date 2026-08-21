@@ -7,6 +7,10 @@ code/docs/env hygiene largely done; Phase D is backlog.
 
 Companion visual: open the **MyPoz soft-launch review** canvas beside this chat.
 
+Architecture reference: [ARCHITECTURE_MAP.md](ARCHITECTURE_MAP.md) ·
+[API_SURFACE.md](API_SURFACE.md) · [SECURITY_AND_AUTH.md](SECURITY_AND_AUTH.md) ·
+[DATABASE_MAP.md](DATABASE_MAP.md).
+
 ---
 
 ## Verdict

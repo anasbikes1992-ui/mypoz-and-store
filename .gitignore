@@ -20,12 +20,19 @@ dist/
 # Vercel
 .vercel/
 
-# Tooling & IDE
-.cursor/
+# Tooling & IDE — keep Cursor local state private; share graphify rule + project skills
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/skills/
+!.cursor/skills/**
 .claude/
 .vscode/
 .idea/
 .DS_Store
+
+# Graphify extraction output (regenerate with `graphify update .`)
+grabber-pos/graphify-out/
 
 # Local runtime data (do not ignore app seed dirs like grabber-pos/src/data/)
 /data/

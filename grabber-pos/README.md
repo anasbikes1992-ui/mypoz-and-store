@@ -64,6 +64,10 @@ Key screens: `/` launcher · `/pos` terminal · `/dashboard` · `/sales` ·
 | [CREDENTIALS.md](docs/CREDENTIALS.md) | What to paste into `.env.local` (no secrets in repo) |
 | [SETUP.md](docs/SETUP.md) | Local development setup |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, the two seams, trust boundaries |
+| [ARCHITECTURE_MAP.md](docs/ARCHITECTURE_MAP.md) | Full product map — roles, flows, folder map |
+| [API_SURFACE.md](docs/API_SURFACE.md) | Inventory of `/api` route groups + auth notes |
+| [SECURITY_AND_AUTH.md](docs/SECURITY_AND_AUTH.md) | Proxy, RLS, GMS HQ, service-role risks |
+| [DATABASE_MAP.md](docs/DATABASE_MAP.md) | Migrations 0001–0018 summary |
 | [DATA-MODEL.md](docs/DATA-MODEL.md) | Schema, RPCs, RLS, legacy mapping |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + mobile builds |
 | [USER-GUIDE.md](docs/USER-GUIDE.md) | Day-to-day use, for staff |
