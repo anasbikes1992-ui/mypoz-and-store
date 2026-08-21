@@ -1,0 +1,27 @@
+name: grabber-pos-ci
+
+on:
+  push:
+    paths:
+      - "grabber-pos/**"
+  pull_request:
+    paths:
+      - "grabber-pos/**"
+
+defaults:
+  run:
+    working-directory: grabber-pos
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: grabber-pos/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx vitest run

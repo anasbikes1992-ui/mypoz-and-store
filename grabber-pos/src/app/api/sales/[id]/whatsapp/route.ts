@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findSaleById } from "@/lib/server/sales-repo";
 import { readSettings } from "@/lib/server/settings-store";
 import { buildInvoicePdf } from "@/lib/server/invoice-pdf";
+import { readWhatsAppSettings } from "@/lib/server/whatsapp-inbox-store";
 import {
   isWhatsAppConfigured,
   normalizeMobile,
@@ -36,13 +37,16 @@ export async function POST(
     );
   }
 
-  if (!isWhatsAppConfigured()) {
+  const waSettings = await readWhatsAppSettings();
+  const orgToken = waSettings.accessToken?.trim() || undefined;
+  const orgPhoneId = waSettings.phoneNumberId?.trim() || undefined;
+  if (!isWhatsAppConfigured() && !(orgToken && orgPhoneId)) {
     return NextResponse.json(
       {
         success: false,
         data: null,
         error:
-          "WhatsApp is not configured. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID in the environment.",
+          "WhatsApp is not configured. Set WHATSAPP_TOKEN and WHATSAPP_PHONE_NUMBER_ID in the environment, or save an org token + phone number id on /whatsapp.",
       },
       { status: 400 },
     );
@@ -57,6 +61,8 @@ export async function POST(
       pdf,
       filename: `invoice-${sale.id}.pdf`,
       caption: `Invoice ${sale.id} — ${settings.businessName}`,
+      token: orgToken,
+      phoneNumberId: orgPhoneId,
     });
     return NextResponse.json({
       success: true,

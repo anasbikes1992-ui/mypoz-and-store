@@ -49,9 +49,21 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     label: "Printers (ESC/POS over TCP)",
     requiresAny: ["retail", "restaurant"],
     fields: [
-      { key: "printerReceiptIp", label: "Receipt printer IP", type: "text" },
-      { key: "printerKotIp", label: "KOT printer IP", type: "text" },
-      { key: "printerBotIp", label: "BOT printer IP", type: "text" },
+      {
+        key: "printerReceiptIp",
+        label: "Receipt printer IP (local agent; Vercel uses PRINTER_RECEIPT_IP env)",
+        type: "text",
+      },
+      {
+        key: "printerKotIp",
+        label: "KOT printer IP (local agent; Vercel uses PRINTER_KOT_IP env)",
+        type: "text",
+      },
+      {
+        key: "printerBotIp",
+        label: "BOT printer IP (local agent; Vercel uses PRINTER_BOT_IP env)",
+        type: "text",
+      },
     ],
   },
   {

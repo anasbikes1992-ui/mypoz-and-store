@@ -22,6 +22,9 @@ Defense in depth for the production host (`mypoz-and-store-ui.vercel.app`).
   `WHATSAPP_APP_SECRET` HMAC in production.
 - Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
 
-## Related
+## Phase B status
 
-[PRODUCTION.md](PRODUCTION.md) · [DEPLOYMENT.md](DEPLOYMENT.md) · HQ playbook §8
+- [x] Application WAF + rate limit in app (`waf.ts` / `proxy.ts`)
+- [ ] Cloudflare (or similar) DNS proxy in front of Vercel — enable when apex/www DNS is ready
+- [x] WhatsApp webhook stays public + HMAC (`WHATSAPP_APP_SECRET`)
+- [x] Service role never exposed to browser

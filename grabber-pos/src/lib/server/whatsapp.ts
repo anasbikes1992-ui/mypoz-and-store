@@ -57,9 +57,13 @@ export async function sendInvoiceViaWhatsApp(opts: {
   pdf: Uint8Array;
   filename: string;
   caption: string;
+  /** Optional org override (else platform env). */
+  token?: string;
+  phoneNumberId?: string;
 }): Promise<SendResult> {
-  const token = process.env.WHATSAPP_TOKEN;
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token = opts.token || process.env.WHATSAPP_TOKEN;
+  const phoneNumberId =
+    opts.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
   const version = process.env.WHATSAPP_API_VERSION ?? "v21.0";
   if (!token || !phoneNumberId) throw new WhatsAppNotConfiguredError();
 

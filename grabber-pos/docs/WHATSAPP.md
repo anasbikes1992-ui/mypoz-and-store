@@ -129,8 +129,8 @@ Per-tenant overrides live in `app_documents` key `whatsapp` (phoneNumberId, acce
 - Bot “View menu” is live POS text (not Meta Commerce). Empty phone catalog
   after connect often means Meta’s ≤24h mirror lag — see [META_CATALOG_FEED.md](META_CATALOG_FEED.md).
 - Free-form messages may fail outside the 24h window without templates.
-- Invoice send uses platform env token (not always per-org token).
-- Treat fleet WhatsApp as **beta** until approved templates land.
+- Invoice PDF send uses **org** access token + phone number id when saved on
+  `/whatsapp`; otherwise the platform `WHATSAPP_*` env.
 
 ## Docs hub
 

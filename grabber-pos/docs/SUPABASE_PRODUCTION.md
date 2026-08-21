@@ -11,11 +11,11 @@
 
 - [x] Migrations `0001`–`0018` applied (`list_migrations` shows 19+ entries)
 - [x] Vercel env vars set (Supabase URL/anon/service_role + `NEXT_PUBLIC_APP_URL` + `GMS_ADMIN_EMAILS`); production redeployed
-- [ ] `/api/health` → `ok`, `backend: supabase`, `gatewayLedger: service-role` (open in an authenticated browser if Deployment Protection is on)
+- [x] `/api/health` → `ok`, `backend: supabase`, `gatewayLedger: service-role` (open in an authenticated browser if Deployment Protection is on)
 - [ ] Auth Site URL + redirect allowlist configured in Supabase dashboard (see below)
 - [x] HQ Super Admin + sample tenant owner provisioned (login verified via Auth API)
 - [ ] Smoke: `/login`, `/welcome`, `/dashboard`, one POS sale, optional `/store/<slug>` order
-- [ ] WhatsApp: Meta credentials + webhook + one inbound `hi` test (optional for soft launch)
+- [x] WhatsApp: Meta credentials + webhook wired; allowlisted inbound `hi` still manual
 - [ ] Resend / PayHere (or bank-transfer proof) configured if you sell those flows
 
 ### Local go-live smoke
