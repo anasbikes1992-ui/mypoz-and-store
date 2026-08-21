@@ -213,6 +213,50 @@ export async function getStorefrontCatalog(
 ): Promise<StoreCatalog> {
   const page = Math.max(q.page ?? 1, 1);
   const size = Math.min(Math.max(q.size ?? 24, 1), 100);
+  return fetchStorefrontCatalogPage(key, { ...q, page, size });
+}
+
+/** Full online catalog for Meta / WhatsApp CSV feeds (pages through RPC). */
+export async function getStorefrontCatalogExport(
+  key: StorefrontKey,
+  q: { search?: string; category?: string } = {},
+): Promise<StoreCatalog> {
+  const pageSize = 100;
+  let page = 1;
+  let total = Infinity;
+  const items: StoreCatalog["items"] = [];
+  let categories: StoreCatalog["categories"] = [];
+
+  while (items.length < total) {
+    const chunk = await fetchStorefrontCatalogPage(key, {
+      ...q,
+      page,
+      size: pageSize,
+    });
+    if (page === 1) {
+      total = chunk.total;
+      categories = chunk.categories;
+    }
+    items.push(...chunk.items);
+    if (!chunk.items.length || chunk.items.length < pageSize) break;
+    page += 1;
+    if (page > 200) break; // hard stop ~20k SKUs
+  }
+
+  return {
+    items,
+    total: Number.isFinite(total) ? total : items.length,
+    page: 1,
+    size: items.length,
+    categories,
+  };
+}
+
+async function fetchStorefrontCatalogPage(
+  key: StorefrontKey,
+  q: { search?: string; category?: string; page: number; size: number },
+): Promise<StoreCatalog> {
+  const { page, size } = q;
 
   const fallbackCatalog = async (): Promise<StoreCatalog> => {
     if (isSupabaseEnabled) {

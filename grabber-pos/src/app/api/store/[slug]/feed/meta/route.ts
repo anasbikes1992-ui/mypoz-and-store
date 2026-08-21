@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStorefrontCatalog, getStorefrontInfo } from "@/lib/server/storefront-repo";
+import {
+  getStorefrontCatalogExport,
+  getStorefrontInfo,
+} from "@/lib/server/storefront-repo";
 import { storeBaseUrl } from "@/lib/server/storefront-url";
 import { readSettings } from "@/lib/server/settings-store";
 
-/** Meta / Facebook catalog product feed (CSV) — online_visible catalog only. */
+/** Meta / Facebook catalog product feed (CSV) — full online_visible catalog. */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -16,7 +19,7 @@ export async function GET(
   }
 
   const settings = await readSettings();
-  const catalog = await getStorefrontCatalog({ host, slug }, { size: 500 });
+  const catalog = await getStorefrontCatalogExport({ host, slug });
   const currency = settings.currency || "LKR";
   const base = await storeBaseUrl(slug);
   const origin = base.replace(/\/store\/[^/]+$/, "") || base;

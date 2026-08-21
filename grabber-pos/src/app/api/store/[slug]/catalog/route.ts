@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getStorefrontCatalog,
+  getStorefrontCatalogExport,
   getStorefrontInfo,
 } from "@/lib/server/storefront-repo";
 import { readWebsite } from "@/lib/server/website-store";
@@ -9,7 +9,7 @@ import { whatsAppLink } from "@/lib/storefront";
 
 /**
  * WhatsApp / Meta-ready catalog export (CSV or JSON).
- * Not full Commerce API sync — download + optional wa.me catalog link.
+ * Pages the full online POS catalog (not capped at 100).
  */
 export async function GET(
   req: NextRequest,
@@ -27,7 +27,7 @@ export async function GET(
   }
 
   const website = await readWebsite();
-  const catalog = await getStorefrontCatalog({ host, slug }, { size: 500 });
+  const catalog = await getStorefrontCatalogExport({ host, slug });
   const base = await storeBaseUrl(slug);
 
   const items = catalog.items.map((p) => ({
@@ -60,6 +60,7 @@ export async function GET(
         businessName: info.businessName,
         catalogUrl,
         whatsappCatalogLink: wa,
+        total: catalog.total,
         items,
       },
       error: null,
