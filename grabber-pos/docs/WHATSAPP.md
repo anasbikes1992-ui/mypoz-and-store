@@ -124,12 +124,13 @@ Per-tenant overrides live in `app_documents` key `whatsapp` (phoneNumberId, acce
 
 ## Known limits (honest)
 
-- Staff “talk to human” flags inbox only — no in-app compose yet (reply in WA Business).
-- Bot “View menu” is live POS text (not Meta Commerce). Empty phone catalog =
-  catalog not linked in WhatsApp Manager, not a bot bug.
-- Free-form messages may fail outside the 24h customer-care window without **approved templates**.
+- Staff can reply from MyPoz `/whatsapp` inbox (within the 24h customer-care
+  window). Outside that window you still need **approved templates**.
+- Bot “View menu” is live POS text (not Meta Commerce). Empty phone catalog
+  after connect often means Meta’s ≤24h mirror lag — see [META_CATALOG_FEED.md](META_CATALOG_FEED.md).
+- Free-form messages may fail outside the 24h window without templates.
 - Invoice send uses platform env token (not always per-org token).
-- Treat fleet WhatsApp as **beta** until templates + staff reply land.
+- Treat fleet WhatsApp as **beta** until approved templates land.
 
 ## Docs hub
 

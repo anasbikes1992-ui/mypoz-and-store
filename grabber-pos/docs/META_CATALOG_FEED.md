@@ -39,12 +39,41 @@ to the GRABBER.LK number (API link to SMB WABA may be blocked — use UI).
 | Check | What you should see |
 |-------|---------------------|
 | Feed JSON | `total` ≈ store online products (Anaz ~1518) |
-| Meta catalog `product_count` | Often caps ~1000 on SMB catalogs after sync |
-| WhatsApp app catalog | **Only after** Manager links catalog ↔ phone number |
+| Meta catalog `product_count` | Anaz Store MyPoz ≈ 1518 (Eligible in Commerce Manager) |
+| WhatsApp app catalog | **Only after** Manager links **one** catalog ↔ WABA/phone |
 
-Bot path **2 · View menu** always reads POS (independent of Meta). If customers
-expect the WhatsApp shopping catalog UI, complete the Manager link step —
-MyPoz cannot attach catalogs to SMB WABAs via Graph API alone.
+### Error: “WABA should have maximum one product catalogue”
+
+Meta allows **exactly one** catalog per WhatsApp Business Account (GRABBER.LK).
+
+**Do not** keep clicking **Connect Catalogue** while that error shows — it means a
+catalog is already attached (or a stale link remains).
+
+1. Click **OK** → **Cancel** (close the Connect modal).
+2. On **WhatsApp Manager → Catalogue** (phone **+94 77 959 2288**), look at the
+   page **without** the modal:
+   - If you see **Disconnect** / **Manage** → a catalog is already linked.
+     Open **Manage** → confirm it is **Anaz Store MyPoz**. If it is, stop —
+     enable the chat-header / basket toggles and test the phone.
+   - If **Manage** shows the empty **WhatsApp Product Catalog** → **Disconnect**,
+     then connect **Anaz Store MyPoz** once.
+3. If you already **Removed** the empty catalog in Business Settings but Connect
+   still fails: refresh, wait a few minutes, try again. SMB WABAs **cannot** be
+   fixed via Graph API (`(#10) … SMB business type`) — only the Manager UI (or
+   Meta support) can clear a stuck link.
+4. Pixel / datasets / Advantage+ “Connect tracking” are **ads** steps — skip them
+   for WhatsApp shopping.
+
+### Phone catalog connected but still empty in WhatsApp app
+
+If Catalog manager says **connected to Anaz Store MyPoz** but “contains no
+products”, Meta may take **up to 24 hours** to mirror items into WhatsApp.
+Commerce Manager can already show ~1518 while the phone UI is empty.
+
+- **Ignore** Events → “catalogue match rate 0%” (ads/pixel only).
+- Do **not** re-import into MyPoz POS to “fix” the phone shop.
+- Re-check WhatsApp Catalog manager after the wait; use bot **2 · View menu**
+  for live stock in the meantime.
 
 ## Manual CSV upload (fallback)
 

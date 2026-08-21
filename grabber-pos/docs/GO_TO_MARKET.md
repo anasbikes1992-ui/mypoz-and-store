@@ -1,6 +1,9 @@
 # MyPoz — go-to-market plan
 
-**Status:** Soft-launch ready for Anaz commerce; WhatsApp + smoke sign-off remain the gate.  
+**Status:** Soft-launch ready for Anaz commerce. WhatsApp Cloud API + automation
+graph are live; native Meta phone catalog is **connected** (Anaz Store MyPoz) and
+may take up to 24h to populate. Remaining Phase A items are mostly **manual
+smokes**.  
 **Live host only:** https://mypoz-and-store-ui.vercel.app  
 **Do not** send launch traffic to `mypoz-and-store`.
 
@@ -62,6 +65,8 @@ Ordered. Stop and fix before marketing chat ordering.
 7. Desktop COD + mobile checkout — **manual once** (place one COD order on `/store/anaz-store`)
 8. Supabase Auth Site URL + `/update-password` allowlist — **confirm in dashboard**
 9. Allowlisted WhatsApp `hi` to +94 77 959 2288 — **manual once** (Meta may still limit recipients until Business verification finishes)
+10. Merchant `/whatsapp` automation graph + inbox staff reply — **shipped**
+11. Meta Commerce catalog **Anaz Store MyPoz** synced (~1518) + linked to WABA — **done**; WhatsApp app may lag ≤24h
 
 **Security:** If this chat is shared, rotate the WA system-user token in Meta and update Vercel `WHATSAPP_TOKEN`.
 
@@ -96,7 +101,7 @@ Detail checklist: [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).
 - Live PayHere / PickMe / Uber APIs
 - Full courier ledger / HQ multi-tenant order search
 - Thin vertical polish (repair, rooms, rent, …)
-- WA templates + in-app staff compose
+- WA **approved message templates** (outside 24h window)
 - Delete unused `mypoz-and-store` Vercel project (only with explicit OK)
 
 ---
@@ -114,4 +119,6 @@ Detail checklist: [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).
 
 ## Suggested next action
 
-Run **Phase A steps 2–6** in one sitting, then mark this doc’s Phase A complete. After that, decide whether to market **commerce-only** soft launch (if WA still blocked) or **commerce + WhatsApp** together.
+1. **Manual:** one COD order on `/store/anaz-store`; Auth `/update-password` allowlist; allowlisted `hi` smoke.
+2. **Wait ≤24h** for Meta to mirror Anaz products into WhatsApp Catalog manager (already connected).
+3. Then start **Phase B** (password rotation, PITR, WAF) or market **commerce + WhatsApp bot** while the native shop icon catches up.

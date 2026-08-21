@@ -78,6 +78,8 @@ export default function WhatsAppPage() {
     useState<AutomationPathEnabled>(DEFAULT_ENABLED_PATHS);
   const [orgName, setOrgName] = useState("Your store");
   const [assignDraft, setAssignDraft] = useState("");
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replyBusy, setReplyBusy] = useState(false);
 
   function loadInbox() {
     fetch("/api/whatsapp/inbox")
@@ -130,10 +132,12 @@ export default function WhatsAppPage() {
     if (!activeId) {
       setThread([]);
       setAssignDraft("");
+      setReplyDraft("");
       return;
     }
     const active = conversations.find((c) => c.id === activeId);
     setAssignDraft(active?.assignedTo ?? "");
+    setReplyDraft("");
     fetch(`/api/whatsapp/inbox?id=${encodeURIComponent(activeId)}`)
       .then((r) => r.json())
       .then((j) => {
@@ -220,6 +224,37 @@ export default function WhatsAppPage() {
     }
   }
 
+  async function sendStaffReply() {
+    if (!activeId || !replyDraft.trim()) return;
+    setReplyBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/whatsapp/inbox", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: activeId,
+          reply: replyDraft.trim(),
+          resolveStaff: true,
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Send failed");
+      const updated = json.data.conversation as Conversation;
+      const messages = json.data.messages as ThreadMessage[];
+      setConversations((prev) =>
+        prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)),
+      );
+      setThread(messages);
+      setReplyDraft("");
+      setMsg("Reply sent on WhatsApp.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Could not send reply");
+    } finally {
+      setReplyBusy(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
       <ModuleHeader
@@ -228,6 +263,19 @@ export default function WhatsAppPage() {
       />
 
       {msg ? <p className="mt-4 text-sm text-accent">{msg}</p> : null}
+
+      <aside className="mt-6 rounded-2xl border border-accent/30 bg-accent/5 px-4 py-3 text-sm text-text-body">
+        <p className="font-medium text-text-strong">Meta phone catalog</p>
+        <p className="mt-1 text-xs text-text-dim">
+          Native WhatsApp shopping uses catalog{" "}
+          <strong className="text-text-body">Anaz Store MyPoz</strong> in Meta
+          (not MyPoz POS data). After connect, Meta can take up to{" "}
+          <strong className="text-text-body">24 hours</strong> to show items in
+          the WhatsApp Catalog manager. Bot menu option{" "}
+          <strong className="text-text-body">2 · View menu</strong> always reads
+          live POS stock and does not wait on Meta.
+        </p>
+      </aside>
 
       <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">Connection</h2>
@@ -530,6 +578,33 @@ export default function WhatsAppPage() {
                   </li>
                 ))}
               </ul>
+              <div className="border-t border-line p-3">
+                <label className="block text-sm">
+                  <span className="mb-1 block text-text-dim">
+                    Reply on WhatsApp (within 24h customer-care window)
+                  </span>
+                  <textarea
+                    value={replyDraft}
+                    onChange={(e) => setReplyDraft(e.target.value)}
+                    rows={2}
+                    maxLength={4096}
+                    placeholder="Type a staff reply…"
+                    className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+                  />
+                </label>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Button
+                    disabled={replyBusy || !replyDraft.trim()}
+                    onClick={() => void sendStaffReply()}
+                  >
+                    {replyBusy ? "Sending…" : "Send reply"}
+                  </Button>
+                  <span className="text-[11px] text-text-dim">
+                    Clears “needs staff” and returns the bot to the greeting
+                    menu for that chat.
+                  </span>
+                </div>
+              </div>
             </>
           )}
         </div>

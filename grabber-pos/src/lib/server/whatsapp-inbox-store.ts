@@ -184,6 +184,30 @@ export async function assignConversation(
   );
 }
 
+/** Mark staff handoff resolved (after a human reply from MyPoz inbox). */
+export async function resolveStaffHandoff(
+  id: string,
+  phoneNumberId?: string,
+): Promise<WhatsAppConversation | null> {
+  const existing = await getConversation(id, phoneNumberId);
+  if (!existing) return null;
+  return upsertConversation(
+    {
+      id: existing.id,
+      waId: existing.waId,
+      phone: existing.phone,
+      name: existing.name,
+      state: "GREETING",
+      payload: existing.payload,
+      lastMessage: existing.lastMessage,
+      lastSaleId: existing.lastSaleId,
+      needsStaffReply: false,
+      assignedTo: existing.assignedTo,
+    },
+    phoneNumberId,
+  );
+}
+
 export async function appendMessage(
   input: Omit<WhatsAppMessage, "id" | "createdAt"> & { id?: string },
   phoneNumberId?: string,
