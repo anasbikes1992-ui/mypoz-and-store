@@ -40,7 +40,11 @@ function isPublicPath(req: NextRequest): boolean {
 function withStorefrontContext(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-mypoz-host", req.headers.get("host") ?? "");
-  const match = req.nextUrl.pathname.match(/^\/store\/([^/]+)/);
+  // Page (/store/:slug) and API (/api/store/:slug) both need the tenant slug —
+  // storefront_documents(host, null) is null on the shared vercel.app host.
+  const match = req.nextUrl.pathname.match(
+    /^\/(?:api\/)?store\/([^/]+)/,
+  );
   if (match?.[1]) {
     requestHeaders.set("x-mypoz-slug", decodeURIComponent(match[1]));
   }

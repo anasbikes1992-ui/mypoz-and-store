@@ -5,7 +5,7 @@ import { getRepository } from "@/lib/server/repositories";
 import { createServiceSupabase } from "@/lib/supabase/server";
 import { computeDiscount, normalizeCode, type DiscountCodeRecord } from "@/lib/commerce/discount-codes";
 import { readSettings } from "./settings-store";
-import { readWebsite } from "./website-store";
+import { readWebsite, readWebsiteForStorefront } from "./website-store";
 import { createClickCollect } from "./click-collect-store";
 import { createOrderFromStorefront } from "./delivery-store";
 import {
@@ -159,7 +159,10 @@ export function isOnlineVisible(p: Product): boolean {
 
 export async function getStorefrontInfo(key: StorefrontKey): Promise<StorefrontInfo | null> {
   const settings = await readSettings();
-  const website = await readWebsite();
+  const website = await readWebsiteForStorefront({
+    host: key.host,
+    slug: key.slug,
+  });
   if (!website.enabled) {
     return null;
   }
@@ -449,7 +452,10 @@ export async function placeStorefrontOrder(
   // for storefront order persistence but is not configured.
   assertNoLocalFallbackForPublicOrders();
 
-  const website = await readWebsite();
+  const website = await readWebsiteForStorefront({
+    host: key.host,
+    slug: key.slug,
+  });
   if (!website.enabled) {
     throw new Error("STOREFRONT: online ordering is disabled");
   }

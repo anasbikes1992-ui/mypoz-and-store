@@ -7,6 +7,12 @@ import {
 import { docStore } from "./persistence/doc-store";
 import { readSettings, writeSettings } from "./settings-store";
 import { readPublicStorefrontBundle } from "./storefront-public-docs";
+import {
+  SUPABASE_ANON_KEY,
+  SUPABASE_URL,
+  isSupabaseEnabled,
+} from "@/lib/supabase/config";
+import { createClient } from "@supabase/supabase-js";
 
 /**
  * Tenant website / storefront CMS config.
@@ -16,6 +22,42 @@ const store = docStore<Partial<WebsiteConfig>>({
   key: "website",
   file: "website.json",
 });
+
+function anonClient() {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/**
+ * Resolve website CMS for a public storefront by host/slug — does not depend on
+ * middleware `x-mypoz-slug` (API routes historically omitted that header).
+ */
+export async function readWebsiteForStorefront(opts: {
+  host?: string | null;
+  slug?: string | null;
+}): Promise<WebsiteConfig> {
+  if (isSupabaseEnabled && (opts.slug || opts.host)) {
+    try {
+      const { data, error } = await anonClient().rpc("storefront_documents", {
+        p_host: opts.host ?? "",
+        p_slug: opts.slug ?? null,
+      });
+      if (!error && data && typeof data === "object") {
+        const row = data as { website?: Record<string, unknown> };
+        if (row.website && Object.keys(row.website).length > 0) {
+          return websiteSchema.parse({
+            ...DEFAULT_WEBSITE,
+            ...row.website,
+          });
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return readWebsite();
+}
 
 /** Merge CMS doc with settings storefront fields so Settings stays a fallback. */
 export async function readWebsite(): Promise<WebsiteConfig> {
