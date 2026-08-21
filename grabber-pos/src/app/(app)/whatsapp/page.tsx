@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { WhatsAppAutomationGraph } from "@/components/whatsapp/WhatsAppAutomationGraph";
+import {
+  DEFAULT_ENABLED_PATHS,
+  normalizeEnabledPaths,
+  type AutomationPathEnabled,
+} from "@/lib/whatsapp/automation-graph";
+import type { Locale } from "@/lib/whatsapp/i18n";
 
 interface WaSettings {
   phoneNumberId: string;
@@ -14,6 +21,7 @@ interface WaSettings {
   locationText: string;
   offersText: string;
   staffNotify: boolean;
+  enabledPaths?: Partial<AutomationPathEnabled>;
 }
 
 interface Conversation {
@@ -61,9 +69,14 @@ export default function WhatsAppPage() {
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [verifyToken, setVerifyToken] = useState("");
   const [accessToken, setAccessToken] = useState("");
-  const [locale, setLocale] = useState("en");
+  const [locale, setLocale] = useState<Locale>("en");
+  const [greeting, setGreeting] = useState("");
   const [locationText, setLocationText] = useState("");
   const [offersText, setOffersText] = useState("");
+  const [staffNotify, setStaffNotify] = useState(true);
+  const [enabledPaths, setEnabledPaths] =
+    useState<AutomationPathEnabled>(DEFAULT_ENABLED_PATHS);
+  const [orgName, setOrgName] = useState("Your store");
   const [assignDraft, setAssignDraft] = useState("");
 
   function loadInbox() {
@@ -84,9 +97,12 @@ export default function WhatsAppPage() {
           const s = j.data.settings as WaSettings;
           setSettings(s);
           setPhoneNumberId(s.phoneNumberId ?? "");
-          setLocale(s.locale ?? "en");
+          setLocale((s.locale as Locale) || "en");
+          setGreeting(s.greeting ?? "");
           setLocationText(s.locationText ?? "");
           setOffersText(s.offersText ?? "");
+          setStaffNotify(s.staffNotify !== false);
+          setEnabledPaths(normalizeEnabledPaths(s.enabledPaths));
         }
       })
       .catch(() => undefined);
@@ -99,6 +115,13 @@ export default function WhatsAppPage() {
         } else if (j.success && Array.isArray(j.data?.items)) {
           setEmployees(j.data.items as EmployeeRow[]);
         }
+      })
+      .catch(() => undefined);
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((j) => {
+        const name = j?.data?.businessName || j?.businessName;
+        if (typeof name === "string" && name.trim()) setOrgName(name.trim());
       })
       .catch(() => undefined);
   }, []);
@@ -130,28 +153,37 @@ export default function WhatsAppPage() {
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
 
-  async function saveSettings() {
+  async function saveSettings(opts?: { connectionOnly?: boolean }) {
     setBusy(true);
     setMsg(null);
     try {
+      const body: Record<string, unknown> = {
+        phoneNumberId,
+        verifyToken: verifyToken.trim() || undefined,
+        accessToken: accessToken.trim() || undefined,
+        locale,
+      };
+      if (!opts?.connectionOnly) {
+        body.greeting = greeting;
+        body.locationText = locationText;
+        body.offersText = offersText;
+        body.staffNotify = staffNotify;
+        body.enabledPaths = enabledPaths;
+      }
       const res = await fetch("/api/whatsapp/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumberId,
-          verifyToken: verifyToken.trim() || undefined,
-          accessToken: accessToken.trim() || undefined,
-          locale,
-          locationText,
-          offersText,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setSettings(json.data);
       setVerifyToken("");
       setAccessToken("");
-      setMsg("Settings saved.");
+      if (json.data?.enabledPaths) {
+        setEnabledPaths(normalizeEnabledPaths(json.data.enabledPaths));
+      }
+      setMsg(opts?.connectionOnly ? "Connection saved." : "Automations saved.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not save");
     } finally {
@@ -200,14 +232,15 @@ export default function WhatsAppPage() {
       <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">Connection</h2>
         <p className="mt-1 text-xs text-text-dim">
-          Callback URL: <code className="text-text-body">{status?.webhookPath ?? "/api/whatsapp/webhook"}</code>
-          . Set Meta verify token to match WHATSAPP_VERIFY_TOKEN (or the org override below).
+          Callback URL:{" "}
+          <code className="text-text-body">
+            {status?.webhookPath ?? "/api/whatsapp/webhook"}
+          </code>
+          . Set Meta verify token to match WHATSAPP_VERIFY_TOKEN (or the org
+          override below).
         </p>
         <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <StatusRow
-            label="Access token"
-            ok={Boolean(status?.envToken)}
-          />
+          <StatusRow label="Access token" ok={Boolean(status?.envToken)} />
           <StatusRow
             label="Phone number id (env)"
             ok={Boolean(status?.envPhoneNumberId)}
@@ -223,7 +256,9 @@ export default function WhatsAppPage() {
         </dl>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block text-sm">
-            <span className="mb-1 block text-text-dim">Phone number id (org override)</span>
+            <span className="mb-1 block text-text-dim">
+              Phone number id (org override)
+            </span>
             <input
               value={phoneNumberId}
               onChange={(e) => setPhoneNumberId(e.target.value)}
@@ -233,7 +268,10 @@ export default function WhatsAppPage() {
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-text-dim">
-              Org verify token {settings?.verifyTokenSet ? "(set — leave blank to keep)" : "(optional override)"}
+              Org verify token{" "}
+              {settings?.verifyTokenSet
+                ? "(set — leave blank to keep)"
+                : "(optional override)"}
             </span>
             <input
               type="password"
@@ -248,7 +286,7 @@ export default function WhatsAppPage() {
             <span className="mb-1 block text-text-dim">Bot language</span>
             <select
               value={locale}
-              onChange={(e) => setLocale(e.target.value)}
+              onChange={(e) => setLocale(e.target.value as Locale)}
               className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
             >
               <option value="en">English</option>
@@ -258,7 +296,10 @@ export default function WhatsAppPage() {
           </label>
           <label className="block text-sm">
             <span className="mb-1 block text-text-dim">
-              Org access token {settings?.accessTokenSet ? "(set — leave blank to keep)" : "(optional; else platform token)"}
+              Org access token{" "}
+              {settings?.accessTokenSet
+                ? "(set — leave blank to keep)"
+                : "(optional; else platform token)"}
             </span>
             <input
               type="password"
@@ -268,28 +309,72 @@ export default function WhatsAppPage() {
               className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
             />
           </label>
-          <label className="block text-sm sm:col-span-2">
-            <span className="mb-1 block text-text-dim">Location reply</span>
-            <textarea
-              value={locationText}
-              onChange={(e) => setLocationText(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
-            />
-          </label>
-          <label className="block text-sm sm:col-span-2">
-            <span className="mb-1 block text-text-dim">Offers reply</span>
-            <textarea
-              value={offersText}
-              onChange={(e) => setOffersText(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
-            />
-          </label>
         </div>
-        <Button className="mt-4" disabled={busy} onClick={() => void saveSettings()}>
-          {busy ? "Saving…" : "Save settings"}
+        <Button
+          className="mt-4"
+          disabled={busy}
+          onClick={() => void saveSettings({ connectionOnly: true })}
+        >
+          {busy ? "Saving…" : "Save connection"}
         </Button>
+      </section>
+
+      <div className="mt-6">
+        <WhatsAppAutomationGraph
+          value={{
+            greeting,
+            locationText,
+            offersText,
+            staffNotify,
+            enabledPaths,
+            locale,
+            orgName,
+          }}
+          onChange={(next) => {
+            setGreeting(next.greeting);
+            setLocationText(next.locationText);
+            setOffersText(next.offersText);
+            setStaffNotify(next.staffNotify);
+            setEnabledPaths(next.enabledPaths);
+            setLocale(next.locale);
+          }}
+          busy={busy}
+          onSave={() => void saveSettings()}
+        />
+      </div>
+
+      <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-5">
+        <h2 className="text-sm font-semibold text-text-strong">
+          Meta product catalog (phone shopping)
+        </h2>
+        <p className="mt-1 text-xs text-text-dim">
+          The numbered bot menu uses live POS stock. The native WhatsApp
+          product catalog on your phone is a separate Meta Commerce catalog —
+          it must be synced and then connected to this number in WhatsApp
+          Manager.
+        </p>
+        <ul className="mt-3 list-inside list-disc space-y-1 text-sm text-text-body">
+          <li>
+            Feed:{" "}
+            <code className="text-xs text-text-dim">
+              /api/store/anaz-store/catalog?format=json
+            </code>
+          </li>
+          <li>
+            Catalog id:{" "}
+            <code className="text-xs text-text-dim">1397856035621959</code>{" "}
+            (Anaz Store MyPoz)
+          </li>
+          <li>
+            After sync: WhatsApp Manager → Catalog → connect to GRABBER.LK (
+            +94 77 959 2288)
+          </li>
+        </ul>
+        <p className="mt-2 text-xs text-warn">
+          If the phone shows an empty catalog, the catalog is usually not
+          linked to the WABA number yet (SMB accounts often cannot attach via
+          API — use the Manager UI).
+        </p>
       </section>
 
       <section className="mt-6 grid min-h-[24rem] gap-4 lg:grid-cols-[18rem_1fr]">
@@ -305,7 +390,9 @@ export default function WhatsAppPage() {
             </button>
           </div>
           {conversations.length === 0 ? (
-            <p className="px-4 py-8 text-sm text-text-dim">No conversations yet.</p>
+            <p className="px-4 py-8 text-sm text-text-dim">
+              No conversations yet.
+            </p>
           ) : (
             <ul className="max-h-[28rem] overflow-y-auto">
               {conversations.map((c) => {
@@ -372,7 +459,9 @@ export default function WhatsAppPage() {
                         <span className="mb-1 block text-text-dim">Assign</span>
                         <select
                           value={
-                            employees.some((e) => (e.name || e.id) === assignDraft)
+                            employees.some(
+                              (e) => (e.name || e.id) === assignDraft,
+                            )
                               ? assignDraft
                               : ""
                           }
@@ -453,7 +542,9 @@ function StatusRow({ label, ok }: { label: string; ok: boolean }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-line px-3 py-2">
       <span className="text-text-dim">{label}</span>
-      <span className={ok ? "text-accent" : "text-warn"}>{ok ? "Set" : "Missing"}</span>
+      <span className={ok ? "text-accent" : "text-warn"}>
+        {ok ? "Set" : "Missing"}
+      </span>
     </div>
   );
 }

@@ -34,6 +34,18 @@ node scripts/sync-meta-catalog.mjs 1397856035621959 "https://mypoz-and-store-ui.
 Then in **Meta WhatsApp Manager → Catalog**, connect **Anaz Store MyPoz**
 to the GRABBER.LK number (API link to SMB WABA may be blocked — use UI).
 
+### Phone shows no products?
+
+| Check | What you should see |
+|-------|---------------------|
+| Feed JSON | `total` ≈ store online products (Anaz ~1518) |
+| Meta catalog `product_count` | Often caps ~1000 on SMB catalogs after sync |
+| WhatsApp app catalog | **Only after** Manager links catalog ↔ phone number |
+
+Bot path **2 · View menu** always reads POS (independent of Meta). If customers
+expect the WhatsApp shopping catalog UI, complete the Manager link step —
+MyPoz cannot attach catalogs to SMB WABAs via Graph API alone.
+
 ## Manual CSV upload (fallback)
 
 1. Meta Business Suite → Commerce → Catalog (or WhatsApp → Catalog).

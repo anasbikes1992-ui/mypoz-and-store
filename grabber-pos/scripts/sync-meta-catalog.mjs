@@ -65,11 +65,27 @@ function toBatchItem(p) {
 
 const feed = await fetch(feedUrl).then((r) => r.json());
 const items = feed?.data?.items || feed?.items || [];
-console.log("feed_items", items.length, "total_field", feed?.data?.total);
+const withImage = items.filter((p) => p.image_url || p.image_link).length;
+console.log(
+  "feed_items",
+  items.length,
+  "total_field",
+  feed?.data?.total,
+  "with_image",
+  withImage,
+  "missing_image",
+  items.length - withImage,
+);
 
 if (!items.length) {
   console.error("No items in feed — deploy catalog export fix first");
   process.exit(1);
+}
+
+if (withImage < items.length * 0.5) {
+  console.warn(
+    "Warning: many items lack image_link — Meta may hide them from the WhatsApp catalog until images are set.",
+  );
 }
 
 const BATCH = 500;

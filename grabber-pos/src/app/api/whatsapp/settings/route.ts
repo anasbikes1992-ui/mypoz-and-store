@@ -15,6 +15,16 @@ const patchSchema = z.object({
   locationText: z.string().max(400).optional(),
   offersText: z.string().max(400).optional(),
   staffNotify: z.boolean().optional(),
+  enabledPaths: z
+    .object({
+      order: z.boolean().optional(),
+      menu: z.boolean().optional(),
+      offers: z.boolean().optional(),
+      location: z.boolean().optional(),
+      track: z.boolean().optional(),
+      staff: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export async function GET() {

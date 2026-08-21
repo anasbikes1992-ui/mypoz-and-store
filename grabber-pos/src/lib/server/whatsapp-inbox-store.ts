@@ -4,6 +4,10 @@ import { recordStore } from "./persistence/record-store";
 import { docStore } from "./persistence/doc-store";
 import type { BotPayload, BotState } from "@/lib/whatsapp/menu";
 import { emptyBotPayload } from "@/lib/whatsapp/menu";
+import {
+  normalizeEnabledPaths,
+  type AutomationPathEnabled,
+} from "@/lib/whatsapp/automation-graph";
 import { isLocale, type Locale } from "@/lib/whatsapp/i18n";
 import {
   findCollectionByField,
@@ -50,6 +54,8 @@ export interface WhatsAppSettings {
   locationText: string;
   offersText: string;
   staffNotify: boolean;
+  /** Which greeting-menu branches customers see. */
+  enabledPaths: AutomationPathEnabled;
   updatedAt: string;
 }
 
@@ -208,7 +214,10 @@ export async function readWhatsAppSettings(
     greeting: String(raw.greeting ?? ""),
     locationText: String(raw.locationText ?? ""),
     offersText: String(raw.offersText ?? ""),
-    staffNotify: Boolean(raw.staffNotify),
+    staffNotify: Boolean(raw.staffNotify ?? true),
+    enabledPaths: normalizeEnabledPaths(
+      raw.enabledPaths as Partial<AutomationPathEnabled> | undefined,
+    ),
     updatedAt: String(raw.updatedAt ?? ""),
   };
 }
@@ -232,6 +241,9 @@ export async function writeWhatsAppSettings(
     locationText: patch.locationText ?? current.locationText,
     offersText: patch.offersText ?? current.offersText,
     staffNotify: patch.staffNotify ?? current.staffNotify,
+    enabledPaths: patch.enabledPaths
+      ? normalizeEnabledPaths(patch.enabledPaths)
+      : current.enabledPaths,
     updatedAt: new Date().toISOString(),
   };
   const tenant = await tenantFor(next.phoneNumberId || undefined);
@@ -253,6 +265,7 @@ export function publicWhatsAppSettings(settings: WhatsAppSettings) {
     locationText: settings.locationText,
     offersText: settings.offersText,
     staffNotify: settings.staffNotify,
+    enabledPaths: settings.enabledPaths,
     updatedAt: settings.updatedAt,
   };
 }

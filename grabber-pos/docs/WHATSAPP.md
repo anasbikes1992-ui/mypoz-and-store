@@ -87,10 +87,14 @@ Shared webhook: `https://mypoz-and-store-ui.vercel.app/api/whatsapp/webhook` —
 
 - Inbound webhook (verify + signed POST)
 - Numbered text bot (en / si / ta): order, menu, offers, location, track, staff
+- **Automation graph** on `/whatsapp` — visual flow; edit greeting / offers /
+  location; toggle paths; live menu preview (persists `enabledPaths`,
+  `greeting`, `staffNotify`)
 - Orders into sales ledger (`source = WHATSAPP`) when migration `0014` + service role are live
 - Inbox persistence + HQ attach/detach per org phone number id
 - POS invoice PDF send via WhatsApp
 - Storefront `wa.me` links / catalog CSV export for Meta upload
+  (native phone catalog = Meta Commerce — see [META_CATALOG_FEED.md](META_CATALOG_FEED.md))
 
 ## Env (Vercel)
 
@@ -112,13 +116,17 @@ Per-tenant overrides live in `app_documents` key `whatsapp` (phoneNumberId, acce
 3. Meta app callback: `https://<host>/api/whatsapp/webhook` with `WHATSAPP_VERIFY_TOKEN`.
 4. Subscribe to `messages`.
 5. HQ → attach each tenant’s **phone number id**.
-6. Merchant → set locale / location / offers.
+6. Merchant → `/whatsapp` → Automation graph (greeting, offers, location, paths).
 7. Test: send `hi` → menu; place order → sale appears; POS invoice send.
+8. For **native WhatsApp product catalog on the phone**: sync Meta catalog
+   (`scripts/sync-meta-catalog.mjs`) then **WhatsApp Manager → Catalog →
+   connect** to the business number (API attach often blocked on SMB).
 
 ## Known limits (honest)
 
 - Staff “talk to human” flags inbox only — no in-app compose yet (reply in WA Business).
-- Greeting / staffNotify settings partially unused by the bot.
+- Bot “View menu” is live POS text (not Meta Commerce). Empty phone catalog =
+  catalog not linked in WhatsApp Manager, not a bot bug.
 - Free-form messages may fail outside the 24h customer-care window without **approved templates**.
 - Invoice send uses platform env token (not always per-org token).
 - Treat fleet WhatsApp as **beta** until templates + staff reply land.

@@ -120,6 +120,8 @@ export async function handleInboundText(opts: {
       waSettings.locationText ||
       [settings.address, settings.phone].filter(Boolean).join("\n"),
     offersText: waSettings.offersText,
+    greeting: waSettings.greeting,
+    enabledPaths: waSettings.enabledPaths,
     locale,
   });
 
@@ -148,9 +150,11 @@ export async function handleInboundText(opts: {
       name: opts.name || convo.name,
       state: turn.nextState,
       payload: turn.nextPayload,
-    lastMessage: reply,
-    lastSaleId,
-    needsStaffReply: turn.action === "staff" || turn.nextState === "STAFF",
+      lastMessage: reply,
+      lastSaleId,
+      needsStaffReply:
+        waSettings.staffNotify !== false &&
+        (turn.action === "staff" || turn.nextState === "STAFF"),
     },
     phoneNumberId,
   );

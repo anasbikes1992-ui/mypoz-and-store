@@ -103,7 +103,7 @@ export async function listWhatsAppCatalog(
       .eq("org_id", tenant.orgId)
       .eq("is_active", true)
       .order("name")
-      .limit(200),
+      .limit(800),
     tenant.db
       .from("categories")
       .select("id, name")

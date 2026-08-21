@@ -1,4 +1,13 @@
 import { t, type Locale } from "./i18n";
+import {
+  greetingMenuFromGraph,
+  normalizeEnabledPaths,
+  pathFromKeyword,
+  resolveMenuChoice,
+  type AutomationGraphConfig,
+  type AutomationPathEnabled,
+  type AutomationPathId,
+} from "./automation-graph";
 
 export type BotState = "GREETING" | "MENU" | "ORDERING" | "TRACK" | "STAFF";
 
@@ -35,6 +44,9 @@ export interface BotTurnInput {
   categories: BotCatalogCategory[];
   locationText: string;
   offersText: string;
+  /** Optional welcome line under the store name. */
+  greeting?: string;
+  enabledPaths?: Partial<AutomationPathEnabled> | null;
   locale?: Locale;
 }
 
@@ -52,19 +64,15 @@ export function emptyBotPayload(): BotPayload {
   return { cart: [] };
 }
 
-export function greetingMenu(orgName: string, locale: Locale = "en"): string {
-  return [
-    `${t(locale, "welcome")} ${orgName}.`,
-    "",
-    `1. ${t(locale, "order")}`,
-    `2. ${t(locale, "viewMenu")}`,
-    `3. ${t(locale, "offers")}`,
-    `4. ${t(locale, "location")}`,
-    `5. ${t(locale, "trackOrder")}`,
-    `6. ${t(locale, "talkToStaff")}`,
-    "",
-    t(locale, "replyNumber"),
-  ].join("\n");
+export function greetingMenu(
+  orgName: string,
+  locale: Locale = "en",
+  config?: Partial<Pick<AutomationGraphConfig, "greeting" | "enabled">>,
+): string {
+  return greetingMenuFromGraph(orgName, locale, {
+    greeting: config?.greeting ?? "",
+    enabled: normalizeEnabledPaths(config?.enabled),
+  });
 }
 
 function money(amount: number): string {
@@ -85,7 +93,7 @@ function formatProductLine(p: BotCatalogProduct, locale: Locale): string {
 function formatMenu(categories: BotCatalogCategory[], locale: Locale): string {
   const lines = categories.flatMap((c) => [
     `*${c.name}*`,
-    ...c.products.slice(0, 8).map((p) => formatProductLine(p, locale)),
+    ...c.products.slice(0, 20).map((p) => formatProductLine(p, locale)),
   ]);
   return lines.join("\n") || t(locale, "menuSoon");
 }
@@ -93,6 +101,58 @@ function formatMenu(categories: BotCatalogCategory[], locale: Locale): string {
 function categoryList(categories: BotCatalogCategory[], locale: Locale): string {
   if (!categories.length) return t(locale, "noCategories");
   return categories.map((c, i) => `${i + 1}. ${c.name}`).join("\n");
+}
+
+function startPath(
+  path: AutomationPathId,
+  input: BotTurnInput,
+  locale: Locale,
+  payload: BotPayload,
+): BotTurnResult {
+  switch (path) {
+    case "order":
+      return {
+        reply: `${t(locale, "chooseCategory")}\n\n${categoryList(input.categories, locale)}`,
+        nextState: "ORDERING",
+        nextPayload: { cart: payload.cart, locale },
+        action: "none",
+      };
+    case "menu":
+      return {
+        reply: formatMenu(input.categories, locale),
+        nextState: "MENU",
+        nextPayload: payload,
+        action: "none",
+      };
+    case "offers":
+      return {
+        reply: input.offersText || t(locale, "noOffers"),
+        nextState: "GREETING",
+        nextPayload: payload,
+        action: "none",
+      };
+    case "location":
+      return {
+        reply: input.locationText || t(locale, "locationUnset"),
+        nextState: "GREETING",
+        nextPayload: payload,
+        action: "none",
+      };
+    case "track":
+      return {
+        reply: t(locale, "sendReceipt"),
+        nextState: "TRACK",
+        nextPayload: payload,
+        action: "none",
+      };
+    case "staff":
+      return {
+        reply: t(locale, "staffSoon"),
+        nextState: "STAFF",
+        nextPayload: payload,
+        action: "staff",
+      };
+  }
 }
 
 export function nextBotTurn(input: BotTurnInput): BotTurnResult {
@@ -103,9 +163,14 @@ export function nextBotTurn(input: BotTurnInput): BotTurnResult {
     categoryName: input.payload.categoryName,
     locale,
   };
-  const greet = greetingMenu(input.orgName, locale);
+  const enabled = normalizeEnabledPaths(input.enabledPaths);
+  const greet = greetingMenu(input.orgName, locale, {
+    greeting: input.greeting,
+    enabled,
+  });
   const isHi = /^(hi|hello|hey|menu|start|en|si|ta|english|sinhala|tamil)$/i.test(text);
-  const isChoice = /^[1-6]$/.test(text);
+  const numbered = resolveMenuChoice(text, enabled);
+  const keywordPath = pathFromKeyword(text);
 
   if (isHi) {
     return {
@@ -117,7 +182,8 @@ export function nextBotTurn(input: BotTurnInput): BotTurnResult {
   }
 
   if (input.state === "GREETING" || input.state === "MENU") {
-    if (!isChoice && input.state === "GREETING" && !/order|menu|offer|location|track|staff/i.test(text)) {
+    const path = numbered ?? keywordPath;
+    if (!path && input.state === "GREETING") {
       return {
         reply: greet,
         nextState: "GREETING",
@@ -125,54 +191,16 @@ export function nextBotTurn(input: BotTurnInput): BotTurnResult {
         action: "none",
       };
     }
-
-    if (text === "1" || /order/i.test(text)) {
-      return {
-        reply: `${t(locale, "chooseCategory")}\n\n${categoryList(input.categories, locale)}`,
-        nextState: "ORDERING",
-        nextPayload: { cart: payload.cart, locale },
-        action: "none",
-      };
-    }
-    if (text === "2" || /menu/i.test(text)) {
-      return {
-        reply: formatMenu(input.categories, locale),
-        nextState: "MENU",
-        nextPayload: payload,
-        action: "none",
-      };
-    }
-    if (text === "3" || /offer/i.test(text)) {
-      return {
-        reply: input.offersText || t(locale, "noOffers"),
-        nextState: "GREETING",
-        nextPayload: payload,
-        action: "none",
-      };
-    }
-    if (text === "4" || /location|address/i.test(text)) {
-      return {
-        reply: input.locationText || t(locale, "locationUnset"),
-        nextState: "GREETING",
-        nextPayload: payload,
-        action: "none",
-      };
-    }
-    if (text === "5" || /track/i.test(text)) {
-      return {
-        reply: t(locale, "sendReceipt"),
-        nextState: "TRACK",
-        nextPayload: payload,
-        action: "none",
-      };
-    }
-    if (text === "6" || /staff|human/i.test(text)) {
-      return {
-        reply: t(locale, "staffSoon"),
-        nextState: "STAFF",
-        nextPayload: payload,
-        action: "staff",
-      };
+    if (path) {
+      if (!enabled[path]) {
+        return {
+          reply: greet,
+          nextState: "GREETING",
+          nextPayload: payload,
+          action: "none",
+        };
+      }
+      return startPath(path, input, locale, payload);
     }
   }
 
