@@ -81,14 +81,15 @@ for (let i = 0; i < items.length; i += BATCH) {
     allow_upsert: true,
     requests: slice,
   });
-  handles.push(result.handle);
+  const batchHandles = result.handles || (result.handle ? [result.handle] : []);
+  handles.push(...batchHandles);
   console.log(
     "batch",
     i / BATCH + 1,
     "size",
     slice.length,
-    "handle",
-    result.handle,
+    "handles",
+    batchHandles.join(",") || "(none)",
   );
 }
 
