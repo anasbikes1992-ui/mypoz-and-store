@@ -1,4 +1,5 @@
 import "server-only";
+import { createHmac } from "crypto";
 
 /**
  * WhatsApp Business Cloud API sender for invoice PDFs.
@@ -6,6 +7,7 @@ import "server-only";
  * Credentials come from the environment (never stored in the app):
  *   WHATSAPP_TOKEN            — permanent/system access token
  *   WHATSAPP_PHONE_NUMBER_ID  — the sending phone number's ID
+ *   WHATSAPP_APP_SECRET       — required when Meta enforces appsecret_proof
  *   WHATSAPP_API_VERSION      — optional, defaults to v21.0
  *
  * Flow: upload the PDF to the media endpoint, then send a document message.
@@ -25,6 +27,15 @@ export function isWhatsAppConfigured(): boolean {
   return Boolean(
     process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID,
   );
+}
+
+/** Meta requires HMAC(token, app_secret) when "Require app secret" is on. */
+function graphUrl(path: string, token: string): string {
+  const secret = process.env.WHATSAPP_APP_SECRET?.trim();
+  if (!secret) return path;
+  const proof = createHmac("sha256", secret).update(token).digest("hex");
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}appsecret_proof=${proof}`;
 }
 
 /** Normalize a local mobile number to E.164 digits using a default country code. */
@@ -62,11 +73,14 @@ export async function sendInvoiceViaWhatsApp(opts: {
     opts.filename,
   );
 
-  const uploadRes = await fetch(`${GRAPH}/${version}/${phoneNumberId}/media`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: form,
-  });
+  const uploadRes = await fetch(
+    graphUrl(`${GRAPH}/${version}/${phoneNumberId}/media`, token),
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    },
+  );
   const uploadJson = await uploadRes.json();
   if (!uploadRes.ok || !uploadJson.id) {
     throw new Error(
@@ -75,23 +89,26 @@ export async function sendInvoiceViaWhatsApp(opts: {
   }
 
   // 2) Send the document message.
-  const sendRes = await fetch(`${GRAPH}/${version}/${phoneNumberId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to: opts.to,
-      type: "document",
-      document: {
-        id: uploadJson.id,
-        filename: opts.filename,
-        caption: opts.caption,
+  const sendRes = await fetch(
+    graphUrl(`${GRAPH}/${version}/${phoneNumberId}/messages`, token),
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
-    }),
-  });
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: opts.to,
+        type: "document",
+        document: {
+          id: uploadJson.id,
+          filename: opts.filename,
+          caption: opts.caption,
+        },
+      }),
+    },
+  );
   const sendJson = await sendRes.json();
   if (!sendRes.ok) {
     throw new Error(
@@ -113,19 +130,22 @@ export async function sendWhatsAppText(opts: {
   if (!token || !phoneNumberId) throw new WhatsAppNotConfiguredError();
 
   const to = opts.to.replace(/[^\d]/g, "");
-  const sendRes = await fetch(`${GRAPH}/${version}/${phoneNumberId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+  const sendRes = await fetch(
+    graphUrl(`${GRAPH}/${version}/${phoneNumberId}/messages`, token),
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to,
+        type: "text",
+        text: { preview_url: false, body: opts.body.slice(0, 4096) },
+      }),
     },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to,
-      type: "text",
-      text: { preview_url: false, body: opts.body.slice(0, 4096) },
-    }),
-  });
+  );
   const sendJson = await sendRes.json();
   if (!sendRes.ok) {
     throw new Error(

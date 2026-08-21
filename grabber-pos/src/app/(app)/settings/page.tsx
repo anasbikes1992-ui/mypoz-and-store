@@ -6,6 +6,7 @@ import { SETTINGS_SECTIONS } from "@/lib/settings";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { PrinterTestPanel } from "@/components/settings/PrinterTestPanel";
 import { AiKeyPanel } from "@/components/settings/AiKeyPanel";
+import { WhatsAppStatusPanel } from "@/components/settings/WhatsAppStatusPanel";
 import { Button } from "@/components/ui/Button";
 import { SkeletonRows } from "@/components/ui/EmptyState";
 
@@ -144,6 +145,7 @@ export default function SettingsPage() {
             </div>
           </motion.section>
         ))}
+        <WhatsAppStatusPanel />
         <PrinterTestPanel />
         <AiKeyPanel />
         <section className="rounded-2xl border border-line bg-surface-1 p-5">
