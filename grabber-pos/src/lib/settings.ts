@@ -4,6 +4,8 @@ import type { FieldDef } from "./collections";
 export interface SettingsSection {
   label: string;
   fields: FieldDef[];
+  /** Hide unless any of these module keys are enabled on the tenant plan. */
+  requiresAny?: string[];
 }
 
 /** Business settings, grouped for the Settings screen. */
@@ -45,6 +47,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     label: "Printers (ESC/POS over TCP)",
+    requiresAny: ["retail", "restaurant"],
     fields: [
       { key: "printerReceiptIp", label: "Receipt printer IP", type: "text" },
       { key: "printerKotIp", label: "KOT printer IP", type: "text" },
@@ -53,12 +56,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     label: "WhatsApp invoices",
+    requiresAny: ["whatsapp"],
     fields: [
       { key: "whatsappCountryCode", label: "Default country code", type: "text" },
     ],
   },
   {
     label: "Loyalty points",
+    requiresAny: ["loyalty", "customers"],
     fields: [
       { key: "pointsPerCurrency", label: "Spend per 1 point (LKR)", type: "number" },
       { key: "pointsValue", label: "1 point = (LKR)", type: "number" },
@@ -73,6 +78,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   },
   {
     label: "Website Storefront & Marketing (SEO / Ads)",
+    requiresAny: ["commerce", "website", "commerce-onboarding"],
     fields: [
       { key: "storeEnabled", label: "Enable Public Website", type: "select", options: ["Yes", "No"] },
       { key: "storeSlug", label: "Website URL Slug (e.g. apex-retail)", type: "text" },

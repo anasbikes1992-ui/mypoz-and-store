@@ -33,7 +33,10 @@ export const PLAN_NAMES: Record<PlanTier, string> = {
 export const VERTICAL_KEYS = [
   "category",
   "restaurant",
+  "kds",
+  "tables",
   "delivery",
+  "drivers",
   "repair",
   "service",
   "reloads",
@@ -43,7 +46,27 @@ export const VERTICAL_KEYS = [
   "play",
   "layaway",
   "click-collect",
+  "digital",
 ];
+
+/**
+ * When HQ enables a primary vertical extra, companion modules unlock with it
+ * so grocery tenants never see restaurant floor / KDS / drivers alone.
+ */
+export const VERTICAL_BUNDLES: Record<string, readonly string[]> = {
+  restaurant: ["restaurant", "kds", "tables"],
+  delivery: ["delivery", "drivers"],
+};
+
+export function expandExtras(extras: string[]): string[] {
+  const out = new Set<string>();
+  for (const key of extras) {
+    const bundle = VERTICAL_BUNDLES[key];
+    if (bundle) bundle.forEach((k) => out.add(k));
+    else out.add(key);
+  }
+  return [...out];
+}
 
 /** The lean Starter set (core POS + basics). */
 export const STARTER_KEYS = [
@@ -87,14 +110,15 @@ export function planEnabledKeys(
   allKeys: string[],
   extras: string[] = [],
 ): Set<string> {
+  const expanded = expandExtras(extras);
   if (plan === "enterprise") return new Set(allKeys);
   if (plan === "business") {
     return new Set([
       ...allKeys.filter((k) => !VERTICAL_KEYS.includes(k)),
-      ...extras,
+      ...expanded,
     ]);
   }
-  return new Set([...STARTER_KEYS, ...extras]);
+  return new Set([...STARTER_KEYS, ...expanded]);
 }
 
 export function isLicenseExpired(expiry: string): boolean {

@@ -142,7 +142,7 @@ export async function hqSendPasswordReset(opts: {
     throw new Error(getErr?.message ?? "Auth user email not found");
   }
   const email = userData.user.email.toLowerCase();
-  const redirectTo = `${appUrl()}/login`;
+  const redirectTo = `${appUrl()}/update-password`;
 
   const { data, error } = await admin.auth.admin.generateLink({
     type: "recovery",

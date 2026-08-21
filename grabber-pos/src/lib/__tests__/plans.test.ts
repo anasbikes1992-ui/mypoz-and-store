@@ -49,8 +49,17 @@ describe("planEnabledKeys", () => {
   it("adds per-client extras on top of the plan", () => {
     const keys = planEnabledKeys("starter", ALL, ["restaurant"]);
     expect(keys.has("restaurant")).toBe(true);
-    // Extras don't unlock anything else.
+    expect(keys.has("kds")).toBe(true);
+    expect(keys.has("tables")).toBe(true);
+    // Extras don't unlock unrelated verticals.
     expect(keys.has("rooms")).toBe(false);
+  });
+
+  it("bundles delivery drivers with the delivery extra", () => {
+    const keys = planEnabledKeys("business", ALL, ["delivery"]);
+    expect(keys.has("delivery")).toBe(true);
+    expect(keys.has("drivers")).toBe(true);
+    expect(keys.has("restaurant")).toBe(false);
   });
 });
 

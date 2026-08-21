@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { PasswordField } from "@/components/ui/PasswordField";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 import { fadeUp, springSoft } from "@/lib/motion";
 
@@ -42,6 +43,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const reduced = useReducedMotion();
+  const demoHint =
+    !isSupabaseEnabled && process.env.NODE_ENV === "development";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -207,29 +210,33 @@ export default function LoginPage() {
               className="mt-2 w-full rounded-2xl border border-line bg-surface-2 px-4 py-3 text-text-strong outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </label>
-          <label
-            className="mt-5 block text-sm font-medium text-text-body"
-            htmlFor="login-password"
-          >
-            Password
-            <input
-              id="login-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-              className="mt-2 w-full rounded-2xl border border-line bg-surface-2 px-4 py-3 text-text-strong outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
-            />
-          </label>
 
-          <div className="mt-2 text-right">
-            <a
-              href="mailto:support@grabber.lk?subject=Password%20Reset%20/%20Account%20Help"
-              className="text-xs text-text-dim hover:text-accent hover:underline transition"
-            >
-              Forgot password or need help?
-            </a>
+          <PasswordField
+            className="mt-5"
+            id="login-password"
+            label="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            {isSupabaseEnabled ? (
+              <Link
+                href="/forgot-password"
+                className="min-h-11 inline-flex items-center text-sm font-medium text-accent transition hover:underline"
+              >
+                Forgot password?
+              </Link>
+            ) : (
+              <a
+                href="mailto:support@grabber.lk?subject=Password%20Reset%20/%20Account%20Help"
+                className="min-h-11 inline-flex items-center text-sm text-text-dim transition hover:text-accent hover:underline"
+              >
+                Need help signing in?
+              </a>
+            )}
           </div>
 
           {error && (
@@ -244,13 +251,13 @@ export default function LoginPage() {
             </motion.p>
           )}
 
-          <Button type="submit" disabled={pending} size="lg" className="mt-8 w-full">
+          <Button type="submit" disabled={pending} size="lg" className="mt-6 w-full">
             {pending ? "Signing in…" : "Sign in"}
           </Button>
           <p className="mt-6 text-center text-xs text-text-dim">
             {isSupabaseEnabled
               ? "Grabber Mobility Solutions (Pvt) Ltd"
-              : process.env.NODE_ENV === "development"
+              : demoHint
                 ? "Local demo — use POS_USER / POS_PASSWORD from .env"
                 : "Sign in with your provisioned account"}
           </p>
@@ -259,20 +266,6 @@ export default function LoginPage() {
               Product overview
             </Link>
           </p>
-          <div className="mt-6 grid grid-cols-3 gap-2 text-center text-[11px]">
-            <div className="rounded-xl border border-line bg-surface-2/70 px-2 py-2 text-text-dim">
-              <p className="font-semibold text-text-strong">99.9%</p>
-              Uptime
-            </div>
-            <div className="rounded-xl border border-line bg-surface-2/70 px-2 py-2 text-text-dim">
-              <p className="font-semibold text-text-strong">RLS</p>
-              Secured data
-            </div>
-            <div className="rounded-xl border border-line bg-surface-2/70 px-2 py-2 text-text-dim">
-              <p className="font-semibold text-text-strong">Cloud</p>
-              Daily backups
-            </div>
-          </div>
         </motion.form>
       </section>
     </main>

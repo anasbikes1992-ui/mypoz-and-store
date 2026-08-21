@@ -12,6 +12,8 @@ const DEMO_COOKIE = "pos_session";
 const SID_COOKIE = "mypoz_sid";
 const PUBLIC_PATHS = [
   "/login",
+  "/forgot-password",
+  "/update-password",
   "/welcome",
   "/privacy-policy",
   "/terms-of-service",
