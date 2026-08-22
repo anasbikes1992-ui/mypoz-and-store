@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { SessionRecorder } from "@/components/observability/SessionRecorder";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -58,6 +59,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans bg-surface-0 text-text-body">
         <SessionRecorder />
         {children}
+        <Analytics />
       </body>
     </html>
   );
