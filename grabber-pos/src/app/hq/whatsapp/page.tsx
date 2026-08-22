@@ -20,6 +20,15 @@ interface FleetStatus {
   envPhoneNumberId: boolean;
   envVerifyToken: boolean;
   envAppSecret: boolean;
+  webhookAudit?: {
+    at: string;
+    ok: boolean;
+    reason?: string;
+    phoneNumberId?: string;
+    messageCount?: number;
+    wabaId?: string;
+    hasSignatureHeader?: boolean;
+  }[];
   tenants: FleetTenant[];
 }
 
@@ -196,6 +205,36 @@ Reply YES and I’ll send the login.`}
         </code>
       </p>
 
+      {data?.webhookAudit?.length ? (
+        <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-4">
+          <h2 className="text-sm font-semibold text-text-strong">
+            Recent Meta webhook deliveries
+          </h2>
+          <p className="mt-1 text-xs text-text-dim">
+            Dashboard “Send to server” tests use a fake phone id — they will not
+            appear in merchant inbox. Real customer messages show phone id{" "}
+            <code>101779492851300</code> and{" "}
+            <code>reason: processed</code>.
+          </p>
+          <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-xs">
+            {data.webhookAudit.slice(0, 8).map((row) => (
+              <li
+                key={row.at}
+                className={`rounded-lg px-2 py-1 ${row.ok ? "bg-surface-2 text-text-body" : "bg-danger/10 text-danger"}`}
+              >
+                <span className="font-mono">{row.at.replace("T", " ").slice(0, 19)}</span>
+                {" · "}
+                {row.ok ? "ok" : "fail"}
+                {row.reason ? ` · ${row.reason}` : ""}
+                {row.phoneNumberId ? ` · phone ${row.phoneNumberId}` : ""}
+                {row.messageCount != null ? ` · msgs ${row.messageCount}` : ""}
+                {row.wabaId ? ` · waba ${row.wabaId}` : ""}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="mt-8 rounded-2xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">
           Meta app (GRABBER) — paste these, not /welcome everywhere
@@ -236,6 +275,31 @@ Reply YES and I’ll send the login.`}
           ). Token + phone number id come from WhatsApp → API Setup, not Basic
           Settings.
         </p>
+        <div className="mt-4 rounded-xl border border-warn/50 bg-warn/10 px-4 py-3 text-sm text-text-body">
+          <p className="font-semibold text-text-strong">
+            If customers send hi and nothing happens
+          </p>
+          <ol className="mt-2 list-inside list-decimal space-y-1 text-xs">
+            <li>
+              WhatsApp → <strong>Step 2: Production setup</strong> → Webhook fields
+              → subscribe <strong>messages</strong> (toggle On).{" "}
+              <code>account_alerts</code> alone does not deliver chat.
+            </li>
+            <li>
+              Callback URL must be exactly the webhook above; verify token must
+              match Vercel <code>WHATSAPP_VERIFY_TOKEN</code>, then{" "}
+              <strong>Verify and save</strong>.
+            </li>
+            <li>
+              App is in <strong>Development</strong>: add the customer number under
+              Step 1 → Test the API, or switch to Live after business verification.
+            </li>
+            <li>
+              Leave org access token blank on attach — platform{" "}
+              <code>WHATSAPP_TOKEN</code> is used (do not paste verify token there).
+            </li>
+          </ol>
+        </div>
       </section>
 
       <section className="mt-8 rounded-2xl border border-line bg-surface-1 p-5">

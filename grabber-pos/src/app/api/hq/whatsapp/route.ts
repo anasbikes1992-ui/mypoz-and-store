@@ -6,12 +6,14 @@ import {
   detachWhatsAppFromOrg,
   listWhatsAppFleet,
 } from "@/lib/server/whatsapp-durable";
+import { readWebhookAudit } from "@/lib/server/whatsapp-webhook-log";
 
 export async function GET() {
   const gate = await requireGmsAdmin();
   if (!gate.ok) return gate.response;
   try {
     const tenants = await listWhatsAppFleet();
+    const webhookAudit = await readWebhookAudit();
     return NextResponse.json({
       success: true,
       data: {
@@ -20,6 +22,7 @@ export async function GET() {
         envPhoneNumberId: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID),
         envVerifyToken: Boolean(process.env.WHATSAPP_VERIFY_TOKEN),
         envAppSecret: Boolean(process.env.WHATSAPP_APP_SECRET),
+        webhookAudit,
         tenants,
       },
       error: null,

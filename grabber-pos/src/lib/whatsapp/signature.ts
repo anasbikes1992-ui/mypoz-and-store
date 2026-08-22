@@ -7,9 +7,10 @@ export function verifyWhatsAppSignature(
   header: string | null | undefined,
   appSecret: string | undefined | null,
 ): boolean {
-  if (!appSecret) return false;
+  if (!appSecret?.trim()) return false;
+  const secret = appSecret.trim();
   if (!header?.startsWith("sha256=")) return false;
-  const expected = hmacSha256Hex(rawBody, appSecret);
+  const expected = hmacSha256Hex(rawBody, secret);
   const given = header.slice("sha256=".length);
   return safeEqual(expected.toLowerCase(), given.toLowerCase());
 }

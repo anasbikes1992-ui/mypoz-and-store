@@ -101,7 +101,7 @@ export function proxy(req: NextRequest) {
   const waf = inspectRequest(req);
   if (!waf.ok) return blocked(waf.status, waf.reason);
 
-  if (pathname !== "/api/health") {
+  if (pathname !== "/api/health" && pathname !== "/api/whatsapp/webhook") {
     const decision = apiRateLimit(clientIpFromHeaders(req.headers), pathname);
     if (decision.limited) {
       return blocked(

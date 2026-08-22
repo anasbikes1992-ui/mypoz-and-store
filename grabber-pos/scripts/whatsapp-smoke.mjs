@@ -38,6 +38,15 @@ rows.push(
     `${base}/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=test`,
   ),
 );
+const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN?.trim();
+if (verifyToken) {
+  rows.push(
+    await check(
+      "GET webhook verify (env token)",
+      `${base}/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(verifyToken)}&hub.challenge=smoke-ok`,
+    ),
+  );
+}
 rows.push(
   await check(
     "GET catalog CSV",
