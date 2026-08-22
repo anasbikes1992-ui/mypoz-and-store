@@ -3,6 +3,7 @@ import { findSaleById } from "@/lib/server/sales-repo";
 import { readSettings } from "@/lib/server/settings-store";
 import { buildInvoicePdf } from "@/lib/server/invoice-pdf";
 import { readWhatsAppSettings } from "@/lib/server/whatsapp-inbox-store";
+import { resolveMetaAccessToken } from "@/lib/whatsapp/phone-number-id";
 import {
   isWhatsAppConfigured,
   normalizeMobile,
@@ -38,9 +39,9 @@ export async function POST(
   }
 
   const waSettings = await readWhatsAppSettings();
-  const orgToken = waSettings.accessToken?.trim() || undefined;
+  const orgToken = resolveMetaAccessToken(waSettings.accessToken);
   const orgPhoneId = waSettings.phoneNumberId?.trim() || undefined;
-  if (!isWhatsAppConfigured() && !(orgToken && orgPhoneId)) {
+  if (!orgToken || !(orgPhoneId || process.env.WHATSAPP_PHONE_NUMBER_ID)) {
     return NextResponse.json(
       {
         success: false,

@@ -285,13 +285,16 @@ Reply YES and I’ll send the login.`}
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-text-dim">Access token (optional override)</span>
+            <span className="mb-1 block text-text-dim">
+              Access token (optional override)
+            </span>
             <input
               type="password"
               value={accessToken}
               onChange={(e) => setAccessToken(e.target.value)}
               autoComplete="off"
               className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong"
+              placeholder="Meta token (EAA…) — leave blank to use platform token"
             />
           </label>
         </div>

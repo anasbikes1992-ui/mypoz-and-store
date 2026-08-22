@@ -366,7 +366,7 @@ export default function WhatsAppPage() {
               Org access token{" "}
               {settings?.accessTokenSet
                 ? "(set — leave blank to keep)"
-                : "(optional; else platform token)"}
+                : "(optional; uses platform token from Vercel if blank)"}
             </span>
             <input
               type="password"
@@ -374,6 +374,7 @@ export default function WhatsAppPage() {
               onChange={(e) => setAccessToken(e.target.value)}
               autoComplete="off"
               className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+              placeholder="Meta system-user token (starts with EAA) — not the verify token"
             />
           </label>
         </div>

@@ -21,7 +21,14 @@ const metaPhoneNumberId = z
 const patchSchema = z.object({
   phoneNumberId: metaPhoneNumberId,
   verifyToken: z.string().max(200).optional(),
-  accessToken: z.string().max(400).optional(),
+  accessToken: z
+    .string()
+    .max(400)
+    .optional()
+    .refine((v) => !v?.trim() || (v.trim().length >= 50 && /^EAA[A-Za-z0-9]+$/.test(v.trim())), {
+      message:
+        "Access token must be the Meta system-user token from API Setup (starts with EAA).",
+    }),
   locale: z.enum(["en", "si", "ta"]).optional(),
   greeting: z.string().max(400).optional(),
   locationText: z.string().max(400).optional(),

@@ -22,3 +22,33 @@ export function normalizeMetaPhoneNumberId(raw: string | undefined): string {
   }
   return value;
 }
+
+/** Meta system-user tokens start with EAA and are long (not verify tokens / passwords). */
+export function isValidMetaAccessToken(value: string): boolean {
+  const v = value.trim();
+  return v.length >= 50 && /^EAA[A-Za-z0-9]+$/.test(v);
+}
+
+export function readStoredMetaAccessToken(raw: unknown): string {
+  const v = String(raw ?? "").trim();
+  return isValidMetaAccessToken(v) ? v : "";
+}
+
+export function normalizeMetaAccessToken(raw: string | undefined): string {
+  const value = (raw ?? "").trim();
+  if (!value) return "";
+  if (!isValidMetaAccessToken(value)) {
+    throw new Error(
+      "Access token must be the Meta system-user token from WhatsApp → API Setup (starts with EAA). Do not paste the verify token here.",
+    );
+  }
+  return value;
+}
+
+/** Org override when valid; otherwise platform env token. */
+export function resolveMetaAccessToken(orgToken: unknown): string | undefined {
+  const org = readStoredMetaAccessToken(orgToken);
+  if (org) return org;
+  const env = String(process.env.WHATSAPP_TOKEN ?? "").trim();
+  return isValidMetaAccessToken(env) ? env : undefined;
+}

@@ -11,6 +11,7 @@ import {
   upsertConversation,
 } from "@/lib/server/whatsapp-inbox-store";
 import { sendWhatsAppText } from "@/lib/server/whatsapp";
+import { resolveMetaAccessToken } from "@/lib/whatsapp/phone-number-id";
 
 export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
@@ -152,7 +153,7 @@ async function replyHandler(body: unknown) {
       to,
       body: text,
       phoneNumberId,
-      token: waSettings.accessToken || undefined,
+      token: resolveMetaAccessToken(waSettings.accessToken),
     });
 
     await appendMessage(

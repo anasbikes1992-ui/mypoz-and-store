@@ -45,7 +45,13 @@ const attachSchema = z.object({
     .refine((v) => !v?.trim() || /^\d{10,20}$/.test(v.trim()), {
       message: "Phone number id must be numeric Meta digits only.",
     }),
-  accessToken: z.string().max(400).optional(),
+  accessToken: z
+    .string()
+    .max(400)
+    .optional()
+    .refine((v) => !v?.trim() || (v.trim().length >= 50 && /^EAA[A-Za-z0-9]+$/.test(v.trim())), {
+      message: "Access token must start with EAA (Meta system-user token).",
+    }),
   locale: z.enum(["en", "si", "ta"]).optional(),
   detach: z.boolean().optional(),
 });

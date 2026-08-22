@@ -19,6 +19,7 @@ import {
   sendWhatsAppText,
   WhatsAppNotConfiguredError,
 } from "@/lib/server/whatsapp";
+import { resolveMetaAccessToken } from "@/lib/whatsapp/phone-number-id";
 import { normalizeLkPhone } from "@/lib/whatsapp/phone";
 import { detectLocale, isLocale } from "@/lib/whatsapp/i18n";
 import {
@@ -173,15 +174,16 @@ export async function handleInboundText(opts: {
     await sendWhatsAppText({
       to,
       body: reply,
-      phoneNumberId: waSettings.phoneNumberId || undefined,
-      token: waSettings.accessToken || undefined,
+      phoneNumberId: waSettings.phoneNumberId || phoneNumberId || undefined,
+      token: resolveMetaAccessToken(waSettings.accessToken),
     });
   } catch (err) {
     if (err instanceof WhatsAppNotConfiguredError) {
       // Demo / inbox-only: conversation is still persisted.
       return;
     }
-    throw err;
+    // Persist inbound + draft reply even if Meta send fails (bad token, etc.).
+    console.error("[whatsapp-bot] send failed:", err instanceof Error ? err.message : err);
   }
 }
 

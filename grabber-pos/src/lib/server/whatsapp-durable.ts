@@ -4,8 +4,11 @@ import { createServerSupabase, createServiceSupabase } from "@/lib/supabase/serv
 import type { Json } from "@/lib/supabase/database.types";
 import {
   isValidMetaPhoneNumberId,
+  normalizeMetaAccessToken,
   normalizeMetaPhoneNumberId,
+  readStoredMetaAccessToken,
   readStoredMetaPhoneNumberId,
+  resolveMetaAccessToken,
 } from "@/lib/whatsapp/phone-number-id";
 import type { BotCatalogCategory } from "@/lib/whatsapp/menu";
 import type { Sale } from "@/lib/types";
@@ -415,8 +418,8 @@ export async function attachWhatsAppToOrg(
     ...cur,
     phoneNumberId,
     accessToken: patch.accessToken?.trim()
-      ? patch.accessToken.trim()
-      : (cur.accessToken ?? ""),
+      ? normalizeMetaAccessToken(patch.accessToken.trim())
+      : readStoredMetaAccessToken(cur.accessToken),
     locale: patch.locale ?? cur.locale ?? "en",
     updatedAt: new Date().toISOString(),
   };

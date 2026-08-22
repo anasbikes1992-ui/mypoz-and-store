@@ -23,6 +23,8 @@ import {
 
 import {
   normalizeMetaPhoneNumberId,
+  normalizeMetaAccessToken,
+  readStoredMetaAccessToken,
   readStoredMetaPhoneNumberId,
 } from "@/lib/whatsapp/phone-number-id";
 
@@ -250,7 +252,7 @@ export async function readWhatsAppSettings(
   return {
     phoneNumberId: readStoredMetaPhoneNumberId(raw.phoneNumberId),
     verifyToken: String(raw.verifyToken ?? ""),
-    accessToken: String(raw.accessToken ?? ""),
+    accessToken: readStoredMetaAccessToken(raw.accessToken),
     locale: isLocale(localeRaw) ? localeRaw : "en",
     greeting: String(raw.greeting ?? ""),
     locationText: String(raw.locationText ?? ""),
@@ -272,6 +274,8 @@ export async function writeWhatsAppSettings(
     patch.phoneNumberId !== undefined
       ? normalizeMetaPhoneNumberId(patch.phoneNumberId)
       : undefined;
+  const tokenPatch =
+    patch.accessToken !== undefined ? patch.accessToken.trim() : undefined;
   const next: WhatsAppSettings = {
     phoneNumberId: phonePatch ?? current.phoneNumberId,
     verifyToken:
@@ -279,8 +283,8 @@ export async function writeWhatsAppSettings(
         ? patch.verifyToken.trim()
         : current.verifyToken,
     accessToken:
-      patch.accessToken && patch.accessToken.trim()
-        ? patch.accessToken.trim()
+      tokenPatch
+        ? normalizeMetaAccessToken(tokenPatch)
         : current.accessToken,
     locale: patch.locale ?? current.locale,
     greeting: patch.greeting ?? current.greeting,
