@@ -4,6 +4,7 @@ import {
   getPermissions,
   savePermissions,
   verifyManagerPin,
+  permissionsHasPin,
   type PermissionKey,
   type PermissionsConfig,
   type UserOverrides,
@@ -12,18 +13,25 @@ import {
   resolvePermission,
   type PermissionKey as SharedKey,
 } from "@/lib/permissions";
+import {
+  requireRoles,
+  requireTenantSession,
+} from "@/lib/server/auth-session";
 
 export async function GET() {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+
   try {
     const cfg = await getPermissions();
-    // Never expose the raw PIN to the client
+    // Never expose the raw PIN / hash to the client
     return NextResponse.json({
       success: true,
       data: {
         idleLockMinutes: cfg.idleLockMinutes,
         roleDefaults: cfg.roleDefaults,
         userOverrides: cfg.userOverrides ?? {},
-        hasPin: !!cfg.managerPin,
+        hasPin: permissionsHasPin(cfg),
       },
       error: null,
     });
@@ -102,13 +110,16 @@ function toPatch(
 function publicData(cfg: PermissionsConfig) {
   return {
     idleLockMinutes: cfg.idleLockMinutes,
-    hasPin: !!cfg.managerPin,
+    hasPin: permissionsHasPin(cfg),
     roleDefaults: cfg.roleDefaults,
     userOverrides: cfg.userOverrides ?? {},
   };
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -136,7 +147,7 @@ export async function POST(req: NextRequest) {
     const allowed = resolvePermission(
       cfg,
       parsed.data.permission as SharedKey,
-      { userId: parsed.data.userId, role: parsed.data.role ?? "manager" },
+      { userId: parsed.data.userId, role: parsed.data.role ?? gate.session.role },
     );
     return NextResponse.json({
       success: true,
@@ -158,6 +169,14 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+    const cfg = await getPermissions();
+    if (!permissionsHasPin(cfg)) {
+      return NextResponse.json({
+        success: false,
+        data: { valid: false, configured: false },
+        error: "Manager PIN is not configured. Ask an owner to set it in Permissions.",
+      });
+    }
     const ok = await verifyManagerPin(parsed.data.pin);
     if (!ok) {
       return NextResponse.json({
@@ -168,7 +187,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (parsed.data.permission) {
-      const cfg = await getPermissions();
       const allowed = resolvePermission(
         cfg,
         parsed.data.permission as SharedKey,
@@ -193,6 +211,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  const forbidden = requireRoles(gate.session, ["owner"]);
+  if (forbidden) return forbidden;
+
   const parsed = saveSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -214,6 +235,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+  const forbidden = requireRoles(gate.session, ["owner"]);
+  if (forbidden) return forbidden;
+
   let body: unknown;
   try {
     body = await req.json();

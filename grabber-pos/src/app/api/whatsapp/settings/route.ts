@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireTenantSession } from "@/lib/server/auth-session";
 import {
   publicWhatsAppSettings,
   readWhatsAppSettings,
@@ -8,8 +9,17 @@ import {
 } from "@/lib/server/whatsapp-inbox-store";
 import { normalizeEnabledPaths } from "@/lib/whatsapp/automation-graph";
 
+const metaPhoneNumberId = z
+  .string()
+  .max(80)
+  .optional()
+  .refine((v) => !v?.trim() || /^\d{10,20}$/.test(v.trim()), {
+    message:
+      "Phone number id must be the numeric Meta WhatsApp phone number id (digits only).",
+  });
+
 const patchSchema = z.object({
-  phoneNumberId: z.string().max(80).optional(),
+  phoneNumberId: metaPhoneNumberId,
   verifyToken: z.string().max(200).optional(),
   accessToken: z.string().max(400).optional(),
   locale: z.enum(["en", "si", "ta"]).optional(),
@@ -30,7 +40,9 @@ const patchSchema = z.object({
 });
 
 export async function GET() {
-  const settings = await readWhatsAppSettings();
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+  const settings = await readWhatsAppSettings(undefined, gate.session.orgId);
   return NextResponse.json({
     success: true,
     data: publicWhatsAppSettings(settings),
@@ -39,6 +51,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
   let body: unknown;
   try {
     body = await req.json();
@@ -69,10 +83,21 @@ export async function PUT(req: NextRequest) {
   if (data.enabledPaths) {
     patch.enabledPaths = normalizeEnabledPaths(data.enabledPaths);
   }
-  const settings = await writeWhatsAppSettings(patch);
-  return NextResponse.json({
-    success: true,
-    data: publicWhatsAppSettings(settings),
-    error: null,
-  });
+  try {
+    const settings = await writeWhatsAppSettings(patch, gate.session.orgId);
+    return NextResponse.json({
+      success: true,
+      data: publicWhatsAppSettings(settings),
+      error: null,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: error instanceof Error ? error.message : "Could not save settings",
+      },
+      { status: 400 },
+    );
+  }
 }

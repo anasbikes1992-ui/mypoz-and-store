@@ -14,6 +14,13 @@ import { complianceDataRequestEmail } from "@/lib/email/templates/compliance-dat
 import { newTenantWelcomeEmail } from "@/lib/email/templates/new-tenant-welcome";
 import { readSettings } from "@/lib/server/settings-store";
 import { readTenant } from "@/lib/server/tenant-store";
+import {
+  requireRoles,
+  requireTenantSession,
+} from "@/lib/server/auth-session";
+
+/** Templates any POS role may send (operational deliveries). */
+const CASHIER_TEMPLATES = new Set(["digital-delivery", "order-confirmation"]);
 
 const sendSchema = z.object({
   template: z.enum([
@@ -34,7 +41,25 @@ const sendSchema = z.object({
   data: z.record(z.string(), z.unknown()).optional(),
 });
 
+const WINDOW_MS = 60_000;
+const MAX_PER_WINDOW = 10;
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = hits.get(key);
+  if (!entry || now > entry.resetAt) {
+    hits.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > MAX_PER_WINDOW;
+}
+
 export async function POST(req: NextRequest) {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+
   let body: unknown;
   try { body = await req.json(); } catch {
     return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400 });
@@ -45,13 +70,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
+  const { template, to, data = {} } = parsed.data;
+
+  // Cashiers: only operational delivery templates. Owner/manager: full set.
+  if (gate.session.role === "cashier" && !CASHIER_TEMPLATES.has(template)) {
+    return NextResponse.json(
+      { success: false, error: "Forbidden" },
+      { status: 403 },
+    );
+  }
+  if (gate.session.role !== "cashier") {
+    const forbidden = requireRoles(gate.session, ["owner", "manager"]);
+    if (forbidden) return forbidden;
+  }
+
+  if (rateLimited(`${gate.session.orgId}:${gate.session.userId}`)) {
+    return NextResponse.json(
+      { success: false, error: "Too many emails. Try again shortly." },
+      { status: 429 },
+    );
+  }
+
   const settings = await readSettings();
   const tenant = await readTenant();
   const businessName = settings.businessName || tenant.brand.businessName || "MyPoz Store";
   const accentColor = tenant.brand.accentColor || "#2563eb";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mypoz-and-store-ui.vercel.app";
 
-  const { template, to, data = {} } = parsed.data;
 
   // Build the email from the requested template with sensible defaults.
   let email: { html: string; subject: string; text: string };
@@ -204,6 +249,9 @@ export async function POST(req: NextRequest) {
 
 /** GET — return available templates and whether email is configured. */
 export async function GET() {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+
   return NextResponse.json({
     success: true,
     data: {

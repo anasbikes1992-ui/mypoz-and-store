@@ -215,9 +215,15 @@ export default function PermissionsPage() {
       )}
 
       <div className="mt-6 space-y-4 rounded-2xl border border-line bg-surface-1 p-5">
+        {!hasPin && (
+          <p className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+            Manager PIN is not configured. Voids, price overrides, and idle
+            unlock stay blocked until an owner sets a PIN here.
+          </p>
+        )}
         <label className="block text-sm">
           <span className="mb-1 block text-text-dim">
-            Manager PIN{hasPin ? " (set — leave blank to keep)" : ""}
+            Manager PIN{hasPin ? " (set — leave blank to keep)" : " (required)"}
           </span>
           <input
             type="password"

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getRepository } from "@/lib/server/repositories";
 import {
   getPermissions,
+  permissionsHasPin,
   verifyManagerPin,
 } from "@/lib/server/permissions-store";
 import { resolvePermission } from "@/lib/permissions";
@@ -42,6 +43,18 @@ export async function POST(
     );
   }
 
+  const cfg = await getPermissions();
+  if (!permissionsHasPin(cfg)) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: "Manager PIN is not configured. Ask an owner to set it in Permissions.",
+      },
+      { status: 403 },
+    );
+  }
+
   const ok = await verifyManagerPin(parsed.data.managerPin);
   if (!ok) {
     return NextResponse.json(
@@ -50,7 +63,6 @@ export async function POST(
     );
   }
 
-  const cfg = await getPermissions();
   const allowed = resolvePermission(cfg, "void_sale", {
     userId: parsed.data.userId,
     role: parsed.data.role ?? "manager",

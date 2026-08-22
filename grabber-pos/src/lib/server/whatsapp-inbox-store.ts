@@ -16,9 +16,15 @@ import {
   putCollection,
   readWhatsAppDocument,
   resolveWhatsAppTenant,
+  resolveWhatsAppTenantForOrg,
   writeWhatsAppDocument,
   type WhatsAppTenant,
 } from "./whatsapp-durable";
+
+import {
+  normalizeMetaPhoneNumberId,
+  readStoredMetaPhoneNumberId,
+} from "@/lib/whatsapp/phone-number-id";
 
 export interface WhatsAppConversation {
   id: string;
@@ -80,6 +86,14 @@ const settingsDoc = docStore<Partial<WhatsAppSettings>>({
 async function tenantFor(phoneNumberId?: string): Promise<WhatsAppTenant | null> {
   try {
     return await resolveWhatsAppTenant(phoneNumberId);
+  } catch {
+    return null;
+  }
+}
+
+async function tenantForOrg(orgId: string): Promise<WhatsAppTenant | null> {
+  try {
+    return await resolveWhatsAppTenantForOrg(orgId);
   } catch {
     return null;
   }
@@ -224,14 +238,17 @@ export async function appendMessage(
 
 export async function readWhatsAppSettings(
   phoneNumberId?: string,
+  orgId?: string,
 ): Promise<WhatsAppSettings> {
-  const tenant = await tenantFor(phoneNumberId);
+  const tenant = orgId
+    ? await tenantForOrg(orgId)
+    : await tenantFor(phoneNumberId);
   const raw = tenant
     ? await readWhatsAppDocument(tenant)
     : await settingsDoc.read({});
   const localeRaw = String(raw.locale ?? "en");
   return {
-    phoneNumberId: String(raw.phoneNumberId ?? ""),
+    phoneNumberId: readStoredMetaPhoneNumberId(raw.phoneNumberId),
     verifyToken: String(raw.verifyToken ?? ""),
     accessToken: String(raw.accessToken ?? ""),
     locale: isLocale(localeRaw) ? localeRaw : "en",
@@ -248,10 +265,15 @@ export async function readWhatsAppSettings(
 
 export async function writeWhatsAppSettings(
   patch: Partial<WhatsAppSettings>,
+  orgId?: string,
 ): Promise<WhatsAppSettings> {
-  const current = await readWhatsAppSettings();
+  const current = await readWhatsAppSettings(undefined, orgId);
+  const phonePatch =
+    patch.phoneNumberId !== undefined
+      ? normalizeMetaPhoneNumberId(patch.phoneNumberId)
+      : undefined;
   const next: WhatsAppSettings = {
-    phoneNumberId: patch.phoneNumberId ?? current.phoneNumberId,
+    phoneNumberId: phonePatch ?? current.phoneNumberId,
     verifyToken:
       patch.verifyToken && patch.verifyToken.trim()
         ? patch.verifyToken.trim()
@@ -270,7 +292,9 @@ export async function writeWhatsAppSettings(
       : current.enabledPaths,
     updatedAt: new Date().toISOString(),
   };
-  const tenant = await tenantFor(next.phoneNumberId || undefined);
+  const tenant = orgId
+    ? await tenantForOrg(orgId)
+    : await tenantFor(undefined);
   if (tenant) {
     await writeWhatsAppDocument(tenant, next as unknown as Record<string, unknown>);
     return next;

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireTenantSession } from "@/lib/server/auth-session";
 import { isWhatsAppConfigured } from "@/lib/server/whatsapp";
 import {
   publicWhatsAppSettings,
@@ -6,7 +7,9 @@ import {
 } from "@/lib/server/whatsapp-inbox-store";
 
 export async function GET() {
-  const settings = await readWhatsAppSettings();
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+  const settings = await readWhatsAppSettings(undefined, gate.session.orgId);
   return NextResponse.json({
     success: true,
     data: {

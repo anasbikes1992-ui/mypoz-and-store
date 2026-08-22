@@ -11,6 +11,7 @@ import {
   type AutomationPathEnabled,
 } from "@/lib/whatsapp/automation-graph";
 import type { Locale } from "@/lib/whatsapp/i18n";
+import { sanitizeMetaPhoneNumberIdInput } from "@/lib/whatsapp/phone-number-id";
 
 interface WaSettings {
   phoneNumberId: string;
@@ -128,6 +129,18 @@ export default function WhatsAppPage() {
       .catch(() => undefined);
   }, []);
 
+  // Re-apply server value if the browser autofill injects an email address.
+  useEffect(() => {
+    const saved = settings?.phoneNumberId ?? "";
+    if (!saved) return;
+    const timer = window.setTimeout(() => {
+      setPhoneNumberId((current) =>
+        current !== saved ? saved : current,
+      );
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [settings?.phoneNumberId]);
+
   useEffect(() => {
     if (!activeId) {
       setThread([]);
@@ -182,6 +195,7 @@ export default function WhatsAppPage() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setSettings(json.data);
+      setPhoneNumberId(json.data.phoneNumberId ?? "");
       setVerifyToken("");
       setAccessToken("");
       if (json.data?.enabledPaths) {
@@ -309,9 +323,14 @@ export default function WhatsAppPage() {
             </span>
             <input
               value={phoneNumberId}
-              onChange={(e) => setPhoneNumberId(e.target.value)}
+              onChange={(e) =>
+                setPhoneNumberId(sanitizeMetaPhoneNumberIdInput(e.target.value))
+              }
+              autoComplete="off"
+              inputMode="numeric"
+              name="meta-wa-phone-number-id"
               className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
-              placeholder="From Meta WhatsApp product"
+              placeholder="From Meta WhatsApp product (digits only, e.g. 101779492851300)"
             />
           </label>
           <label className="block text-sm">

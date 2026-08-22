@@ -38,7 +38,13 @@ export async function GET() {
 
 const attachSchema = z.object({
   orgId: z.string().uuid(),
-  phoneNumberId: z.string().max(80).optional(),
+  phoneNumberId: z
+    .string()
+    .max(80)
+    .optional()
+    .refine((v) => !v?.trim() || /^\d{10,20}$/.test(v.trim()), {
+      message: "Phone number id must be numeric Meta digits only.",
+    }),
   accessToken: z.string().max(400).optional(),
   locale: z.enum(["en", "si", "ta"]).optional(),
   detach: z.boolean().optional(),
@@ -71,12 +77,29 @@ export async function PUT(req: NextRequest) {
       error: null,
     });
   }
-  await attachWhatsAppToOrg(parsed.data.orgId, parsed.data);
-  return NextResponse.json({
-    success: true,
-    data: { saved: true },
-    error: null,
-  });
+  try {
+    await attachWhatsAppToOrg(parsed.data.orgId, parsed.data);
+    const tenants = await listWhatsAppFleet();
+    const row = tenants.find((t) => t.orgId === parsed.data.orgId);
+    return NextResponse.json({
+      success: true,
+      data: {
+        saved: true,
+        phoneNumberId: row?.phoneNumberId ?? "",
+        phoneNumberIdSet: row?.phoneNumberIdSet ?? false,
+      },
+      error: null,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: error instanceof Error ? error.message : "Could not save",
+      },
+      { status: 400 },
+    );
+  }
 }
 
 export async function DELETE(req: NextRequest) {

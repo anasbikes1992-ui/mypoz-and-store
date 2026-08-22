@@ -2,6 +2,11 @@ import "server-only";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createServerSupabase, createServiceSupabase } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
+import {
+  isValidMetaPhoneNumberId,
+  normalizeMetaPhoneNumberId,
+  readStoredMetaPhoneNumberId,
+} from "@/lib/whatsapp/phone-number-id";
 import type { BotCatalogCategory } from "@/lib/whatsapp/menu";
 import type { Sale } from "@/lib/types";
 
@@ -21,15 +26,7 @@ function useServiceLedger(): boolean {
   return isSupabaseEnabled && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-/** Service-role tenant for Meta webhooks (no user JWT) and shared inbox rows. */
-export async function resolveWhatsAppTenant(
-  phoneNumberId?: string | null,
-): Promise<WhatsAppTenant | null> {
-  if (!useServiceLedger()) return null;
-  const db = createServiceSupabase();
-  const orgId = await resolveOrgId(db, phoneNumberId);
-  if (!orgId) return null;
-
+async function tenantForOrg(db: ServiceDb, orgId: string): Promise<WhatsAppTenant | null> {
   const { data: branch } = await db
     .from("branches")
     .select("id")
@@ -40,6 +37,26 @@ export async function resolveWhatsAppTenant(
     .maybeSingle<{ id: string }>();
   if (!branch) return null;
   return { db, orgId, branchId: branch.id };
+}
+
+/** Merchant settings / inbox — always scoped to the signed-in org. */
+export async function resolveWhatsAppTenantForOrg(
+  orgId: string,
+): Promise<WhatsAppTenant | null> {
+  if (!useServiceLedger()) return null;
+  const db = createServiceSupabase();
+  return tenantForOrg(db, orgId);
+}
+
+/** Service-role tenant for Meta webhooks (no user JWT) and shared inbox rows. */
+export async function resolveWhatsAppTenant(
+  phoneNumberId?: string | null,
+): Promise<WhatsAppTenant | null> {
+  if (!useServiceLedger()) return null;
+  const db = createServiceSupabase();
+  const orgId = await resolveOrgId(db, phoneNumberId);
+  if (!orgId) return null;
+  return tenantForOrg(db, orgId);
 }
 
 async function resolveOrgId(
@@ -65,6 +82,8 @@ async function resolveOrgId(
       return data?.phoneNumberId?.trim() === phone;
     });
     if (hit?.org_id) return hit.org_id as string;
+    // A phone id was supplied but does not map to any org — never guess from session.
+    return null;
   }
 
   try {
@@ -344,6 +363,7 @@ export interface WhatsAppFleetRow {
   orgId: string;
   name: string;
   slug: string;
+  phoneNumberId: string;
   phoneNumberIdSet: boolean;
   tokenSet: boolean;
   locale: string;
@@ -361,11 +381,13 @@ export async function listWhatsAppFleet(): Promise<WhatsAppFleetRow[]> {
   );
   return (orgs ?? []).map((org) => {
     const data = byOrg.get(org.id) ?? {};
+    const phoneNumberId = readStoredMetaPhoneNumberId(data.phoneNumberId);
     return {
       orgId: org.id,
       name: org.name,
       slug: org.slug,
-      phoneNumberIdSet: Boolean(String(data.phoneNumberId ?? "").trim()),
+      phoneNumberId,
+      phoneNumberIdSet: isValidMetaPhoneNumberId(phoneNumberId),
       tokenSet: Boolean(String(data.accessToken ?? "").trim()),
       locale: String(data.locale ?? "en"),
     };
@@ -384,9 +406,14 @@ export async function attachWhatsAppToOrg(
     .eq("key", "whatsapp")
     .maybeSingle<{ data: Record<string, unknown> }>();
   const cur = existing?.data ?? {};
+  let phoneNumberId = readStoredMetaPhoneNumberId(cur.phoneNumberId);
+  if (patch.phoneNumberId !== undefined) {
+    const trimmed = patch.phoneNumberId.trim();
+    phoneNumberId = trimmed ? normalizeMetaPhoneNumberId(trimmed) : phoneNumberId;
+  }
   const next = {
     ...cur,
-    phoneNumberId: patch.phoneNumberId ?? cur.phoneNumberId ?? "",
+    phoneNumberId,
     accessToken: patch.accessToken?.trim()
       ? patch.accessToken.trim()
       : (cur.accessToken ?? ""),

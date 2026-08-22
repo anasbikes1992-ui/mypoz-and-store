@@ -2,6 +2,7 @@ import "server-only";
 import { resolveDb } from "./backend";
 import { dataFile, readJsonFile, writeJsonFile } from "./local-json";
 import type { Json } from "@/lib/supabase/database.types";
+import { requireSupabase } from "@/lib/supabase/config";
 
 /**
  * Dual-path store for single-document config (business settings, white-label +
@@ -40,6 +41,11 @@ export function docStore<T>(config: DocStoreConfig): DocStore<T> {
     async write(value) {
       const db = await resolveDb();
       if (!db) {
+        // Production must not silently write ephemeral local JSON when the
+        // session is missing (proxy cookie-presence alone is not enough).
+        if (requireSupabase) {
+          throw new Error("Unauthorized");
+        }
         await writeJsonFile(file, value);
         return value;
       }

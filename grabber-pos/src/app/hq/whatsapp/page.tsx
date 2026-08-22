@@ -2,6 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { sanitizeMetaPhoneNumberIdInput } from "@/lib/whatsapp/phone-number-id";
+
+interface FleetTenant {
+  orgId: string;
+  name: string;
+  slug: string;
+  phoneNumberId: string;
+  phoneNumberIdSet: boolean;
+  tokenSet: boolean;
+  locale: string;
+}
 
 interface FleetStatus {
   webhookPath: string;
@@ -9,14 +20,15 @@ interface FleetStatus {
   envPhoneNumberId: boolean;
   envVerifyToken: boolean;
   envAppSecret: boolean;
-  tenants: {
-    orgId: string;
-    name: string;
-    slug: string;
-    phoneNumberIdSet: boolean;
-    tokenSet: boolean;
-    locale: string;
-  }[];
+  tenants: FleetTenant[];
+}
+
+function tenantFormDefaults(tenants: FleetTenant[], selectedOrgId: string) {
+  const row = tenants.find((t) => t.orgId === selectedOrgId);
+  return {
+    phoneNumberId: row?.phoneNumberId ?? "",
+    locale: row?.locale ?? "en",
+  };
 }
 
 export default function HqWhatsAppPage() {
@@ -29,16 +41,24 @@ export default function HqWhatsAppPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  function applyTenantForm(tenants: FleetTenant[], selectedOrgId: string) {
+    const defaults = tenantFormDefaults(tenants, selectedOrgId);
+    setPhoneNumberId(defaults.phoneNumberId);
+    setLocale(defaults.locale);
+  }
+
   function load() {
     fetch("/api/hq/whatsapp")
       .then((r) => r.json())
       .then((j) => {
         if (!j.success) throw new Error(j.error || "Failed");
-        setData(j.data);
-        const anaz = j.data.tenants?.find((t: { slug: string }) => t.slug === "anaz-store");
-        if (!orgId) {
-          setOrgId(anaz?.orgId || j.data.tenants?.[0]?.orgId || "");
-        }
+        const fleet = j.data as FleetStatus;
+        setData(fleet);
+        const tenants = fleet.tenants ?? [];
+        const anaz = tenants.find((t) => t.slug === "anaz-store");
+        const selectedOrgId = orgId || anaz?.orgId || tenants[0]?.orgId || "";
+        if (!orgId && selectedOrgId) setOrgId(selectedOrgId);
+        if (selectedOrgId) applyTenantForm(tenants, selectedOrgId);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed"));
   }
@@ -47,6 +67,22 @@ export default function HqWhatsAppPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!orgId || !data?.tenants?.length) return;
+    applyTenantForm(data.tenants, orgId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId, data?.tenants]);
+
+  useEffect(() => {
+    if (!orgId || !data?.tenants?.length) return;
+    const saved = tenantFormDefaults(data.tenants, orgId).phoneNumberId;
+    if (!saved) return;
+    const timer = window.setTimeout(() => {
+      setPhoneNumberId((current) => (current !== saved ? saved : current));
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [orgId, data?.tenants]);
 
   async function attach() {
     if (!orgId) return;
@@ -66,6 +102,9 @@ export default function HqWhatsAppPage() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error);
       setAccessToken("");
+      if (json.data?.phoneNumberId) {
+        setPhoneNumberId(json.data.phoneNumberId);
+      }
       setMsg("Client WhatsApp saved.");
       load();
     } catch (e) {
@@ -235,8 +274,14 @@ Reply YES and I’ll send the login.`}
             <span className="mb-1 block text-text-dim">Phone number id</span>
             <input
               value={phoneNumberId}
-              onChange={(e) => setPhoneNumberId(e.target.value)}
+              onChange={(e) =>
+                setPhoneNumberId(sanitizeMetaPhoneNumberIdInput(e.target.value))
+              }
+              autoComplete="off"
+              inputMode="numeric"
+              name="meta-wa-phone-number-id"
               className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong"
+              placeholder="101779492851300"
             />
           </label>
           <label className="block text-sm">
@@ -277,7 +322,9 @@ Reply YES and I’ll send the login.`}
               </div>
               <div className="flex items-center gap-3">
                 <p className="text-xs text-text-dim">
-                  {c.phoneNumberIdSet ? "Number set" : "No number"}
+                  {c.phoneNumberIdSet
+                    ? `Number ${c.phoneNumberId}`
+                    : "No number"}
                   {c.tokenSet ? " · token" : ""}
                 </p>
                 {(c.phoneNumberIdSet || c.tokenSet) && (
