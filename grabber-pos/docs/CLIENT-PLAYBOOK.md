@@ -34,6 +34,7 @@ Do these once after handover:
 | 6. Publish online catalog | Website / Products | Items marked online-visible |
 | 7. Check public store | `/store/your-slug` | Shoppers see products |
 | 8. (Optional) WhatsApp | WhatsApp module | Status green; test `hi` from your phone |
+| 9. (Business+) Train Jarvis | Shop knowledge `/knowledge` | Harvest org + add FAQs (returns, delivery zones) |
 
 ---
 
@@ -89,6 +90,14 @@ If the bot is silent, contact GMS — usually Meta webhook or phone mapping.
 - Plan tiles show **🔒 Upgrade** when locked.
 - Ask GMS to raise plan / extras — or use **Billing** if self-serve is enabled.
 - An expired licence may block new sales until renewed; you can still sign in.
+- **Business / Enterprise** includes **Shop knowledge** so Jarvis answers your shop’s policies. Starter shops can ask GMS for the `knowledge` extra.
+
+### Train Jarvis (Business+)
+
+1. Open **Shop knowledge** from the launcher (or Assistant → Knowledge).
+2. Click **Collect from organisation** to pull profile, categories, and sample SKUs.
+3. Add FAQ articles (returns window, delivery areas, house rules).
+4. Ask Jarvis those questions on `/assistant` — shop articles rank above platform how-tos.
 
 ---
 

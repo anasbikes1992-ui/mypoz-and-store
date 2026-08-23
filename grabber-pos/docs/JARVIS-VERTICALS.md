@@ -44,7 +44,8 @@ Owners on **Business** / **Enterprise** (or HQ extra `knowledge`) open `/knowled
 
 Starter stays on platform KB only until they upgrade or HQ adds the extra.
 
-See also [JARVIS-VERTICALS.md](JARVIS-VERTICALS.md).
+Plan gate: Business / Enterprise, or HQ extra `knowledge` / `jarvis-kb`.  
+Launch notes: [LAUNCH_STATUS.md](LAUNCH_STATUS.md).
 
 ## Try prompts
 

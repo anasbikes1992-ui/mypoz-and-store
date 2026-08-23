@@ -4,7 +4,7 @@
 **Scope:** Phase A forensic audit + controlled P1 remediation.  
 **Live host:** `https://mypoz-and-store-ui.vercel.app`  
 
-**Remediation status:** A-P1-02 / A-P1-03 / A-P1-05 fixed in code; A-P1-01 investigated (no blind proxy change); A-P1-04 accepted as test debris. Operator checks A-OP-01 / A-OP-02 still required before declaring Phase A complete.
+**Remediation status:** A-P1-02 / A-P1-03 / A-P1-05 fixed in code; A-P1-01 investigated (no blind proxy change); A-P1-04 accepted as test debris. Operator check **A-OP-01** (Auth URLs) still required for READY. **A-OP-02** WhatsApp `hi` path PASS (DB 2026-08-22). Launch hardening `0023` closed advisor ERROR tables and revoked POS RPCs from `anon`. See [LAUNCH_STATUS.md](LAUNCH_STATUS.md).
 
 ---
 

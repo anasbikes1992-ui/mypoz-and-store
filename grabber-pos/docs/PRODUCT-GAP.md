@@ -138,6 +138,13 @@ polish: CRM lite mass-send, Agreement screen, live courier/telco APIs — see FE
 - Memberships ✅ collection + POS member badge · CRM lite 🟡 `/crm` (segments, no mass send)  
 - Coupons schedule ✅ `startsAt` + `description` on discount codes  
 
+**Jarvis + shop knowledge (2026-08)** ✅  
+- Persona + platform KB + `list_verticals`  
+- Business+ `/knowledge` (harvest org + FAQs); HQ extra `knowledge` for Starter  
+- `kb_search` merges tenant articles ahead of platform how-tos  
+
+Launch remaining is **ops** (Auth URL confirm), not product gaps — [LAUNCH_STATUS.md](LAUNCH_STATUS.md).
+
 ---
 
 ## 4. Last sprints

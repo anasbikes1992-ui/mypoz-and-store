@@ -8,7 +8,7 @@
 | Tier | Price | Unlocks |
 |------|------:|---------|
 | **Starter** | 4,500 | Core POS, catalogue, inventory, full commerce suite, register |
-| **Business** | 9,500 | All non-vertical modules; add verticals via HQ **extras** |
+| **Business** | 9,500 | Non-vertical modules + **custom Jarvis shop knowledge**; verticals via HQ **extras** |
 | **Enterprise** | 18,500 | Everything unlocked |
 
 Source of truth: `src/lib/plans.ts`, `src/lib/billing.ts`, `src/lib/hq-config.ts`.
@@ -20,6 +20,7 @@ Source of truth: `src/lib/plans.ts`, `src/lib/billing.ts`, `src/lib/hq-config.ts
 | `restaurant` | KDS + tables |
 | `delivery` | Drivers / delivery board |
 | `whatsapp` | Cloud API bot + inbox + invoice send (HQ attaches phone) |
+| `knowledge` | Shop knowledge base on Starter (included free on Business+) |
 
 WhatsApp is **not** implied by Starter alone — attach via HQ `/hq/whatsapp` after Meta WABA is ready.
 
@@ -29,12 +30,18 @@ WhatsApp is **not** implied by Starter alone — attach via HQ `/hq/whatsapp` af
 - WhatsApp numbered bot (order / menu / offers / location / track / staff) on **allowlisted** numbers until Meta **Live** + Business verification
 - Meta phone catalog is optional bonus (can lag after connect); bot **View menu** always uses live POS stock
 
+## What to promise (Jarvis)
+
+- Owner Assistant answers POS how-tos from the MyPoz knowledge base
+- **Business+:** upload / harvest shop FAQs at `/knowledge` so Jarvis learns *their* policies
+
 ## What not to promise yet
 
 - Approved WA templates outside the 24h window
 - Live PayHere / PickMe / Uber capture
 - HQ multi-tenant order search across all shops
 - Cloud printing to LAN ESC/POS (needs on-prem agent + `PRINTER_*_IP`)
+- PDF auto-ingest / vector RAG for knowledge (manual articles + org harvest today)
 
 ## Onboard path (HQ)
 

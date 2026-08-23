@@ -131,7 +131,8 @@ and use DEFINER RPCs / service role carefully — never staff JWT.
 
 | Route | Access |
 |-------|--------|
-| `/api/ai/chat` · `/api/ai/settings` | **Session** — owner retail tools |
+| `/api/ai/chat` · `/api/ai/settings` | **Session** — owner retail tools + KB search |
+| `/api/knowledge` · `/api/knowledge/[id]` | **Session** — Business+ / extra `knowledge` shop KB CRUD + harvest |
 | `/api/hq/ai/chat` | **GMS** — HQ tools |
 
 ---

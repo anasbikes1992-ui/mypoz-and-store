@@ -42,9 +42,12 @@ Check in order:
    (service DB / service role).
 3. Confirm they appear on **`/hq/tenants`**.
 4. Open tenant detail → set **brand**, **plan**, **expiry**, **extras**.
+   - Prefer **Business+** so owners get **Shop knowledge** (`/knowledge`) for Jarvis.
+   - On Starter, add extra `knowledge` (or `whatsapp`, verticals) as sold.
 5. Attach WhatsApp phone number id on **`/hq/whatsapp`** (if they bought WA).
 6. Hand them [CLIENT-PLAYBOOK.md](CLIENT-PLAYBOOK.md) + login URL.
 7. First login: they open Products, import catalog, open register, sell one test bill.
+   Business owners: also harvest `/knowledge` once.
 
 ### Password help (existing clients)
 

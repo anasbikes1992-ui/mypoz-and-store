@@ -6,16 +6,19 @@
 
 Leave `mypoz-and-store` undeployed.
 
+**Launch remaining:** [LAUNCH_STATUS.md](LAUNCH_STATUS.md)
+
 ---
 
 ## Live tenants (durable)
 
-| Org | Slug | Profiles | Products | Storefront |
-|-----|------|----------|----------|------------|
-| MyPoz HQ workspace | `mypoz-hq` | 1 (GMS) | 0 | — |
-| Anaz Store | `anaz-store` | 1 owner | **1518** | published `/store/anaz-store` |
+| Org | Slug | Profiles | Products | Plan | Storefront |
+|-----|------|----------|----------|------|------------|
+| MyPoz HQ workspace | `mypoz-hq` | 1 (GMS) | 0 | — | — |
+| Anaz Store | `anaz-store` | 1 owner | **1518** | **business** | published `/store/anaz-store` |
+| Pilot 2 Test | `pilot-2-test` | 1 | — | — | provisioned |
 
-Migrations on remote: **22** history rows (local `0001`–`0018` + companions).
+Migrations on remote: through **`0023_launch_rls_hardening`** (git `0001`–`0023`).
 
 ---
 
@@ -30,6 +33,8 @@ UPSERT_ADMIN_EMAIL=owner@client.com UPSERT_ADMIN_PASSWORD='…' \
 UPSERT_ORG_SLUG=client-slug UPSERT_ORG_NAME='Client Name' \
 node --env-file=.env.local scripts/provision-tenant-owner.mjs
 ```
+
+4. Set plan / extras on `/hq/tenants/[id]` — Business+ unlocks **Shop knowledge**; or add extra `knowledge` on Starter.
 
 Pipeline-only clients (checkbox off) do **not** appear on `/hq/tenants` when the live `reseller_licences` view is active.
 
@@ -50,6 +55,7 @@ Pipeline-only clients (checkbox off) do **not** appear on `/hq/tenants` when the
 
 ```bash
 npm test          # vitest unit
+npm run ops:gate  # production health + WA + catalog
 npm run test:e2e  # Playwright (needs PLAYWRIGHT_EMAIL / PASSWORD)
 ```
 
@@ -57,4 +63,4 @@ npm run test:e2e  # Playwright (needs PLAYWRIGHT_EMAIL / PASSWORD)
 
 ## Soft-launch smoke
 
-See [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) — COD order, mobile cart, WhatsApp webhook verify, Export Excel on `/products`.
+See [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) — COD order, mobile cart, WhatsApp, shop knowledge harvest, Export Excel on `/products`.

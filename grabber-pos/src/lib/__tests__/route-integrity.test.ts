@@ -58,6 +58,9 @@ describe("route integrity", () => {
       "src/app/api/commerce/theme/route.ts",
       "src/app/api/store/[slug]/order/route.ts",
       "src/app/api/auth/login/route.ts",
+      "src/app/api/knowledge/route.ts",
+      "src/app/api/knowledge/[id]/route.ts",
+      "src/app/api/ai/chat/route.ts",
     ];
     expect(routes.filter((r) => !existsSync(path.join(ROOT, r)))).toEqual([]);
   });

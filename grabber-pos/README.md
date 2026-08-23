@@ -59,15 +59,18 @@ Key screens: `/` launcher · `/pos` terminal · `/dashboard` · `/sales` ·
 | Doc | For |
 |-----|-----|
 | [PRODUCTION.md](docs/PRODUCTION.md) | **Going live** — migrations, env, go-live checklist, security |
-| [GO_TO_MARKET.md](docs/GO_TO_MARKET.md) | Market launch plan — phases A–C, plan tiers, risks |
-| [LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) | Anaz soft launch — UI-only host, checkout smoke, WA paste gate |
+| [LAUNCH_STATUS.md](docs/LAUNCH_STATUS.md) | **What’s left for launch** — single status page |
+| [RELEASE_GATE.md](docs/RELEASE_GATE.md) | Go / no-go release gate |
+| [GO_TO_MARKET.md](docs/GO_TO_MARKET.md) | Market launch plan — phases A–D, plan tiers, risks |
+| [LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) | Anaz soft launch — UI-only host, checkout smoke, WA, knowledge |
+| [JARVIS-VERTICALS.md](docs/JARVIS-VERTICALS.md) | Jarvis ↔ verticals + Business+ shop knowledge |
 | [CREDENTIALS.md](docs/CREDENTIALS.md) | What to paste into `.env.local` (no secrets in repo) |
 | [SETUP.md](docs/SETUP.md) | Local development setup |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, the two seams, trust boundaries |
 | [ARCHITECTURE_MAP.md](docs/ARCHITECTURE_MAP.md) | Full product map — roles, flows, folder map |
 | [API_SURFACE.md](docs/API_SURFACE.md) | Inventory of `/api` route groups + auth notes |
 | [SECURITY_AND_AUTH.md](docs/SECURITY_AND_AUTH.md) | Proxy, RLS, GMS HQ, service-role risks |
-| [DATABASE_MAP.md](docs/DATABASE_MAP.md) | Migrations 0001–0018 summary |
+| [DATABASE_MAP.md](docs/DATABASE_MAP.md) | Migrations summary (see also `0022`/`0023`) |
 | [DATA-MODEL.md](docs/DATA-MODEL.md) | Schema, RPCs, RLS, legacy mapping |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel + mobile builds |
 | [USER-GUIDE.md](docs/USER-GUIDE.md) | Day-to-day use, for staff |
@@ -88,6 +91,7 @@ Key screens: `/` launcher · `/pos` terminal · `/dashboard` · `/sales` ·
 | `npm test` | Vitest unit tests |
 | `npm run seed` | Load org + catalog into Supabase (`--env-file=.env.local`) |
 | `npm run db:push` | Apply migrations via the Supabase CLI |
+| `npm run ops:gate` | Production release-gate smoke (health + WA + catalog) |
 
 ## Layout
 
@@ -105,7 +109,7 @@ src/
 │   ├── plans.ts    # plan tiers + feature gating
 │   └── validation.ts, types.ts, format.ts, receipt.ts
 └── data/products.json   # demo catalog seed
-supabase/migrations/     # 0001 schema → 0007 storefront
+supabase/migrations/     # 0001 schema → 0023 launch RLS hardening
 scripts/seed.mjs         # Supabase seeder
-docs/                    # production, architecture, setup, data model, guides
+docs/                    # production, launch status, architecture, guides
 ```

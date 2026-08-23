@@ -238,3 +238,18 @@ from billing. Each sale is de-duplicated, so a retry never charges twice.
 - Barcode scanners work anywhere the search box is focused — scan and it adds.
 - Use **Wholesale** for trade customers to switch every line to wholesale price.
 - The **max discount** on a product prevents cashiers from over-discounting.
+
+## Assistant & shop knowledge (owners)
+
+Open **Assistant** (`/assistant`) to ask Jarvis how-to questions (register, delivery,
+wholesale MOQ, restaurant seat split, and other verticals).
+
+On **Business** or **Enterprise** (or if GMS enabled the `knowledge` extra):
+
+1. Open **Shop knowledge** (`/knowledge`).
+2. **Collect from organisation** — harvests profile, categories, and sample products.
+3. Add FAQ articles for returns, delivery zones, and house rules.
+4. Ask Jarvis those questions — your shop articles are searched **before** platform how-tos.
+
+Starter plans only see platform knowledge until you upgrade or GMS adds the extra.
+

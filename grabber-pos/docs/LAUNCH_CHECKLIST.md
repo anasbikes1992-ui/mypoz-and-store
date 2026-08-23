@@ -1,10 +1,12 @@
 # Anaz soft-launch checklist
 
+**Status overview:** [LAUNCH_STATUS.md](LAUNCH_STATUS.md)  
 **Live product host only:** [mypoz-and-store-ui](https://mypoz-and-store-ui.vercel.app)  
 Do not deploy launch traffic to `mypoz-and-store` (leave undeployed / paused; do not delete without an explicit OK).
 
 Storefront: `/store/anaz-store`  
-WhatsApp ops: [WHATSAPP.md](WHATSAPP.md) · HQ attach: `/hq/whatsapp`
+WhatsApp ops: [WHATSAPP.md](WHATSAPP.md) · HQ attach: `/hq/whatsapp`  
+Jarvis / shop KB: [JARVIS-VERTICALS.md](JARVIS-VERTICALS.md) · `/knowledge` (Business+)
 
 ---
 
@@ -12,7 +14,8 @@ WhatsApp ops: [WHATSAPP.md](WHATSAPP.md) · HQ attach: `/hq/whatsapp`
 
 1. **Deploy to `mypoz-and-store-ui` only**  
    Confirm Production URL is `https://mypoz-and-store-ui.vercel.app`.  
-   Local CLI: from `grabber-pos/`, `.vercel/project.json` must name `mypoz-and-store-ui` (see [DEPLOYMENT.md](DEPLOYMENT.md)).
+   Local CLI: from `grabber-pos/`, `.vercel/project.json` must name `mypoz-and-store-ui` (see [DEPLOYMENT.md](DEPLOYMENT.md)).  
+   Prefer **Git auto-deploy**; Vercel CLI on Hobby can hit the 12-function cap.
 
 2. **Checkout / delivery smoke (desktop)**  
    - Place a **COD courier** order on `/store/anaz-store`  
@@ -29,10 +32,14 @@ WhatsApp ops: [WHATSAPP.md](WHATSAPP.md) · HQ attach: `/hq/whatsapp`
 5. **Catalogue**  
    Anaz catalogue is live at **1518** products (confirm on `/products`). Re-import only if counts drop.
 
-6. **Soft launch Anaz**  
+6. **Shop knowledge (Business+)**  
+   Anaz is on **business** plan — open `/knowledge` → **Collect from organisation** → ask Jarvis a shop-specific FAQ.  
+   Starter tenants need HQ extra `knowledge` (or upgrade).
+
+7. **Soft launch Anaz**  
    Optional: run password rotate when service role decryptable (`scripts/rotate-chat-passwords.mjs` after `vercel env pull`).
 
-7. **Release gate (automated)**  
+8. **Release gate (automated)**  
    From `grabber-pos/`:
 
 ```bash
@@ -52,7 +59,7 @@ Do this on **`mypoz-and-store-ui`** only, then redeploy Production.
 
 | Step | Action |
 |------|--------|
-| 1 | Meta **GRABBER** app → permanent / system-user token → Vercel env `WHATSAPP_TOKEN` on **`mypoz-and-store-ui`** (still missing on that project if only phone/secret/verify were set) |
+| 1 | Meta **GRABBER** app → permanent / system-user token → Vercel env `WHATSAPP_TOKEN` on **`mypoz-and-store-ui`** |
 | 2 | Confirm `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET` match Meta (webhook verify token = env verify token) |
 | 3 | Redeploy Production on `mypoz-and-store-ui` |
 | 4 | Open `/hq/whatsapp` → select **Anaz Store** → paste **phone number id** → Save |
@@ -77,7 +84,16 @@ Full Meta wiring and multi-tenant attach rules: [WHATSAPP.md](WHATSAPP.md).
 
 ---
 
+## Operator confirm before READY
+
+- [ ] **A-OP-01** — Auth Site URL + redirects (see [RELEASE_GATE.md](RELEASE_GATE.md))
+- [ ] Manager PIN not left at default on live shops
+- [ ] Optional: PITR / Cloudflare decisions recorded
+
+---
+
 ## Out of scope this launch
 
 - Full courier ledger / HQ multi-tenant order search (later)
+- PDF upload → knowledge base (harvest + manual articles only)
 - Deleting the unused `mypoz-and-store` Vercel project
