@@ -114,8 +114,8 @@ Object spot-check: `current_org_id()` present; `collection_matches_rules()` pres
 
 ## Operator decisions (record even if deferred)
 
-- [ ] Auth Site URL + redirect allowlist confirmed (A-OP-01) ← **FAIL**
-- [ ] WhatsApp live `hi` path confirmed (A-OP-02)
+- [ ] Auth Site URL + redirect allowlist confirmed (A-OP-01) ← **UNVERIFIED**
+- [x] WhatsApp live `hi` path confirmed (A-OP-02) ← **PASS (DB 2026-08-22)**
 - [ ] PITR decision recorded (enable / defer + reason)
 - [ ] Cloudflare decision recorded (enable / defer + reason)
 

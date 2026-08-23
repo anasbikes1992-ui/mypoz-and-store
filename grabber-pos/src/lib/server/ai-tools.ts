@@ -11,6 +11,8 @@ import {
   getHqTenantMonitor,
 } from "@/lib/server/hq-monitor";
 import type { AgentId } from "@/lib/ai/agents";
+import { searchKb } from "@/lib/ai/kb";
+import { listVerticalGuides } from "@/lib/ai/vertical-guides";
 import {
   demandHint,
   periodSales,
@@ -21,6 +23,48 @@ import {
 const daysProp = {
   type: "number",
   description: "Lookback days (1–90). Default 7 for sales, 30 for products.",
+};
+
+/** Shared how-to knowledge (curated docs snippets). */
+const KB_SEARCH_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "kb_search",
+    description:
+      "Search MyPoz operating knowledge (WhatsApp, POS, wholesale, rooms, restaurant, delivery, HQ, storefront, alerts, release gate). Use before inventing procedures.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Short topic, e.g. whatsapp webhook, wholesale MOQ, fleet backup",
+        },
+        limit: {
+          type: "number",
+          description: "Max hits 1–5 (default 3)",
+        },
+      },
+      required: ["query"],
+    },
+  },
+};
+
+const LIST_VERTICALS_TOOL = {
+  type: "function" as const,
+  function: {
+    name: "list_verticals",
+    description:
+      "Map sale-mode verticals to app routes and what Jarvis can do for each (retail, restaurant, delivery, rooms, repair, etc.). Optional query filters.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Optional filter, e.g. restaurant, delivery, hire",
+        },
+      },
+    },
+  },
 };
 
 export const OWNER_TOOLS = [
@@ -94,6 +138,8 @@ export const OWNER_TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
 ];
 
 export const HQ_TOOLS = [
@@ -168,6 +214,8 @@ export const HQ_TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
 ];
 
 export function toolsFor(agent: AgentId) {
@@ -201,6 +249,20 @@ export async function runTool(
   const days = Number(args.days) || undefined;
   const source = typeof args.source === "string" ? args.source : undefined;
   const limit = Number(args.limit) || undefined;
+
+  if (name === "kb_search") {
+    const query = typeof args.query === "string" ? args.query : "";
+    return JSON.stringify(
+      searchKb(query, {
+        audience: plane === "hq" ? "hq" : "owner",
+        limit: Number(args.limit) || 3,
+      }),
+    );
+  }
+  if (name === "list_verticals") {
+    const query = typeof args.query === "string" ? args.query : undefined;
+    return JSON.stringify(listVerticalGuides(query));
+  }
 
   if (plane === "hq") {
     if (name === "fleet_pulse") {
