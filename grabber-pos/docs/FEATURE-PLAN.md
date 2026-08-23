@@ -183,7 +183,7 @@ salary, users/roles + permissions UI.
 
 **P7 Settings, notifications, SMS, help** ✅ — settings, alerts, SMS templates, help; dedicated “Drivers & Softwares” hub ⬜.
 
-**P8 Hardening & launch** 🟡 — typecheck/tests/docs present; production cutover awaits real Supabase / WhatsApp / printer credentials ([CREDENTIALS.md](CREDENTIALS.md)). Include migration **0007+** and `GMS_ADMIN_EMAILS` when enabling storefront + HQ.
+**P8 Hardening & launch** 🟡 — typecheck/tests/docs present; `npm run ops:gate` automated; production cutover awaits Auth URL confirm (A-OP-01) and Vercel Hobby function limit if CLI deploy used ([CREDENTIALS.md](CREDENTIALS.md)).
 
 **Documentation (parallel):** USER / RESELLER / GMS-OPERATIONS / CUSTOMER-STOREFRONT /
 PRODUCTION / DEPLOYMENT / FEATURE-PLAN / PRODUCT-GAP / CREDENTIALS — in `docs/`.
