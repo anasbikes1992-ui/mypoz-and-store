@@ -12,6 +12,9 @@ import { dailySummaryEmail } from "@/lib/email/templates/daily-summary";
 import { refundConfirmationEmail } from "@/lib/email/templates/refund-confirmation";
 import { complianceDataRequestEmail } from "@/lib/email/templates/compliance-data-request";
 import { newTenantWelcomeEmail } from "@/lib/email/templates/new-tenant-welcome";
+import { digitalDeliveryEmail } from "@/lib/email/templates/digital-delivery";
+import { orderShippedEmail } from "@/lib/email/templates/order-shipped";
+import { passwordResetEmail } from "@/lib/email/templates/password-reset";
 import { readSettings } from "@/lib/server/settings-store";
 import { readTenant } from "@/lib/server/tenant-store";
 import {
@@ -36,6 +39,8 @@ const sendSchema = z.object({
     "compliance-data-request",
     "new-tenant-welcome",
     "digital-delivery",
+    "order-shipped",
+    "password-reset",
   ]),
   to: z.string().email(),
   data: z.record(z.string(), z.unknown()).optional(),
@@ -218,22 +223,39 @@ export async function POST(req: NextRequest) {
         bodies.length > 0
           ? bodies.join("\n\n")
           : String(data.body ?? "Your digital purchase is ready.");
-      const htmlBodies = bodyText
-        .split("\n")
-        .map((line) => `<p style="margin:0 0 8px">${line || "&nbsp;"}</p>`)
-        .join("");
-      email = {
-        subject: `${businessName} · Digital delivery${receiptNo ? ` · ${receiptNo}` : ""}`,
-        text: bodyText,
-        html: `<div style="font-family:sans-serif;max-width:560px">
-          <p style="color:${accentColor};font-weight:600">${businessName}</p>
-          <p>Hi ${String(data.customerName ?? "Customer")},</p>
-          ${htmlBodies}
-          <p style="color:#666;font-size:12px;margin-top:24px">Receipt ${receiptNo || "—"} · Total ${String(data.total ?? "")}</p>
-        </div>`,
-      };
+      email = digitalDeliveryEmail({
+        businessName,
+        accentColor,
+        customerName: String(data.customerName ?? "Customer"),
+        receiptNo,
+        total: String(data.total ?? ""),
+        body: bodyText,
+      });
       break;
     }
+
+    case "order-shipped":
+      email = orderShippedEmail({
+        businessName,
+        accentColor,
+        customerName: String(data.customerName ?? "Customer"),
+        receiptNo: String(data.receiptNo ?? "ORD-001"),
+        courier: data.courier as string | undefined,
+        trackingNumber: data.trackingNumber as string | undefined,
+        trackingUrl: data.trackingUrl as string | undefined,
+        estimatedDelivery: data.estimatedDelivery as string | undefined,
+      });
+      break;
+
+    case "password-reset":
+      email = passwordResetEmail({
+        businessName,
+        accentColor,
+        customerName: String(data.customerName ?? "User"),
+        resetUrl: String(data.resetUrl ?? `${appUrl}/update-password`),
+        expiresInMinutes: Number(data.expiresInMinutes ?? 60),
+      });
+      break;
 
     default:
       return NextResponse.json({ success: false, error: "Unknown template" }, { status: 400 });
@@ -257,8 +279,8 @@ export async function GET() {
     data: {
       configured: isEmailConfigured(),
       templates: [
-        "order-confirmation", "registration", "licence-invoice",
-        "licence-renewed", "licence-expiry-warning", "staff-invite",
+        "order-confirmation", "order-shipped", "registration", "password-reset",
+        "licence-invoice", "licence-renewed", "licence-expiry-warning", "staff-invite",
         "low-stock-alert", "daily-summary", "refund-confirmation",
         "compliance-data-request", "new-tenant-welcome", "digital-delivery",
       ],

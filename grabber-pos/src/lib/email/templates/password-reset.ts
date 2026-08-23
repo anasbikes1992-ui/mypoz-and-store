@@ -1,4 +1,4 @@
-import { emailBase } from "../base";
+import { emailBase, escapeHtml } from "../base";
 
 export interface PasswordResetData {
   businessName: string;
@@ -11,10 +11,11 @@ export interface PasswordResetData {
 export function passwordResetEmail(d: PasswordResetData): { html: string; subject: string; text: string } {
   const subject = `Reset your ${d.businessName} password`;
   const expires = d.expiresInMinutes ?? 60;
+  const name = escapeHtml(d.customerName);
 
   const body = `
 <h2>Reset your password</h2>
-<p>Hi ${d.customerName}, we received a request to reset the password for your account.</p>
+<p>Hi ${name}, we received a request to reset the password for your account.</p>
 
 <a class="btn" href="${d.resetUrl}">Reset password</a>
 

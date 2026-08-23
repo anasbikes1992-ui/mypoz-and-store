@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/shell/ThemeToggle";
 
@@ -20,17 +19,21 @@ export default function ForgotPasswordPage() {
     try {
       if (!isSupabaseEnabled) {
         setError(
-          "Password reset is available on cloud accounts. Email support@grabber.lk for help.",
+          "Password reset is available on cloud accounts. Email support@mypoz.lk for help.",
         );
         return;
       }
-      const origin = window.location.origin;
-      const { error: resetError } = await createClient().auth.resetPasswordForEmail(
-        email.trim(),
-        { redirectTo: `${origin}/update-password` },
-      );
-      if (resetError) {
-        setError(resetError.message);
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const json = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !json.success) {
+        setError(json.error ?? "Could not send reset email");
         return;
       }
       setSent(true);

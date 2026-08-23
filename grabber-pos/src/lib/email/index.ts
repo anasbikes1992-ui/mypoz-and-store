@@ -1,10 +1,16 @@
 export { sendEmail, isEmailConfigured } from "./client";
 export type { SendEmailOpts, SendEmailResult } from "./client";
+export { EMAIL_TEMPLATE_CATALOG, EMAIL_TEMPLATE_IDS } from "./catalog";
+export type { EmailTemplateId, EmailTemplateMeta } from "./catalog";
+export { renderSampleEmail } from "./samples";
 
 export { orderConfirmationEmail } from "./templates/order-confirmation";
 export { orderShippedEmail } from "./templates/order-shipped";
 export { registrationEmail } from "./templates/registration";
 export { passwordResetEmail } from "./templates/password-reset";
+export { passwordChangedEmail } from "./templates/password-changed";
+export { emailVerificationEmail } from "./templates/email-verification";
+export { magicLinkEmail } from "./templates/magic-link";
 export { licenceInvoiceEmail } from "./templates/licence-invoice";
 export { licenceRenewedEmail } from "./templates/licence-renewed";
 export { licenceExpiryWarningEmail } from "./templates/licence-expiry-warning";
@@ -14,3 +20,4 @@ export { dailySummaryEmail } from "./templates/daily-summary";
 export { refundConfirmationEmail } from "./templates/refund-confirmation";
 export { complianceDataRequestEmail } from "./templates/compliance-data-request";
 export { newTenantWelcomeEmail } from "./templates/new-tenant-welcome";
+export { digitalDeliveryEmail } from "./templates/digital-delivery";
