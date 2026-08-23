@@ -43,6 +43,7 @@ export const DEFAULT_HQ_TENANT_OPS: HqTenantOps = hqTenantOpsSchema.parse({});
 
 export const HQ_EXTRA_KEYS = [
   "whatsapp",
+  "knowledge",
   "category",
   "restaurant",
   "delivery",
@@ -55,4 +56,5 @@ export const HQ_EXTRA_KEYS = [
   "play",
   "layaway",
   "click-collect",
+  "digital",
 ] as const;

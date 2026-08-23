@@ -14,6 +14,10 @@ import type { AgentId } from "@/lib/ai/agents";
 import { searchKb } from "@/lib/ai/kb";
 import { listVerticalGuides } from "@/lib/ai/vertical-guides";
 import {
+  searchTenantKb,
+  tenantKnowledgeAllowed,
+} from "@/lib/server/tenant-kb-store";
+import {
   demandHint,
   periodSales,
   slowMovers,
@@ -31,7 +35,7 @@ const KB_SEARCH_TOOL = {
   function: {
     name: "kb_search",
     description:
-      "Search MyPoz operating knowledge (WhatsApp, POS, wholesale, rooms, restaurant, delivery, HQ, storefront, alerts, release gate). Use before inventing procedures.",
+      "Search MyPoz platform knowledge plus this shop’s custom knowledge base (Business+). Use before inventing procedures.",
     parameters: {
       type: "object",
       properties: {
@@ -252,12 +256,42 @@ export async function runTool(
 
   if (name === "kb_search") {
     const query = typeof args.query === "string" ? args.query : "";
-    return JSON.stringify(
-      searchKb(query, {
-        audience: plane === "hq" ? "hq" : "owner",
-        limit: Number(args.limit) || 3,
-      }),
-    );
+    const limit = Number(args.limit) || 3;
+    const platform = searchKb(query, {
+      audience: plane === "hq" ? "hq" : "owner",
+      limit,
+    });
+    let tenantHits: Awaited<ReturnType<typeof searchTenantKb>> = [];
+    let tenantNote: string | undefined;
+    let tenantKbEnabled = false;
+    if (plane === "owner") {
+      tenantKbEnabled = await tenantKnowledgeAllowed();
+      if (tenantKbEnabled) {
+        tenantHits = await searchTenantKb(query, limit);
+      } else {
+        tenantNote =
+          "Shop custom KB locked — upgrade to Business/Enterprise or ask HQ for extras: knowledge.";
+      }
+    }
+    const hits = [
+      ...tenantHits.map((h) => ({
+        id: h.id,
+        title: h.title,
+        source: h.source,
+        score: h.score + 0.5,
+        body: h.body,
+        origin: h.origin,
+      })),
+      ...platform.hits.map((h) => ({ ...h, origin: "platform" as const })),
+    ]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.max(limit, 5));
+    return JSON.stringify({
+      query,
+      hits,
+      note: platform.note || tenantNote,
+      tenantKbEnabled,
+    });
   }
   if (name === "list_verticals") {
     const query = typeof args.query === "string" ? args.query : undefined;

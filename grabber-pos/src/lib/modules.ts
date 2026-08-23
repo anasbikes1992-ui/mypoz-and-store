@@ -117,6 +117,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "audit", title: "Audit log", subtitle: "Sensitive actions", icon: "📜", href: "/audit", status: "active" },
       { key: "settings", title: "Settings", subtitle: "Business & receipt", icon: "⚙️", href: "/settings", status: "active" },
       { key: "assistant", title: "Jarvis", subtitle: "Shop AI agents", icon: "✦", href: "/assistant", status: "active" },
+      { key: "knowledge", title: "Shop knowledge", subtitle: "Train Jarvis (Business+)", icon: "📚", href: "/knowledge", status: "active" },
       { key: "display", title: "Customer display", subtitle: "Second screen total", icon: "🖥️", href: "/display", status: "active" },
       { key: "privacy", title: "Privacy purge", subtitle: "PII retention", icon: "🧹", href: "/privacy", status: "active" },
       { key: "billing", title: "Billing", subtitle: "Plan, expiry, upgrade", icon: "💳", href: "/billing", status: "active" },

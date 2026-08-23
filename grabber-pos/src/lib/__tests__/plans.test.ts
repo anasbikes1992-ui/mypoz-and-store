@@ -61,6 +61,18 @@ describe("planEnabledKeys", () => {
     expect(keys.has("drivers")).toBe(true);
     expect(keys.has("restaurant")).toBe(false);
   });
+
+  it("adds knowledge module on business without verticals", () => {
+    const withKb = [...STARTER_KEYS, ...VERTICAL_KEYS, "knowledge", "employees"];
+    const biz = planEnabledKeys("business", withKb);
+    expect(biz.has("knowledge")).toBe(true);
+    expect(biz.has("restaurant")).toBe(false);
+    const starter = planEnabledKeys("starter", withKb);
+    expect(starter.has("knowledge")).toBe(false);
+    expect(
+      planEnabledKeys("starter", withKb, ["knowledge"]).has("knowledge"),
+    ).toBe(true);
+  });
 });
 
 describe("isLicenseExpired", () => {

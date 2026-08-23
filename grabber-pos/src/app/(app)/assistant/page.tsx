@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AgentChat } from "@/components/ai/AgentChat";
 
 export default function AssistantPage() {
@@ -15,8 +16,15 @@ export default function AssistantPage() {
           { id: "owner-retail", name: "Shop retail" },
           { id: "owner-whatsapp", name: "WhatsApp coach" },
         ]}
-        emptyHint="Ask for low stock, today’s sales, or WhatsApp pitch copy."
+        emptyHint="Ask for low stock, today’s sales, WhatsApp copy, or your shop policies (Business+ knowledge)."
       />
+      <p className="mt-4 text-xs text-text-dim">
+        Train Jarvis with shop-specific FAQs on{" "}
+        <Link href="/knowledge" className="text-accent hover:underline">
+          Shop knowledge
+        </Link>{" "}
+        (Business / Enterprise).
+      </p>
     </div>
   );
 }

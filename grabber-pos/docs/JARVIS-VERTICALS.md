@@ -34,6 +34,18 @@ How sale modes connect to Jarvis today, and what time that saves.
 - Metrics tools are strongest on **retail-like POS**; other verticals are **guided** via KB + `list_verticals`.
 - Password reset stays on tenant UI (by design).
 
+## Shop knowledge (Business+)
+
+Owners on **Business** / **Enterprise** (or HQ extra `knowledge`) open `/knowledge` to:
+
+1. **Collect from organisation** — harvest profile, categories, sample SKUs into Jarvis articles  
+2. **Add / edit FAQs** — returns, delivery zones, house rules  
+3. Jarvis `kb_search` merges **tenant articles first**, then platform MyPoz how-tos  
+
+Starter stays on platform KB only until they upgrade or HQ adds the extra.
+
+See also [JARVIS-VERTICALS.md](JARVIS-VERTICALS.md).
+
 ## Try prompts
 
 **Owner:** “How do I split a restaurant bill by seat?” · “Wholesale MOQ?” · “List all verticals”  
