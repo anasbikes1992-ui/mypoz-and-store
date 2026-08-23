@@ -14,6 +14,7 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [items, setItems] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -21,8 +22,15 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const debounced = useDebounce(search, SEARCH_DEBOUNCE_MS);
 
+  useEffect(() => {
+    setPage(1);
+  }, [debounced]);
+
   const load = useCallback(() => {
-    const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(PAGE_SIZE),
+    });
     if (debounced) params.set("search", debounced);
     setLoading(true);
     fetch(`/api/products?${params}`)
@@ -34,7 +42,7 @@ export default function ProductsPage() {
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
-  }, [debounced]);
+  }, [debounced, page]);
 
   useEffect(() => {
     load();
@@ -56,6 +64,8 @@ export default function ProductsPage() {
     setEditing(product);
     setFormOpen(true);
   }
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -160,6 +170,30 @@ export default function ProductsPage() {
         </div>
       )}
 
+      {total > PAGE_SIZE && (
+        <div className="mt-5 flex items-center justify-between text-sm text-text-dim">
+          <p>
+            Showing {(page - 1) * PAGE_SIZE + 1}–
+            {Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
+          </p>
+          <div className="flex gap-2">
+            <PagerButton
+              label="Previous"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            />
+            <span className="px-2 py-1">
+              Page {page} of {pageCount}
+            </span>
+            <PagerButton
+              label="Next"
+              disabled={page >= pageCount}
+              onClick={() => setPage((p) => p + 1)}
+            />
+          </div>
+        </div>
+      )}
+
       <ProductForm
         open={formOpen}
         product={editing}
@@ -167,5 +201,25 @@ export default function ProductsPage() {
         onSaved={load}
       />
     </div>
+  );
+}
+
+function PagerButton({
+  label,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className="rounded-lg border border-line px-3 py-1.5 transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {label}
+    </button>
   );
 }

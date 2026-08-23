@@ -1,6 +1,15 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import { recordStore, type RecordStore } from "./persistence/record-store";
+import { resolveDb } from "./persistence/backend";
+import {
+  SQL_CATALOG_ENTITIES,
+  createCatalogEntity,
+  deleteCatalogEntity,
+  getCatalogEntity,
+  listCatalogEntity,
+  updateCatalogEntity,
+} from "./catalog-entity-store";
 
 /**
  * Generic CRUD store for the simple management collections (categories, brands,
@@ -33,6 +42,10 @@ function storeFor(name: string): RecordStore<Entity> {
 }
 
 export async function listCollection(name: string): Promise<Entity[]> {
+  if (SQL_CATALOG_ENTITIES.has(name)) {
+    const db = await resolveDb();
+    if (db) return listCatalogEntity(db, name);
+  }
   const items = await storeFor(name).list();
   return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
@@ -41,6 +54,10 @@ export async function getEntity(
   name: string,
   id: string,
 ): Promise<Entity | null> {
+  if (SQL_CATALOG_ENTITIES.has(name)) {
+    const db = await resolveDb();
+    if (db) return getCatalogEntity(db, name, id);
+  }
   return storeFor(name).get(id);
 }
 
@@ -48,6 +65,10 @@ export async function createEntity(
   name: string,
   data: Record<string, unknown>,
 ): Promise<Entity> {
+  if (SQL_CATALOG_ENTITIES.has(name)) {
+    const db = await resolveDb();
+    if (db) return createCatalogEntity(db, name, data);
+  }
   const entity: Entity = {
     ...data,
     id: name.slice(0, 3).toUpperCase() + "-" + randomUUID().slice(0, 8),
@@ -61,6 +82,10 @@ export async function updateEntity(
   id: string,
   data: Record<string, unknown>,
 ): Promise<Entity | null> {
+  if (SQL_CATALOG_ENTITIES.has(name)) {
+    const db = await resolveDb();
+    if (db) return updateCatalogEntity(db, name, id, data);
+  }
   const store = storeFor(name);
   const existing = await store.get(id);
   if (!existing) return null;
@@ -68,5 +93,9 @@ export async function updateEntity(
 }
 
 export async function deleteEntity(name: string, id: string): Promise<boolean> {
+  if (SQL_CATALOG_ENTITIES.has(name)) {
+    const db = await resolveDb();
+    if (db) return deleteCatalogEntity(db, name, id);
+  }
   return storeFor(name).remove(id);
 }
