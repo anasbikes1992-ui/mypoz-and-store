@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatMoney } from "@/lib/format";
@@ -39,11 +39,24 @@ export default function RestaurantFloorPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const byArea = useMemo(() => {
+    const map = new Map<string, TableRow[]>();
+    for (const t of tables) {
+      const area = t.area?.trim() || "Main floor";
+      const list = map.get(area) ?? [];
+      list.push(t);
+      map.set(area, list);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [tables]);
+
+  const occupied = tables.filter((t) => orders[t.id]).length;
+
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       <ModuleHeader
         title="Restaurant"
-        subtitle="Tap a table to open its order"
+        subtitle={`${occupied} occupied · ${tables.length - occupied} free`}
         actions={
           <Link
             href="/tables"
@@ -62,46 +75,61 @@ export default function RestaurantFloorPage() {
           <Link href="/tables" className="text-accent">
             Add tables
           </Link>{" "}
-          to lay out your floor.
+          with area labels to lay out your floor.
         </p>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {tables.map((t, i) => {
-            const order = orders[t.id];
-            const occupied = !!order;
-            return (
-              <motion.div
-                key={t.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.03, 0.3) }}
-              >
-                <Link
-                  href={`/restaurant/${t.id}`}
-                  className={`flex aspect-square flex-col items-center justify-center rounded-2xl border p-4 text-center transition ${
-                    occupied
-                      ? "border-accent bg-accent/10 hover:bg-accent/15"
-                      : "border-line bg-surface-1 hover:border-accent/50"
-                  }`}
-                >
-                  <span className="text-2xl" aria-hidden>
-                    🍽️
-                  </span>
-                  <p className="mt-2 font-semibold text-text-strong">
-                    {t.name ?? t.id}
-                  </p>
-                  {t.area && <p className="text-xs text-text-dim">{t.area}</p>}
-                  {occupied ? (
-                    <p className="mt-1 text-sm font-semibold text-accent">
-                      {formatMoney(order.total)}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-xs text-text-dim">Free</p>
-                  )}
-                </Link>
-              </motion.div>
-            );
-          })}
+        <div className="mt-6 space-y-8">
+          {byArea.map(([area, areaTables]) => (
+            <section key={area}>
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-text-dim">
+                {area}
+                <span className="ml-2 font-normal normal-case text-text-dim">
+                  ({areaTables.filter((t) => orders[t.id]).length}/
+                  {areaTables.length} busy)
+                </span>
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {areaTables.map((t, i) => {
+                  const order = orders[t.id];
+                  const busy = !!order;
+                  return (
+                    <motion.div
+                      key={t.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                    >
+                      <Link
+                        href={`/restaurant/${t.id}`}
+                        className={`flex aspect-square flex-col items-center justify-center rounded-2xl border p-4 text-center transition ${
+                          busy
+                            ? "border-accent bg-accent/10 hover:bg-accent/15"
+                            : "border-line bg-surface-1 hover:border-accent/50"
+                        }`}
+                      >
+                        <span className="text-2xl" aria-hidden>
+                          🍽️
+                        </span>
+                        <p className="mt-2 font-semibold text-text-strong">
+                          {t.name ?? t.id}
+                        </p>
+                        {t.seats != null && t.seats > 0 && (
+                          <p className="text-xs text-text-dim">{t.seats} seats</p>
+                        )}
+                        {busy ? (
+                          <p className="mt-1 text-sm font-semibold text-accent">
+                            {formatMoney(order.total)}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-text-dim">Free</p>
+                        )}
+                      </Link>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
     </div>

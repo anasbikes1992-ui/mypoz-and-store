@@ -5,6 +5,8 @@ import {
   createAgreement,
   hpBalance,
 } from "@/lib/server/hp-store";
+import { readSettings } from "@/lib/server/settings-store";
+import { hpNextDueAt, hpOverdueDays } from "@/lib/hp-math";
 
 const schema = z.object({
   customer: z.string().min(1, "Customer is required").max(120),
@@ -15,11 +17,34 @@ const schema = z.object({
   installments: z.coerce.number().int().min(1).default(1),
 });
 
+function enrichAgreement(
+  a: Awaited<ReturnType<typeof listAgreements>>[number],
+  dueDayOfMonth: number,
+) {
+  const bal = hpBalance(a);
+  const nextDueAt = hpNextDueAt(
+    {
+      createdAt: a.createdAt,
+      status: a.status,
+      payments: a.payments,
+      balance: bal.balance,
+    },
+    dueDayOfMonth,
+  );
+  return {
+    ...a,
+    ...bal,
+    nextDueAt,
+    overdueDays: hpOverdueDays(nextDueAt),
+  };
+}
+
 export async function GET() {
+  const settings = await readSettings();
   const agreements = await listAgreements();
   return NextResponse.json({
     success: true,
-    data: agreements.map((a) => ({ ...a, ...hpBalance(a) })),
+    data: agreements.map((a) => enrichAgreement(a, settings.hpDueDayOfMonth)),
     error: null,
   });
 }

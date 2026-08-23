@@ -7,6 +7,9 @@ import {
   removeBooking,
   bookingTotals,
   suggestedOverdueFee,
+  checkIn,
+  afterCheckoutHousekeeping,
+  type ExtraKind,
 } from "@/lib/server/booking-store";
 import { createSale } from "@/lib/server/sales-repo";
 import { BOOKING_CONFIG } from "@/lib/bookings-config";
@@ -26,10 +29,16 @@ export async function GET(
 }
 
 interface Body {
-  action: "meta" | "addExtra" | "removeExtra" | "settle";
-  meta?: Record<string, string | number>;
+  action:
+    | "meta"
+    | "addExtra"
+    | "removeExtra"
+    | "checkIn"
+    | "settle";
+  meta?: Record<string, string | number | null>;
   description?: string;
   amount?: number;
+  kind?: ExtraKind;
   extraId?: string;
   paymentMethod?: "cash" | "card" | "wholesale";
   cashReceived?: number;
@@ -60,10 +69,17 @@ export async function POST(
         return ok(
           await updateMeta(id, (body.meta ?? {}) as { status?: BookingStatus }),
         );
+      case "checkIn":
+        return ok(await checkIn(id));
       case "addExtra":
         if (!body.description) return fail("description is required");
         return ok(
-          await addExtra(id, body.description, Number(body.amount) || 0),
+          await addExtra(
+            id,
+            body.description,
+            Number(body.amount) || 0,
+            body.kind ?? "folio",
+          ),
         );
       case "removeExtra":
         if (!body.extraId) return fail("extraId is required");
@@ -72,12 +88,8 @@ export async function POST(
         let booking = await getBooking(id);
         if (!booking) return fail("Booking not found", 404);
 
-        // Auto-suggest overdue when past endDate and fee not yet set.
         const suggested = suggestedOverdueFee(booking);
-        if (
-          suggested > 0 &&
-          !(Number(booking.overdueFee) > 0)
-        ) {
+        if (suggested > 0 && !(Number(booking.overdueFee) > 0)) {
           booking =
             (await updateMeta(id, { overdueFee: suggested })) ?? booking;
         }
@@ -97,7 +109,10 @@ export async function POST(
           },
           ...booking.extras.map((e) => ({
             productId: "",
-            name: e.description,
+            name:
+              e.kind === "fnb"
+                ? `F&B · ${e.description}`
+                : e.description,
             unitPrice: e.amount,
             quantity: 1,
             discount: 0,
@@ -149,6 +164,7 @@ export async function POST(
           cashReceived: cash,
           change: cash != null ? cash - totals.total : null,
         });
+        await afterCheckoutHousekeeping(booking);
         await removeBooking(id);
         return NextResponse.json({ success: true, data: sale, error: null });
       }

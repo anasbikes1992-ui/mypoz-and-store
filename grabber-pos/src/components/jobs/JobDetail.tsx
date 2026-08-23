@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Product, Sale } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
+import { jobNotifyMessage } from "@/lib/job-math";
 import { saleToTicketText } from "@/lib/receipt";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
@@ -37,6 +38,7 @@ interface Job {
   deposit?: number;
   diagnosis?: string;
   warrantyNote?: string;
+  dueAt?: string | null;
 }
 
 export function JobDetail() {
@@ -46,6 +48,8 @@ export function JobDetail() {
   const [labourDesc, setLabourDesc] = useState("");
   const [labourAmt, setLabourAmt] = useState("");
   const [done, setDone] = useState<Sale | null>(null);
+  const [businessName, setBusinessName] = useState("MyPoz Store");
+  const [notifyMsg, setNotifyMsg] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/jobs/${id}`)
@@ -53,6 +57,16 @@ export function JobDetail() {
       .then((j) => j.success && setJob(j.data));
   }, [id]);
   useEffect(() => load(), [load]);
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data?.businessName) {
+          setBusinessName(String(j.data.businessName));
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function act(action: string, extra: Record<string, unknown> = {}) {
     const j = await (
@@ -77,6 +91,22 @@ export function JobDetail() {
   async function settle() {
     const j = await act("settle", { paymentMethod: "cash", cashReceived: total });
     if (j.success) setDone(j.data as Sale);
+  }
+
+  function copyStatusUpdate() {
+    if (!job) return;
+    const text = jobNotifyMessage({
+      businessName,
+      jobId: job.id,
+      customer: job.customer,
+      subject: job.subject,
+      status: job.status,
+      type: job.type,
+    });
+    void navigator.clipboard.writeText(text).then(() => {
+      setNotifyMsg("WhatsApp message copied — paste into chat or /whatsapp inbox.");
+      setTimeout(() => setNotifyMsg(null), 3000);
+    });
   }
 
   if (done) {
@@ -154,6 +184,33 @@ export function JobDetail() {
               value={job.deposit ?? 0}
               onCommit={(v) => act("meta", { meta: { deposit: Number(v) || 0 } })}
             />
+            <label className="mt-3 block text-sm">
+              <span className="mb-1 block text-text-dim">Due date (SLA)</span>
+              <input
+                type="date"
+                value={job.dueAt ? job.dueAt.slice(0, 10) : ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  act("meta", {
+                    meta: { dueAt: v ? new Date(v).toISOString() : null },
+                  });
+                }}
+                className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+              />
+            </label>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={copyStatusUpdate}
+                disabled={!job.phone && !job.customer}
+                className="rounded-lg border border-line px-3 py-1.5 text-xs text-text-body transition hover:border-accent hover:text-accent disabled:opacity-40"
+              >
+                Copy WhatsApp update
+              </button>
+              {notifyMsg && (
+                <p className="text-xs text-accent">{notifyMsg}</p>
+              )}
+            </div>
             <div className="mt-3">
               <span className="mb-1 block text-sm text-text-dim">Status</span>
               <div className="flex flex-wrap gap-1">

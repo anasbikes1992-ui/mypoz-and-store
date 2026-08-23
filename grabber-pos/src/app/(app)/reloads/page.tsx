@@ -22,11 +22,20 @@ export default function ReloadsPage() {
   const [pending, setPending] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [recent, setRecent] = useState<ReloadEntry[]>([]);
+  const [providers, setProviders] = useState(PROVIDERS);
 
   function load() {
     fetch("/api/reloads")
       .then((r) => r.json())
-      .then((j) => j.success && setRecent(j.data))
+      .then((j) => {
+        if (!j.success) return;
+        if (Array.isArray(j.data)) {
+          setRecent(j.data);
+        } else {
+          setRecent(j.data.reloads ?? []);
+          if (j.data.providers?.length) setProviders(j.data.providers);
+        }
+      })
       .catch(() => undefined);
   }
   useEffect(load, []);
@@ -125,6 +134,9 @@ export default function ReloadsPage() {
         >
           {pending ? "Selling…" : `Sell reload${amount ? ` · ${formatMoney(Number(amount))}` : ""}`}
         </button>
+        <p className="mt-2 text-xs text-text-dim">
+          Providers list comes from Settings → Mobile reloads.
+        </p>
       </div>
 
       {recent.length > 0 && (

@@ -32,6 +32,16 @@ WhatsApp ops: [WHATSAPP.md](WHATSAPP.md) · HQ attach: `/hq/whatsapp`
 6. **Soft launch Anaz**  
    Optional: run password rotate when service role decryptable (`scripts/rotate-chat-passwords.mjs` after `vercel env pull`).
 
+7. **Release gate (automated)**  
+   From `grabber-pos/`:
+
+```bash
+npm run ops:gate
+# strict (fail on operator reminders): node scripts/release-gate-ops.mjs --strict
+```
+
+Expect health + WhatsApp smoke + catalog PASS. See [RELEASE_GATE.md](RELEASE_GATE.md).
+
 Product topology (HQ + clients + DB): [PRODUCT_FINALIZE.md](PRODUCT_FINALIZE.md).
 
 ---

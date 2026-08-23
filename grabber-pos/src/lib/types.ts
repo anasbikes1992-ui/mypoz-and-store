@@ -8,6 +8,10 @@ export interface Product {
   costPrice: number;
   salePrice: number;
   wholesalePrice: number | null;
+  /** VIP / preferred customer tier price. */
+  vipPrice?: number | null;
+  /** Minimum qty when selling wholesale (0 = no MOQ). */
+  minWholesaleQty?: number;
   maxDiscount: number;
   singleDiscount: number;
   quantity: number;
@@ -33,10 +37,15 @@ export interface CartLine {
   unitPrice: number;
   /** Wholesale unit price, if the product has one (may be overridden). */
   wholesalePrice: number | null;
+  /** VIP unit price (may be overridden). */
+  vipPrice?: number | null;
   /** Catalog retail price at add-time (for override detection). */
   catalogUnitPrice?: number;
   /** Catalog wholesale price at add-time (for override detection). */
   catalogWholesalePrice?: number | null;
+  catalogVipPrice?: number | null;
+  /** Product MOQ for wholesale / VIP bulk. */
+  minWholesaleQty?: number;
   quantity: number;
   /** Per-unit discount amount (LKR), capped at product.maxDiscount */
   discount: number;

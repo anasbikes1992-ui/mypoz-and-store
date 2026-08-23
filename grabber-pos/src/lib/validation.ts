@@ -48,6 +48,8 @@ export const productInputSchema = z.object({
   costPrice: z.number().min(0).default(0),
   salePrice: z.number().min(0, "Sale price is required"),
   wholesalePrice: z.number().min(0).nullish(),
+  vipPrice: z.number().min(0).nullish(),
+  minWholesaleQty: z.number().int().min(0).default(0),
   maxDiscount: z.number().min(0).default(0),
   singleDiscount: z.number().min(0).default(0),
   quantity: z.number().default(0),

@@ -34,6 +34,11 @@ test.describe("public critical path", () => {
     expect(res.status()).toBe(403);
   });
 
+  test("booking units API requires auth", async ({ request }) => {
+    const res = await request.get("/api/booking-units?type=room");
+    expect([401, 403]).toContain(res.status());
+  });
+
   test("robots and sitemap are crawlable", async ({ request }) => {
     const robots = await request.get("/robots.txt");
     expect(robots.ok()).toBeTruthy();

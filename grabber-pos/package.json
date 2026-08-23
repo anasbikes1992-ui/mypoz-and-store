@@ -13,6 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "ops:gate": "node scripts/release-gate-ops.mjs",
+    "ops:smoke": "node scripts/whatsapp-smoke.mjs https://mypoz-and-store-ui.vercel.app",
+    "ops:go-live": "node --env-file=.env.local scripts/go-live-smoke.mjs",
     "prepare": "node -e \"process.exit(0)\""
   },
   "dependencies": {

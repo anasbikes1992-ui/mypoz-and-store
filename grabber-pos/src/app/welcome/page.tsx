@@ -15,37 +15,37 @@ const VERTICALS = [
   {
     mark: "R",
     title: "Retail & supermarket",
-    body: "Barcode scanning, scale lines, cash drawer, and discount limits.",
+    body: "Barcode scanning, cash drawer kick, discount limits, and licence-aware selling.",
     tint: "var(--tint-blue)",
   },
   {
     mark: "D",
     title: "Restaurant & cafe",
-    body: "Floor plans, split bills, and ESC/POS kitchen order tickets.",
+    body: "Tables, KOT/BOT tickets, kitchen display, floor by area, and pay-by-seat split.",
     tint: "var(--tint-coral)",
   },
   {
     mark: "S",
     title: "Service & repair",
-    body: "Job sheets, status updates, parts and labour on one bill.",
+    body: "Job sheets, SLA due dates, parts and labour, WhatsApp status copy.",
     tint: "var(--tint-teal)",
   },
   {
     mark: "W",
     title: "Wholesale",
-    body: "Tier pricing, credit balances, bulk qty, and purchase GRNs.",
+    body: "Customer price tiers (retail / wholesale / VIP), MOQ helpers, credit on the bill, and GRNs.",
     tint: "var(--tint-amber)",
   },
   {
     mark: "H",
     title: "Hotels & rooms",
-    body: "Reservations, check-in/out, room service, and guest folios.",
+    body: "Room inventory, occupancy board, check-in/out, folio extras, and housekeeping.",
     tint: "var(--tint-pink)",
   },
   {
     mark: "I",
     title: "Hire & rentals",
-    body: "Installment schedules, deposits, and overdue alerts.",
+    body: "Hire-purchase schedules with overdue alerts plus rent assets on the shared booking engine.",
     tint: "var(--tint-green)",
   },
 ] as const;

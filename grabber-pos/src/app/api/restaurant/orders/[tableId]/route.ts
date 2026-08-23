@@ -6,6 +6,7 @@ import {
   removeItem,
   markSent,
   clearOrder,
+  extractSeatLines,
 } from "@/lib/server/restaurant-store";
 import { getRepository } from "@/lib/server/repositories";
 import { printTicket } from "@/lib/server/ticket-printer";
@@ -21,7 +22,7 @@ export async function GET(
 }
 
 interface ActionBody {
-  action: "addItem" | "setQty" | "remove" | "send" | "settle";
+  action: "addItem" | "setQty" | "remove" | "send" | "settle" | "settleSeat";
   productId?: string;
   quantity?: number;
   name?: string;
@@ -134,6 +135,28 @@ export async function POST(
         });
         await clearOrder(tableId);
         return NextResponse.json({ success: true, data: sale, error: null });
+      }
+      case "settleSeat": {
+        const seat = body.seat;
+        if (seat == null || !(seat > 0)) return fail("seat is required");
+        const { order: remaining, lines } = await extractSeatLines(tableId, seat);
+        if (lines.length === 0) return fail(`No lines for seat ${seat}`);
+        const repo = await getRepository();
+        const total = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+        const sale = await repo.createSale({
+          lines: lines.map((l) => ({
+            productId: l.productId,
+            quantity: l.quantity,
+            discount: 0,
+          })),
+          paymentMethod: body.paymentMethod ?? "cash",
+          cashReceived: body.cashReceived ?? total,
+        });
+        return NextResponse.json({
+          success: true,
+          data: { sale, order: remaining },
+          error: null,
+        });
       }
       default:
         return fail("Unknown action");

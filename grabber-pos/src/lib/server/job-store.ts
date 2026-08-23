@@ -1,7 +1,9 @@
 import "server-only";
 import { randomUUID } from "crypto";
+import { defaultDueAt } from "@/lib/job-math";
 import { findById } from "./product-repo";
 import { recordStore } from "./persistence/record-store";
+import { readSettings } from "./settings-store";
 
 /**
  * Job-workflow engine shared by Repair and Vehicle Service. A job has parts
@@ -42,6 +44,8 @@ export interface Job {
   deposit: number;
   diagnosis: string;
   warrantyNote: string;
+  /** SLA target — overdue when past and not ready/collected. */
+  dueAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +72,8 @@ export async function getJob(id: string): Promise<Job | null> {
 }
 
 export async function createJob(type: JobType): Promise<Job> {
+  const settings = await readSettings();
+  const createdAt = new Date().toISOString();
   const job: Job = {
     id: (type === "repair" ? "RJ-" : "SJ-") + randomUUID().slice(0, 8),
     type,
@@ -81,8 +87,9 @@ export async function createJob(type: JobType): Promise<Job> {
     deposit: 0,
     diagnosis: "",
     warrantyNote: "",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    dueAt: defaultDueAt(createdAt, settings.jobSlaDays),
+    createdAt,
+    updatedAt: createdAt,
   };
   return store.put(job);
 }
@@ -106,6 +113,7 @@ export async function updateMeta(
       | "deposit"
       | "diagnosis"
       | "warrantyNote"
+      | "dueAt"
     >
   >,
 ): Promise<Job | null> {
@@ -119,6 +127,12 @@ export async function updateMeta(
       meta.warrantyNote != null
         ? String(meta.warrantyNote)
         : j.warrantyNote ?? "",
+    dueAt:
+      meta.dueAt === null
+        ? null
+        : meta.dueAt != null
+          ? String(meta.dueAt)
+          : j.dueAt ?? null,
   }));
 }
 

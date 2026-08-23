@@ -16,6 +16,7 @@ interface Extra {
   id: string;
   description: string;
   amount: number;
+  kind?: string;
 }
 interface Booking {
   id: string;
@@ -23,6 +24,7 @@ interface Booking {
   customer: string;
   phone: string;
   subject: string;
+  unitId?: string | null;
   rate: number;
   startDate: string;
   endDate: string;
@@ -31,6 +33,13 @@ interface Booking {
   depositDisposition?: "held" | "refunded" | "forfeited";
   status: string;
   extras: Extra[];
+}
+
+interface UnitOpt {
+  id: string;
+  name: string;
+  rate: number;
+  status: string;
 }
 
 function daysOverdue(endDate: string): number {
@@ -55,9 +64,12 @@ export function BookingDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [b, setB] = useState<Booking | null>(null);
+  const [units, setUnits] = useState<UnitOpt[]>([]);
   const [xDesc, setXDesc] = useState("");
   const [xAmt, setXAmt] = useState("");
+  const [xKind, setXKind] = useState<"folio" | "fnb" | "other">("folio");
   const [done, setDone] = useState<Sale | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(() => {
     fetch(`/api/bookings/${id}`)
@@ -66,7 +78,15 @@ export function BookingDetail() {
   }, [id]);
   useEffect(() => load(), [load]);
 
+  useEffect(() => {
+    if (!b?.type) return;
+    fetch(`/api/booking-units?type=${b.type}`)
+      .then((r) => r.json())
+      .then((j) => j.success && setUnits(j.data ?? []));
+  }, [b?.type]);
+
   async function act(action: string, extra: Record<string, unknown> = {}) {
+    setErr(null);
     const j = await (
       await fetch(`/api/bookings/${id}`, {
         method: "POST",
@@ -74,7 +94,11 @@ export function BookingDetail() {
         body: JSON.stringify({ action, ...extra }),
       })
     ).json();
-    if (j.success && action !== "settle") setB(j.data);
+    if (!j.success) {
+      setErr(j.error || "Action failed");
+      return j;
+    }
+    if (action !== "settle") setB(j.data);
     return j;
   }
 
@@ -186,11 +210,39 @@ export function BookingDetail() {
         </div>
       )}
 
+      {err && (
+        <p className="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {err}
+        </p>
+      )}
+
       <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_340px]">
         <div className="rounded-xl border border-line bg-surface-1 p-4">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Customer" value={b.customer} onCommit={(v) => act("meta", { meta: { customer: v } })} />
             <Field label="Phone" value={b.phone} onCommit={(v) => act("meta", { meta: { phone: v } })} />
+            <label className="text-sm col-span-2">
+              <span className="mb-1 block text-text-dim">
+                {cfg.subjectLabel} inventory
+              </span>
+              <select
+                value={b.unitId ?? ""}
+                onChange={(e) =>
+                  void act("meta", {
+                    meta: { unitId: e.target.value || null },
+                  })
+                }
+                className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+              >
+                <option value="">— Free text / no unit —</option>
+                {units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.status.replaceAll("_", " ")}) ·{" "}
+                    {formatMoney(u.rate)}
+                  </option>
+                ))}
+              </select>
+            </label>
             <Field label={cfg.subjectLabel} value={b.subject} onCommit={(v) => act("meta", { meta: { subject: v } })} />
             <NumField label={cfg.rateLabel} value={b.rate} onCommit={(v) => act("meta", { meta: { rate: v } })} />
             <DateField label="From" value={b.startDate} onCommit={(v) => act("meta", { meta: { startDate: v } })} />
@@ -202,8 +254,17 @@ export function BookingDetail() {
               onCommit={(v) => act("meta", { meta: { overdueFee: Number(v) || 0 } })}
             />
           </div>
-          <div className="mt-3">
-            <span className="mb-1 block text-sm text-text-dim">Status</span>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {b.status === "booked" && (
+              <button
+                type="button"
+                onClick={() => void act("checkIn")}
+                className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink"
+              >
+                Check in
+              </button>
+            )}
+            <span className="text-sm text-text-dim">Status</span>
             <div className="flex gap-1">
               {BOOKING_STATUSES.map((s) => (
                 <button
@@ -268,15 +329,27 @@ export function BookingDetail() {
             </div>
           )}
 
-          {/* Extras */}
           <div className="mt-4 border-t border-line pt-4">
-            <p className="mb-2 text-sm font-medium text-text-strong">Extras</p>
-            <div className="flex gap-2">
+            <p className="mb-2 text-sm font-medium text-text-strong">
+              Folio extras
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={xKind}
+                onChange={(e) =>
+                  setXKind(e.target.value as "folio" | "fnb" | "other")
+                }
+                className="rounded-lg border border-line bg-surface-2 px-2 py-2 text-sm outline-none focus:border-accent"
+              >
+                <option value="folio">Folio</option>
+                <option value="fnb">F&amp;B</option>
+                <option value="other">Other</option>
+              </select>
               <input
                 value={xDesc}
                 onChange={(e) => setXDesc(e.target.value)}
-                placeholder="e.g. Room service"
-                className="flex-1 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-text-strong outline-none focus:border-accent"
+                placeholder="e.g. Mini bar"
+                className="min-w-[8rem] flex-1 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm text-text-strong outline-none focus:border-accent"
               />
               <input
                 type="number"
@@ -288,7 +361,11 @@ export function BookingDetail() {
               <button
                 onClick={async () => {
                   if (!xDesc.trim()) return;
-                  await act("addExtra", { description: xDesc.trim(), amount: Number(xAmt) || 0 });
+                  await act("addExtra", {
+                    description: xDesc.trim(),
+                    amount: Number(xAmt) || 0,
+                    kind: xKind,
+                  });
                   setXDesc("");
                   setXAmt("");
                 }}
@@ -301,7 +378,10 @@ export function BookingDetail() {
               <ul className="mt-2 space-y-1">
                 {b.extras.map((e) => (
                   <li key={e.id} className="flex items-center justify-between text-sm">
-                    <span className="text-text-body">{e.description}</span>
+                    <span className="text-text-body">
+                      {e.kind === "fnb" ? "F&B · " : ""}
+                      {e.description}
+                    </span>
                     <span className="flex items-center gap-2">
                       <span className="text-text-strong">{formatMoney(e.amount)}</span>
                       <button

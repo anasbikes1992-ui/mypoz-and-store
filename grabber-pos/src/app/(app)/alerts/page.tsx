@@ -12,11 +12,26 @@ interface AlertItem {
   quantity: number;
   expireDate: string | null;
 }
+
+interface OpsAlertItem {
+  id: string;
+  kind: string;
+  title: string;
+  detail: string;
+  severity: "warn" | "danger";
+}
+
 interface AlertsData {
   lowStock: AlertItem[];
   expiring: AlertItem[];
   expired: AlertItem[];
-  counts: { lowStock: number; expiring: number; expired: number };
+  operational: OpsAlertItem[];
+  counts: {
+    lowStock: number;
+    expiring: number;
+    expired: number;
+    operational: number;
+  };
 }
 
 export default function AlertsPage() {
@@ -34,13 +49,52 @@ export default function AlertsPage() {
     <div className="mx-auto max-w-4xl px-6 py-8">
       <ModuleHeader
         title="Alerts"
-        subtitle="Low stock, expiring and expired items"
+        subtitle="Stock, expiry, hire-purchase, and job SLA"
       />
 
       {loading || !data ? (
         <p className="mt-10 text-center text-sm text-text-dim">Loading…</p>
       ) : (
         <div className="mt-8 space-y-8">
+          {data.operational.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-text-strong">
+                Operational ({data.counts.operational})
+              </h2>
+              <ul className="space-y-2">
+                {data.operational.map((a) => (
+                  <li
+                    key={`${a.kind}-${a.id}`}
+                    className={`rounded-xl border px-4 py-3 text-sm ${
+                      a.severity === "danger"
+                        ? "border-danger/40 bg-danger/10"
+                        : "border-warn/40 bg-warn/10"
+                    }`}
+                  >
+                    <p className="font-medium text-text-strong">{a.title}</p>
+                    <p className="text-xs text-text-dim">{a.detail}</p>
+                    {a.kind === "hp-overdue" && (
+                      <Link
+                        href="/hire-purchase"
+                        className="mt-1 inline-block text-xs text-accent hover:underline"
+                      >
+                        Open hire purchase
+                      </Link>
+                    )}
+                    {a.kind === "job-overdue" && (
+                      <Link
+                        href="/repair"
+                        className="mt-1 inline-block text-xs text-accent hover:underline"
+                      >
+                        Open jobs
+                      </Link>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <AlertGroup
             title="Expired"
             tone="danger"
@@ -81,41 +135,30 @@ function AlertGroup({
   items: AlertItem[];
   render: (i: AlertItem) => string;
 }) {
-  const color = tone === "danger" ? "text-danger" : "text-warn";
-  const bg = tone === "danger" ? "bg-danger/15" : "bg-warn/15";
+  if (count === 0) return null;
   return (
     <section>
-      <div className="mb-3 flex items-center gap-2">
-        <h2 className="text-sm font-medium text-text-strong">{title}</h2>
-        <span className={`rounded-full px-2 py-0.5 text-xs ${bg} ${color}`}>
-          {count}
-        </span>
-      </div>
-      {items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-text-dim">
-          Nothing here — all good.
-        </p>
-      ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-1">
-          {items.map((i, idx) => (
-            <motion.li
-              key={i.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: Math.min(idx * 0.01, 0.2) }}
-              className="flex items-center justify-between px-5 py-2.5 text-sm"
-            >
-              <Link
-                href="/products"
-                className="text-text-strong transition hover:text-accent"
-              >
-                {i.name}
-              </Link>
-              <span className={color}>{render(i)}</span>
-            </motion.li>
-          ))}
-        </ul>
-      )}
+      <h2
+        className={`mb-3 text-sm font-semibold ${tone === "danger" ? "text-danger" : "text-warn"}`}
+      >
+        {title} ({count})
+      </h2>
+      <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface-1">
+        {items.slice(0, 20).map((i, idx) => (
+          <motion.li
+            key={i.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: Math.min(idx * 0.02, 0.2) }}
+            className="flex items-center justify-between px-5 py-3 text-sm"
+          >
+            <Link href={`/products`} className="font-medium text-text-strong hover:text-accent">
+              {i.name}
+            </Link>
+            <span className="text-text-dim">{render(i)}</span>
+          </motion.li>
+        ))}
+      </ul>
     </section>
   );
 }

@@ -113,8 +113,25 @@ No P1 gaps remain open. All prior backlog rows below are closed.
 15. ~~Fiscal / e-invoice hooks~~ ✅ (stub)  
 16. ~~PII retention purge~~ ✅  
 
-Next work is production cutover (real Supabase / WhatsApp / printers) and optional
-polish of thin vertical boards — see FEATURE-PLAN §7 P5–P8.
+Next work is production cutover (real Supabase / WhatsApp / printers). Optional
+polish: CRM lite mass-send, Agreement screen, live courier/telco APIs — see FEATURE-PLAN §7 P5–P8.
+
+**Wave 1 verticals (2026-08)** ✅  
+- Wholesale: customer `priceTier` (retail/wholesale/vip), product `vipPrice` + `minWholesaleQty`, MOQ warnings + qty presets, credit limit on bill, HQ `wholesaleEnabled` gates launcher/`/pos`  
+- Rooms/Rent: booking units inventory, occupancy board, date conflict checks, check-in, folio/F&B extras, housekeeping dirty→clean  
+- Retail: pricing-mode banner, licence-expired + register-closed banners, Take payment blocked when licence expired  
+- Tests: `src/lib/__tests__/verticals-wave1.test.ts`; e2e paths `/pos?mode=wholesale`, `/rooms`, `/rent`  
+- Migration: `0022_wholesale_tiers.sql` (`vip_price`, `min_wholesale_qty`)
+
+**Wave 2–4 verticals (2026-08)** ✅  
+- Repair/Service: SLA `dueAt`, status/overdue filters, deposit + diagnosis + WA status copy  
+- Restaurant: floor grouped by table area; pay-by-seat partial settle  
+- Delivery: status filters, driver active-load summary, drivers page workload  
+- Hire purchase: installment due day (Settings), overdue days on list + Alerts  
+- Play: zones + max capacity (Settings), capacity block on check-in  
+- Reloads: provider list from Settings (not hardcoded)  
+- Alerts API/page: stock + expiry + HP/job operational alerts unified  
+- Tests: `src/lib/__tests__/verticals-wave2.test.ts`; e2e `/repair`, `/delivery`, `/hire-purchase`
 
 **Sprint 4 product ideas (partial)**  
 - Digital Mode ✅ `/digital` (catalog + custom-line settle + WA/email delivery)  

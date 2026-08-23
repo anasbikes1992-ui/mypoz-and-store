@@ -205,3 +205,21 @@ export async function markSent(
 export async function clearOrder(tableId: string): Promise<void> {
   await store.remove(tableId);
 }
+
+/** Remove lines for one seat and return them for partial settle. */
+export async function extractSeatLines(
+  tableId: string,
+  seat: number,
+): Promise<{ order: Order | null; lines: OrderLine[] }> {
+  const extracted: OrderLine[] = [];
+  const order = await mutate(tableId, (o) => {
+    const keep: OrderLine[] = [];
+    for (const l of o.lines) {
+      if (l.seat === seat) extracted.push(l);
+      else keep.push(l);
+    }
+    if (keep.length === 0) return null;
+    return { ...o, lines: keep };
+  });
+  return { order, lines: extracted };
+}

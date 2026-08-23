@@ -60,7 +60,10 @@ export async function POST(
     switch (body.action) {
       case "meta":
         return ok(
-          await updateMeta(id, (body.meta ?? {}) as { status?: JobStatus }),
+          await updateMeta(
+            id,
+            (body.meta ?? {}) as Parameters<typeof updateMeta>[1],
+          ),
         );
       case "addPart":
         if (!body.productId) return fail("productId is required");

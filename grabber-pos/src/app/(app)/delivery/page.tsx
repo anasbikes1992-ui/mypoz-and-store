@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -28,18 +28,45 @@ const STATUS_TONE: Record<string, string> = {
   delivered: "bg-surface-3 text-text-dim",
 };
 
+const STATUS_FILTERS = ["active", "new", "preparing", "out", "delivered", "all"] as const;
+
 export default function DeliveryPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<DeliveryOrder[]>([]);
+  const [drivers, setDrivers] = useState<{ id: string; name?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [statusFilter, setStatusFilter] =
+    useState<(typeof STATUS_FILTERS)[number]>("active");
 
   useEffect(() => {
-    fetch("/api/delivery/orders")
-      .then((r) => r.json())
-      .then((j) => j.success && setOrders(j.data))
+    Promise.all([
+      fetch("/api/delivery/orders").then((r) => r.json()),
+      fetch("/api/collections/drivers").then((r) => r.json()),
+    ])
+      .then(([o, d]) => {
+        if (o.success) setOrders(o.data);
+        if (d.success) setDrivers(d.data);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const visible = useMemo(() => {
+    if (statusFilter === "all") return orders;
+    if (statusFilter === "active") {
+      return orders.filter((o) => o.status !== "delivered");
+    }
+    return orders.filter((o) => o.status === statusFilter);
+  }, [orders, statusFilter]);
+
+  const driverLoad = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const o of orders) {
+      if (o.status === "delivered" || !o.driver) continue;
+      map.set(o.driver, (map.get(o.driver) ?? 0) + 1);
+    }
+    return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }, [orders]);
 
   async function newOrder() {
     setCreating(true);
@@ -51,15 +78,15 @@ export default function DeliveryPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <ModuleHeader
-        title="Delivery"
-        subtitle="Orders out for delivery"
+        title="Delivery hub"
+        subtitle="Orders, drivers, and fulfilment status"
         actions={
           <div className="flex gap-2">
             <Link
               href="/drivers"
               className="rounded-lg border border-line px-4 py-2 text-sm text-text-dim transition hover:border-accent hover:text-accent"
             >
-              Drivers
+              Drivers ({drivers.length})
             </Link>
             <button
               onClick={newOrder}
@@ -72,15 +99,45 @@ export default function DeliveryPage() {
         }
       />
 
+      {driverLoad.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {driverLoad.map(([name, count]) => (
+            <span
+              key={name}
+              className="rounded-full border border-line bg-surface-1 px-3 py-1 text-xs text-text-body"
+            >
+              🛵 {name} · {count} active
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {STATUS_FILTERS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => setStatusFilter(s)}
+            className={`rounded-lg border px-3 py-1.5 text-sm capitalize transition ${
+              statusFilter === s
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-line text-text-dim hover:border-accent hover:text-accent"
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="mt-10 text-center text-sm text-text-dim">Loading…</p>
-      ) : orders.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="mt-10 rounded-xl border border-dashed border-line p-10 text-center text-sm text-text-dim">
-          No active deliveries. Start a new one.
+          No deliveries in this view.
         </p>
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {orders.map((o, i) => (
+          {visible.map((o, i) => (
             <motion.div
               key={o.id}
               initial={{ opacity: 0, y: 12 }}

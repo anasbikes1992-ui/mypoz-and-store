@@ -9,11 +9,17 @@ import {
   effectivePrice,
   catalogPrice,
   isPriceOverridden,
+  lineMoqWarnings,
 } from "@/lib/store/cart-store";
 import { formatMoney } from "@/lib/format";
 import { saleToTicketText } from "@/lib/receipt";
 import { CustomerPicker } from "@/components/pos/CustomerPicker";
 import { enqueueFailedSale } from "@/lib/offline-queue";
+import {
+  PRICE_TIER_LABELS,
+  WHOLESALE_QTY_PRESETS,
+  resolveActiveTier,
+} from "@/lib/pricing-tiers";
 import type { PaymentMethod, Sale } from "@/lib/types";
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
@@ -87,6 +93,18 @@ function isTypingTarget(el: EventTarget | null): boolean {
 export function BillPanel() {
   const store = useCartStore();
   const totals = cartTotals(store);
+  const tier = store.customerPriceTier;
+  const px = (l: (typeof store.lines)[0]) =>
+    effectivePrice(l, store.isWholesale, tier);
+  const cat = (l: (typeof store.lines)[0]) =>
+    catalogPrice(l, store.isWholesale, tier);
+  const isOver = (l: (typeof store.lines)[0]) =>
+    isPriceOverridden(l, store.isWholesale, tier);
+  const moqWarn = lineMoqWarnings(store.lines, store.isWholesale, tier);
+  const activeTier = resolveActiveTier({
+    isWholesaleMode: store.isWholesale,
+    customerTier: tier,
+  });
   const reducedMotion = useReducedMotion();
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [customerPaid, setCustomerPaid] = useState("");
@@ -115,6 +133,8 @@ export function BillPanel() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [expandedLine, setExpandedLine] = useState<string | null>(null);
+  const [licenceExpired, setLicenceExpired] = useState(false);
+  const [registerOpen, setRegisterOpen] = useState<boolean | null>(null);
 
   const customerNameRef = useRef<HTMLInputElement>(null);
   const employeeRef = useRef<HTMLInputElement>(null);
@@ -141,6 +161,18 @@ export function BillPanel() {
         if (j.success && Array.isArray(j.data)) setCurrencies(j.data);
       })
       .catch(() => undefined);
+    fetch("/api/tenant")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data?.expired) setLicenceExpired(true);
+      })
+      .catch(() => undefined);
+    fetch("/api/register")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success) setRegisterOpen(Boolean(j.data?.open));
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -154,7 +186,7 @@ export function BillPanel() {
             name: l.name,
             qty: l.quantity,
             amount:
-              (effectivePrice(l, store.isWholesale) - l.discount) * l.quantity,
+              (px(l) - l.discount) * l.quantity,
           })),
         }),
       );
@@ -345,12 +377,12 @@ export function BillPanel() {
     if (!line) return;
     const next = Number(raw);
     if (Number.isNaN(next) || next < 0) return;
-    const current = effectivePrice(line, store.isWholesale);
+    const current = px(line);
     if (Math.abs(next - current) < 0.001) return;
 
     // Custom lines: free override. Stock: PIN when leaving catalog price.
     if (!line.custom) {
-      const catalog = catalogPrice(line, store.isWholesale);
+      const catalog = cat(line);
       if (Math.abs(next - catalog) > 0.001) {
         const ok = await verifyManagerPin(
           "Manager PIN required for price override",
@@ -377,7 +409,7 @@ export function BillPanel() {
           l.discount > 0,
       );
     const needsPricePin = store.lines.some((l) =>
-      isPriceOverridden(l, store.isWholesale),
+      isOver(l),
     );
     if (!needsDiscountPin && !needsPricePin) return true;
     const reason = [
@@ -404,6 +436,10 @@ export function BillPanel() {
 
   const proceed = useCallback(async () => {
     if (store.lines.length === 0) return;
+    if (licenceExpired) {
+      setError("Licence expired — renew before selling");
+      return;
+    }
     if (method === "cash" && paid < chargedTotal) {
       setError("Customer paid is less than the total");
       return;
@@ -427,15 +463,15 @@ export function BillPanel() {
 
     const saleBody = {
       lines: store.lines.map((l) => {
-        const price = effectivePrice(l, store.isWholesale);
-        const overridden = isPriceOverridden(l, store.isWholesale);
+        const price = px(l);
+        const priceOverridden = isOver(l);
         const variant = isVariantLine(l.productId);
         return {
           productId: l.productId,
           quantity: l.quantity,
           discount: l.discount,
           name: l.custom || variant ? l.name : undefined,
-          unitPrice: l.custom || overridden || variant ? price : undefined,
+          unitPrice: l.custom || priceOverridden || variant ? price : undefined,
           custom: l.custom || undefined,
           serial: l.serial || undefined,
           modifiers: l.modifiers,
@@ -520,6 +556,7 @@ export function BillPanel() {
     pointsUsed,
     finalPct,
     trainingMode,
+    licenceExpired,
   ]);
 
   async function holdCurrentBill() {
@@ -540,6 +577,8 @@ export function BillPanel() {
           employee: store.employee,
           customerId: store.customerId,
           customerPoints: store.customerPoints,
+          customerPriceTier: store.customerPriceTier,
+          customerCreditLimit: store.customerCreditLimit,
           lines: store.lines,
         }),
       });
@@ -716,6 +755,37 @@ export function BillPanel() {
           Training — sales not stocked
         </div>
       )}
+      {licenceExpired && (
+        <div className="border-b border-danger/40 bg-danger/15 px-3 py-1.5 text-center text-[11px] font-medium text-danger">
+          Licence expired — renew in Admin / Billing before selling
+        </div>
+      )}
+      {registerOpen === false && (
+        <div className="border-b border-warn/30 bg-warn/10 px-3 py-1.5 text-center text-[11px] text-warn">
+          Register shift is closed — open a shift on Register for cash control
+        </div>
+      )}
+      <div
+        className={`border-b px-3 py-1 text-center text-[10px] font-semibold uppercase tracking-wide ${
+          activeTier === "retail"
+            ? "border-line bg-surface-2 text-text-dim"
+            : "border-accent/30 bg-accent/10 text-accent"
+        }`}
+      >
+        {PRICE_TIER_LABELS[activeTier]} pricing
+        {store.isWholesale ? " · wholesale mode" : " · retail mode"}
+        {store.customerCreditLimit > 0
+          ? ` · credit limit ${formatMoney(store.customerCreditLimit)}`
+          : ""}
+      </div>
+      {moqWarn.length > 0 && (
+        <div className="border-b border-warn/30 bg-warn/10 px-3 py-1.5 text-[11px] text-warn">
+          MOQ:{" "}
+          {moqWarn
+            .map((w) => `${w.name} needs ${w.moq}+ (short ${w.need})`)
+            .join(" · ")}
+        </div>
+      )}
       <div className="pos-ticket-head flex items-center justify-between gap-2 px-3 py-2">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-text-dim">
@@ -794,7 +864,7 @@ export function BillPanel() {
             {store.lines.map((l) => {
               const open = expandedLine === l.productId;
               const lineTotal =
-                (effectivePrice(l, store.isWholesale) - l.discount) * l.quantity;
+                (px(l) - l.discount) * l.quantity;
               return (
                 <li key={l.productId} className="py-1.5">
                   <div className="flex items-baseline gap-2">
@@ -841,12 +911,23 @@ export function BillPanel() {
                           store.setQuantity(l.productId, l.quantity + 1)
                         }
                       />
+                      {activeTier !== "retail" &&
+                        WHOLESALE_QTY_PRESETS.map((q) => (
+                          <button
+                            key={q}
+                            type="button"
+                            onClick={() => store.setQuantity(l.productId, q)}
+                            className="rounded border border-line px-1.5 py-0.5 text-[10px] text-text-dim hover:border-accent hover:text-accent"
+                          >
+                            {q}
+                          </button>
+                        ))}
                       <input
                         type="number"
                         min={0}
                         step="0.01"
-                        defaultValue={effectivePrice(l, store.isWholesale)}
-                        key={`${l.productId}-${store.isWholesale}-${effectivePrice(l, store.isWholesale)}-${priceEditNonce}`}
+                        defaultValue={px(l)}
+                        key={`${l.productId}-${store.isWholesale}-${tier ?? ""}-${px(l)}-${priceEditNonce}`}
                         onBlur={(e) =>
                           void applyUnitPrice(l.productId, e.target.value)
                         }
@@ -858,7 +939,7 @@ export function BillPanel() {
                         title="Unit price (PIN required to override catalog)"
                         aria-label={`Unit price for ${l.name}`}
                         className={`w-20 rounded border bg-surface-1 px-2 py-1 font-mono text-xs tabular-nums outline-none focus:border-accent ${
-                          isPriceOverridden(l, store.isWholesale)
+                          isOver(l)
                             ? "border-warn text-warn"
                             : "border-line"
                         }`}
@@ -1043,14 +1124,21 @@ export function BillPanel() {
         </div>
 
         {!payOpen ? (
-          <button
-            type="button"
-            disabled={store.lines.length === 0}
-            onClick={() => setPayOpen(true)}
-            className="mt-3 w-full rounded-xl bg-accent py-3.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Take payment
-          </button>
+          <>
+            {licenceExpired && (
+              <p className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-2 py-1.5 text-[11px] text-danger">
+                Selling is blocked until the licence is renewed.
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={store.lines.length === 0 || licenceExpired}
+              onClick={() => setPayOpen(true)}
+              className="mt-3 w-full rounded-xl bg-accent py-3.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Take payment
+            </button>
+          </>
         ) : (
           <div className="mt-3 space-y-2 border-t border-dashed border-line pt-3">
             <div className="flex items-center justify-between">
@@ -1094,9 +1182,18 @@ export function BillPanel() {
                             Member −{store.memberDiscountPercent}%
                           </span>
                         )}
+                        {store.customerPriceTier &&
+                          store.customerPriceTier !== "retail" && (
+                            <span className="ml-2 rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                              {PRICE_TIER_LABELS[store.customerPriceTier]}
+                            </span>
+                          )}
                       </p>
                       <p className="text-xs text-text-dim">
                         {store.customerMobile} · {store.customerPoints} points
+                        {store.customerCreditLimit > 0
+                          ? ` · credit ${formatMoney(store.customerCreditLimit)}`
+                          : ""}
                       </p>
                     </div>
                     <button

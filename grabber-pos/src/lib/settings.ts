@@ -82,6 +82,41 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
     ],
   },
   {
+    label: "Repair & service",
+    requiresAny: ["repair", "service"],
+    fields: [
+      { key: "jobSlaDays", label: "Default SLA (days)", type: "number" },
+    ],
+  },
+  {
+    label: "Hire purchase",
+    requiresAny: ["hire-purchase"],
+    fields: [
+      { key: "hpDueDayOfMonth", label: "Installment due day (1–28)", type: "number" },
+    ],
+  },
+  {
+    label: "Play area",
+    requiresAny: ["play"],
+    fields: [
+      { key: "playZones", label: "Zones (comma-separated)", type: "text", full: true },
+      { key: "playMaxCapacity", label: "Max children on floor", type: "number" },
+      { key: "playDefaultRate", label: "Default rate / hour (LKR)", type: "number" },
+    ],
+  },
+  {
+    label: "Mobile reloads",
+    requiresAny: ["reloads"],
+    fields: [
+      {
+        key: "reloadProviders",
+        label: "Providers (comma-separated)",
+        type: "text",
+        full: true,
+      },
+    ],
+  },
+  {
     label: "Email (Resend)",
     fields: [
       { key: "resendFromEmail", label: "From address (e.g. MyPoz Store <noreply@yourdomain.com>)", type: "text", full: true },
@@ -142,6 +177,15 @@ export const settingsSchema = z.object({
   socialWhatsapp: z.string().max(30).default(""),
   resendFromEmail: z.string().max(200).default(""),
   resendReplyTo: z.string().max(120).default(""),
+  jobSlaDays: z.coerce.number().int().min(1).max(90).default(3),
+  hpDueDayOfMonth: z.coerce.number().int().min(1).max(28).default(1),
+  playZones: z.string().max(300).default("Main floor,Party room"),
+  playMaxCapacity: z.coerce.number().int().min(1).max(500).default(20),
+  playDefaultRate: z.coerce.number().min(0).default(500),
+  reloadProviders: z
+    .string()
+    .max(300)
+    .default("Dialog,Mobitel,Hutch,Airtel"),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

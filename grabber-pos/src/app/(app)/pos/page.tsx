@@ -22,6 +22,27 @@ function PosWorkspace() {
   const isWholesale = useCartStore((s) => s.isWholesale);
   const setWholesale = useCartStore((s) => s.setWholesale);
   const categoryMode = params.get("mode") === "category";
+  const [wholesaleAllowed, setWholesaleAllowed] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/tenant")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data?.wholesaleEnabled === false) {
+          setWholesaleAllowed(false);
+          setWholesale(false);
+        }
+      })
+      .catch(() => undefined);
+  }, [setWholesale]);
+
+  useEffect(() => {
+    if (!wholesaleAllowed && params.get("mode") === "wholesale") {
+      setWholesale(false);
+    } else if (params.get("mode") === "wholesale") {
+      setWholesale(true);
+    }
+  }, [params, setWholesale, wholesaleAllowed]);
 
   const [variantPick, setVariantPick] = useState<{
     product: Product;
@@ -30,10 +51,6 @@ function PosWorkspace() {
   const [opt1, setOpt1] = useState<string | null>(null);
   const [opt2, setOpt2] = useState<string | null>(null);
   const [opt3, setOpt3] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (params.get("mode") === "wholesale") setWholesale(true);
-  }, [params, setWholesale]);
 
   useEffect(() => {
     const customer = params.get("customer");
@@ -168,29 +185,35 @@ function PosWorkspace() {
             Scan · tap · Take payment
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-xs">
-          <span className={isWholesale ? "text-text-dim" : "text-accent"}>
-            Retail
-          </span>
-          <button
-            role="switch"
-            aria-checked={isWholesale}
-            aria-label="Toggle wholesale pricing"
-            onClick={() => setWholesale(!isWholesale)}
-            className={`relative h-5 w-9 rounded-full transition ${
-              isWholesale ? "bg-accent" : "bg-surface-3"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 h-4 w-4 rounded-full bg-accent-ink transition-all ${
-                isWholesale ? "left-[18px]" : "left-0.5"
+        {wholesaleAllowed ? (
+          <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-1.5 text-xs">
+            <span className={isWholesale ? "text-text-dim" : "text-accent"}>
+              Retail
+            </span>
+            <button
+              role="switch"
+              aria-checked={isWholesale}
+              aria-label="Toggle wholesale pricing"
+              onClick={() => setWholesale(!isWholesale)}
+              className={`relative h-5 w-9 rounded-full transition ${
+                isWholesale ? "bg-accent" : "bg-surface-3"
               }`}
-            />
-          </button>
-          <span className={isWholesale ? "text-accent" : "text-text-dim"}>
-            Wholesale
-          </span>
-        </div>
+            >
+              <span
+                className={`absolute top-0.5 h-4 w-4 rounded-full bg-accent-ink transition-all ${
+                  isWholesale ? "left-[18px]" : "left-0.5"
+                }`}
+              />
+            </button>
+            <span className={isWholesale ? "text-accent" : "text-text-dim"}>
+              Wholesale
+            </span>
+          </div>
+        ) : (
+          <p className="rounded-lg border border-line px-3 py-1.5 text-xs text-text-dim">
+            Retail only
+          </p>
+        )}
       </div>
 
       {categoryMode && (

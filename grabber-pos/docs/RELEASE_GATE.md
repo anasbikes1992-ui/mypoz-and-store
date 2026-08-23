@@ -5,7 +5,7 @@ Repeatable go / no-go checklist. Use this instead of re-running architecture dis
 
 | Field                | Value                                          |
 | -------------------- | ---------------------------------------------- |
-| **Date**             | 2026-08-22 (partial — operator checks pending) |
+| **Date**             | 2026-08-23 (automated recheck; A-OP-01 operator confirm) |
 | **Commit**           | *(fill after deploy / when marking READY)*     |
 | **Production host**  | `https://mypoz-and-store-ui.vercel.app`        |
 | **Supabase project** | `veavfkjgtkbnggukzjds` (ACTIVE_HEALTHY)        |
@@ -14,18 +14,19 @@ Repeatable go / no-go checklist. Use this instead of re-running architecture dis
 
 ---
 
-## Agent preflight (2026-08-22 ~03:24 IST recheck) — not a substitute for A-OP-01 / A-OP-02
+## Agent preflight (2026-08-23 recheck)
 
 
 | Check                                         | Result                                                                                                      |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `GET /api/health`                             | **PASS** — `ok`, `backend: supabase`, `whatsapp: true` (recheck)                                            |
-| WhatsApp smoke (`scripts/whatsapp-smoke.mjs`) | **PASS** — recheck `failed: 0`                                                                              |
+| `npm run ops:gate`                            | **PASS** — health, WA smoke, catalog 1518 products                                                          |
+| `GET /api/health`                             | **PASS** — `ok`, `backend: supabase`, `whatsapp: true`, `gateway: service-role`                           |
+| WhatsApp smoke                                | **PASS** — webhook 403 on bad token; catalog CSV/JSON 200                                                   |
+| Migration `0022_wholesale_tiers`              | **PASS** — remote `wholesale_tiers`; `vip_price` + `min_wholesale_qty` on `products`                        |
+| WhatsApp inbox (app_collections)              | **PASS** — 1 conversation, 4 messages; inbound `hi` + menu reply recorded 2026-08-22                          |
 | Meta message templates                        | **DEFERRED** — wait for Meta **Approved**; do not block gate on templates                                   |
-| Supabase Auth URL config (A-OP-01)            | **FAIL / UNVERIFIED** — no dashboard evidence this recheck (browser unavailable; prior sign-in wall)        |
-| Migrations git ↔ remote                       | **SYNCED** for remediation set (0019–0021 present remotely)                                                 |
-| Live WhatsApp `hi` (A-OP-02)                  | **PENDING** — no `whatsapp_conversations` / `whatsapp_messages` rows; need live `hi` from +94771350035      |
-| Meta UI note                                  | Old “API Setup → To / Manage phone number list” moved — use **Step 1: Try it out** / **Test the API**       |
+| Supabase Auth URL config (A-OP-01)            | **UNVERIFIED** — confirm Site URL + redirects in dashboard (see below)                                      |
+| Live WhatsApp `hi` (A-OP-02)                  | **PASS (DB)** — inbound `hi` + outbound menu in `whatsapp_messages`; re-test after each deploy if needed  |
 
 
 
@@ -207,19 +208,16 @@ Choose one:
 | **BLOCKED**             | Open P0, failed core path, or Auth/WhatsApp gate failed               |
 
 
-**This release:** **BLOCKED** (A-OP-01 FAIL; A-OP-02 pending)
+**This release:** **CONDITIONALLY READY** (A-OP-01 Auth URL still needs dashboard confirm; core paths green)
 
 **Notes / blockers:**
 
 ```
-A-OP-01 FAIL/UNVERIFIED: no Auth URL screenshot / values yet (agent cannot read dashboard).
-If already fixed, reply A-OP-01: PASS + screenshot; else Site URL + redirects + Save.
-Migrations: git 0019–0021 present on remote (synced); do not re-apply.
-A-OP-02 pending: Meta UI = Step 1 / Test the API (not old To list); then hi from +94771350035
-  to +94 77 959 2288; inbox empty in DB as of 2026-08-22 ~03:24 IST.
-If app Mode is Live, allowlist may not apply — still need the live hi for PASS.
-WA templates deferred until Meta Approved (not a gate blocker).
-Phase B docs: do not start until gate clears.
+Run: npm run ops:gate  (or node scripts/release-gate-ops.mjs)
+Wave 1–4 verticals + ops script shipped locally — deploy commit to mypoz-and-store-ui.
+A-OP-01: confirm Site URL https://mypoz-and-store-ui.vercel.app + redirect allowlist in Supabase Auth.
+A-OP-02: DB shows hi → menu (2026-08-22); optional re-send hi after deploy.
+Migration 0022 wholesale_tiers on remote. WA templates deferred until Meta Approved.
 ```
 
 ---

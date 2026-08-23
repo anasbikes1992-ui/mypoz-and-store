@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createSale } from "@/lib/server/sales-repo";
 import { listReloads, logReload } from "@/lib/server/reload-store";
+import { readSettings } from "@/lib/server/settings-store";
+import { parseCsvList } from "@/lib/hp-math";
 
 const schema = z.object({
   provider: z.string().min(1, "Provider is required").max(60),
@@ -10,8 +12,14 @@ const schema = z.object({
 });
 
 export async function GET() {
+  const settings = await readSettings();
+  const providers = parseCsvList(settings.reloadProviders);
   const reloads = await listReloads();
-  return NextResponse.json({ success: true, data: reloads, error: null });
+  return NextResponse.json({
+    success: true,
+    data: { reloads, providers },
+    error: null,
+  });
 }
 
 export async function POST(req: NextRequest) {

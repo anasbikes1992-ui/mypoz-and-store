@@ -25,15 +25,15 @@ engine specialized per vertical. This is the platform's defining feature.
 | Mode | Purpose | Vertical | Status |
 |------|---------|----------|--------|
 | Retail Mode | Standard barcode retail billing | shops | ✅ `/pos` |
-| Wholesale Mode | Wholesale pricing on shared terminal | wholesale | ✅ `/pos?mode=wholesale` |
+| Wholesale Mode | Customer tiers + MOQ on shared terminal | wholesale | ✅ `/pos?mode=wholesale` |
 | Category Sale Mode | Sell by category grid (no barcodes) | cafes, apparel | ✅ `/pos?mode=category` |
 | Restaurant Mode | Tables, KOT/BOT, courses | food & beverage | ✅ `/restaurant` + `/tables` + `/kds` |
 | Delivery Mode | Orders for delivery + driver assign | food, retail | ✅ `/delivery` + `/drivers` |
-| Repair Mode | Item repair intake → job → billing | electronics, phones | 🟡 `/repair` (JobBoard) |
-| Vehicle Service Mode | Vehicle service jobs + parts + labour | garages | 🟡 `/service` (JobBoard) |
+| Repair Mode | Item repair intake → job → billing | electronics, phones | ✅ `/repair` (SLA, filters, WA copy) |
+| Vehicle Service Mode | Vehicle service jobs + parts + labour | garages | ✅ `/service` (shared job engine) |
 | Reloads | Mobile top-ups / reload sales | comms shops | ✅ `/reloads` |
-| Room Management | Hotel/guesthouse room booking + billing | hospitality | 🟡 `/rooms` (BookingBoard) |
-| Rent Mode | Rental items, periods, returns, deposits | equipment rental | 🟡 `/rent` (BookingBoard) |
+| Room Management | Room units, occupancy, folio, housekeeping | hospitality | ✅ `/rooms` (BookingBoard + units) |
+| Rent Mode | Rental assets, periods, returns, deposits | equipment rental | ✅ `/rent` (shared booking engine) |
 | Hire Purchase | Installment sales + schedules | appliances, furniture | ✅ `/hire-purchase` |
 | Play Area | Time-based play sessions billing | kids play centres | ✅ `/play` |
 | Layaway | Deposits & holds | retail | ✅ `/layaway` |
@@ -106,8 +106,8 @@ Jobs ✅ · Register (open/close / X·Z) ✅.
 Income ✅ · Expenses ✅ · Cash In ✅ · Cash Out ✅ · Currency ✅.
 
 **Operations**
-Tables ✅ · Rooms 🟡 · Delivery + drivers ✅ · Play Area ✅ · Repair / Service 🟡 ·
-Hire Purchase ✅ · Rent 🟡 · Restaurant + KDS ✅ · Reloads ✅.
+Tables ✅ · Rooms ✅ · Delivery + drivers ✅ · Play Area ✅ · Repair / Service ✅ ·
+Hire Purchase ✅ · Rent ✅ · Restaurant + KDS ✅ · Reloads ✅.
 
 **Reports & system**
 Dashboard ✅ · Reports ✅ · Alerts ✅ · Audit log ✅ · Settings ✅ · Help & guides ✅ ·
@@ -175,7 +175,7 @@ salary, users/roles + permissions UI.
 
 **P4 Reports & dashboard** ✅ — dashboard, reports module, alerts, exports (deepen charts as needed).
 
-**P5 Verticals** 🟡 — Restaurant/KDS/delivery/reloads/hire/play ✅-ish; repair/service/rooms/rent thin boards; Digital ✅; Register/Other modes still ⬜. Memberships ✅ · CRM lite 🟡.
+**P5 Verticals** ✅ — Restaurant/KDS/delivery/reloads/hire/play hardened; **rooms/rent** Wave 1; **wholesale** Wave 1; **repair/service** Wave 2 (SLA, filters, WA stub); **restaurant** Wave 3 (floor by area, pay-by-seat); **delivery hub** Wave 3; **HP/play/reloads** Wave 4 (overdue alerts, zones/capacity, provider config). Digital ✅; Register/Other sale mode still ⬜. Memberships ✅ · CRM lite 🟡.
 
 **P6 Reselling** 🟡 — `/admin` branding & licence + gating; `/hq` fleet portal shipped; onboarding wizard present; Agreement polish open.
 
@@ -200,7 +200,7 @@ PRODUCTION / DEPLOYMENT / FEATURE-PLAN / PRODUCT-GAP / CREDENTIALS — in `docs/
 
 ## 9. Still worth a look (optional, to refine)
 
-Polish thin vertical boards (repair / service / rooms / rent), Agreement / Drivers hub,
+Polish CRM lite, Agreement / Drivers hub (basic load counts shipped),
 live payment/courier APIs if required, and collection → first-class schema where
 reporting demands it. Digital Mode ✅ · Memberships ✅ · CRM lite 🟡. Not blocking
 production cutover once credentials are in.

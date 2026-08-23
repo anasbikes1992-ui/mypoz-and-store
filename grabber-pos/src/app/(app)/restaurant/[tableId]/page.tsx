@@ -137,6 +137,22 @@ export default function TableOrderPage() {
     }
   }
 
+  async function settleSeat(seat: number, amount: number) {
+    setPending(true);
+    const j = await act("settleSeat", {
+      seat,
+      paymentMethod: "cash",
+      cashReceived: amount,
+    });
+    setPending(false);
+    if (j.success) {
+      setOrder(j.data.order);
+      setStatus(`Seat ${seat} paid — ${formatMoney(j.data.sale.total)}`);
+    } else {
+      setStatus(j.error ?? "Seat settle failed");
+    }
+  }
+
   async function printReceipt(sale: Sale) {
     await fetch("/api/print", {
       method: "POST",
@@ -307,7 +323,7 @@ export default function TableOrderPage() {
                 {seatTotals.map(([seat, amt]) => (
                   <div
                     key={String(seat)}
-                    className="flex justify-between text-xs text-text-body"
+                    className="mb-2 flex items-center justify-between gap-2 text-xs text-text-body"
                   >
                     <span>
                       {seat === "unassigned" ? "Unassigned" : `Seat ${seat}`}
@@ -315,6 +331,16 @@ export default function TableOrderPage() {
                     <span className="font-medium text-accent">
                       {formatMoney(amt)}
                     </span>
+                    {seat !== "unassigned" && (
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => settleSeat(seat as number, amt)}
+                        className="rounded border border-line px-2 py-0.5 text-[10px] uppercase transition hover:border-accent hover:text-accent disabled:opacity-40"
+                      >
+                        Pay seat
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

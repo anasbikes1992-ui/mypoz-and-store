@@ -16,6 +16,8 @@ interface Agreement {
   balance: number;
   installmentAmount: number;
   status: string;
+  nextDueAt?: string | null;
+  overdueDays?: number;
 }
 
 export default function HirePurchasePage() {
@@ -135,7 +137,22 @@ export default function HirePurchasePage() {
                   </p>
                   <p className="mt-1 text-xs text-text-dim">
                     {a.installments} installments · ~{formatMoney(a.installmentAmount)} each
+                    {a.nextDueAt && a.status !== "completed" && (
+                      <>
+                        {" "}
+                        · Due{" "}
+                        {new Date(a.nextDueAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </>
+                    )}
                   </p>
+                  {(a.overdueDays ?? 0) > 0 && (
+                    <p className="mt-1 text-xs font-medium text-danger">
+                      {a.overdueDays} day(s) overdue
+                    </p>
+                  )}
                 </div>
                 <div className="text-right text-sm">
                   <p className="text-text-dim">

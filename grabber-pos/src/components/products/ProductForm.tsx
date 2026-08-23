@@ -21,6 +21,8 @@ interface FormState {
   costPrice: string;
   salePrice: string;
   wholesalePrice: string;
+  vipPrice: string;
+  minWholesaleQty: string;
   maxDiscount: string;
   singleDiscount: string;
   quantity: string;
@@ -40,6 +42,11 @@ function toForm(p: Product | null): FormState {
     costPrice: p ? String(p.costPrice) : "",
     salePrice: p ? String(p.salePrice) : "",
     wholesalePrice: p?.wholesalePrice != null ? String(p.wholesalePrice) : "",
+    vipPrice: p?.vipPrice != null ? String(p.vipPrice) : "",
+    minWholesaleQty:
+      p?.minWholesaleQty != null && p.minWholesaleQty > 0
+        ? String(p.minWholesaleQty)
+        : "",
     maxDiscount: p ? String(p.maxDiscount) : "0",
     singleDiscount: p ? String(p.singleDiscount) : "0",
     quantity: p ? String(p.quantity) : "0",
@@ -119,6 +126,10 @@ export function ProductForm({
         costPrice: Number(form.costPrice) || 0,
         salePrice: Number(form.salePrice) || 0,
         wholesalePrice: form.wholesalePrice ? Number(form.wholesalePrice) : null,
+        vipPrice: form.vipPrice ? Number(form.vipPrice) : null,
+        minWholesaleQty: form.minWholesaleQty
+          ? Math.max(0, Math.floor(Number(form.minWholesaleQty) || 0))
+          : 0,
         maxDiscount: Number(form.maxDiscount) || 0,
         singleDiscount: Number(form.singleDiscount) || 0,
         quantity: Number(form.quantity) || 0,
@@ -181,6 +192,8 @@ export function ProductForm({
               <Num label="Cost price" value={form.costPrice} onChange={(v) => set("costPrice", v)} />
               <Num label="Sale price" value={form.salePrice} onChange={(v) => set("salePrice", v)} required />
               <Num label="Wholesale price" value={form.wholesalePrice} onChange={(v) => set("wholesalePrice", v)} />
+              <Num label="VIP price" value={form.vipPrice} onChange={(v) => set("vipPrice", v)} />
+              <Num label="Wholesale MOQ" value={form.minWholesaleQty} onChange={(v) => set("minWholesaleQty", v)} />
               <Num label="Quantity" value={form.quantity} onChange={(v) => set("quantity", v)} />
               <Num label="Max discount" value={form.maxDiscount} onChange={(v) => set("maxDiscount", v)} />
               <Num label="Default discount" value={form.singleDiscount} onChange={(v) => set("singleDiscount", v)} />

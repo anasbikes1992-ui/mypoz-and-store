@@ -9,6 +9,7 @@ import { recordStore } from "./persistence/record-store";
 export interface PlaySession {
   id: string;
   name: string;
+  zone: string;
   ratePerHour: number;
   startTime: string;
 }
@@ -39,10 +40,12 @@ export async function getSession(id: string): Promise<PlaySession | null> {
 export async function checkIn(
   name: string,
   ratePerHour: number,
+  zone = "Main floor",
 ): Promise<PlaySession> {
   const session: PlaySession = {
     id: "PLY-" + randomUUID().slice(0, 8),
     name: name.trim() || "Guest",
+    zone: zone.trim() || "Main floor",
     ratePerHour: Math.max(0, Number(ratePerHour) || 0),
     startTime: new Date().toISOString(),
   };

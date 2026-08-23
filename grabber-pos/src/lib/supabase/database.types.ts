@@ -55,6 +55,8 @@ type ProductRow = {
   cost_price: number;
   sale_price: number;
   wholesale_price: number | null;
+  vip_price: number | null;
+  min_wholesale_qty: number;
   max_discount: number;
   single_discount: number;
   reorder_level: number;

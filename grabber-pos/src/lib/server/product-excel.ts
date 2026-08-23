@@ -45,6 +45,11 @@ const HEADER_MAP: Record<string, keyof CanonRow> = {
   whp: "wholesalePrice",
   coopwholesaleprice: "wholesalePrice",
   // discounts
+  vipprice: "vipPrice",
+  vip: "vipPrice",
+  minwholesaleqty: "minWholesaleQty",
+  moq: "minWholesaleQty",
+  wholesalemoq: "minWholesaleQty",
   maxdiscount: "maxDiscount",
   maxdiscountamount: "maxDiscount",
   maximumdiscount: "maxDiscount",
@@ -86,6 +91,8 @@ interface CanonRow {
   costPrice?: unknown;
   salePrice?: unknown;
   wholesalePrice?: unknown;
+  vipPrice?: unknown;
+  minWholesaleQty?: unknown;
   maxDiscount?: unknown;
   singleDiscount?: unknown;
   quantity?: unknown;
@@ -181,6 +188,10 @@ export function parseProductsBuffer(buffer: Buffer): ImportResult {
       costPrice: num(canon.costPrice),
       salePrice: num(canon.salePrice),
       wholesalePrice: canon.wholesalePrice ? num(canon.wholesalePrice) : null,
+      vipPrice: canon.vipPrice ? num(canon.vipPrice) : null,
+      minWholesaleQty: canon.minWholesaleQty
+        ? Math.max(0, Math.round(num(canon.minWholesaleQty)))
+        : 0,
       maxDiscount: num(canon.maxDiscount),
       singleDiscount: num(canon.singleDiscount),
       quantity: num(canon.quantity),
@@ -205,6 +216,8 @@ const EXPORT_HEADERS = [
   ["Cost Price", "costPrice"],
   ["Sale Price", "salePrice"],
   ["Wholesale Price", "wholesalePrice"],
+  ["VIP Price", "vipPrice"],
+  ["Wholesale MOQ", "minWholesaleQty"],
   ["Max Discount", "maxDiscount"],
   ["Single Discount", "singleDiscount"],
   ["Quantity", "quantity"],

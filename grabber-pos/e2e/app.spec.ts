@@ -19,6 +19,12 @@ test.describe("signed-in critical path", () => {
   for (const path of [
     "/",
     "/pos",
+    "/pos?mode=wholesale",
+    "/rooms",
+    "/rent",
+    "/repair",
+    "/delivery",
+    "/hire-purchase",
     "/products",
     "/commerce",
     "/settings",
