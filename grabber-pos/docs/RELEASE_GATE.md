@@ -106,6 +106,8 @@ Object spot-check: `current_org_id()` present; `collection_matches_rules()` pres
 - [x] Production health green on correct host
 - [x] `GET /api/health` → ok
 - [x] Correct Vercel project: **mypoz-and-store-ui**
+- [x] Git push to `main` (`4294502` + verticals, `ff401dd` docs)
+- [ ] Vercel deploy of latest commit — **CLI blocked** on Hobby 12-function cap; confirm Git auto-deploy in dashboard
 - [ ] No secrets exposed *(ongoing)*
 
 
