@@ -13,11 +13,12 @@
 | `/api/payments/status` readiness probe | ✅ |
 | `/api/pos/pay` card checkout | ✅ |
 | POS BillPanel card → pending → form POST | ✅ |
-| Staging keys in `.env.local` | ❌ **MISSING** (file only has DB password) |
-| Staging keys on Vercel production | ❌ **MISSING** (no `WEBXPAY_*` in project env) |
-| Live keys | ⏸ deferred per CEO order |
+| Staging keys in `.env.local` | ❌ **MISSING** |
+| Staging keys on Vercel production | ❌ **MISSING** — probe shows `configured:false` |
+| Production probe | ✅ `GET /api/payments/status` → staging host `stagingxpay.info` |
+| Live keys | ⏸ deferred |
 
-**Action required from merchant:** paste WebXPay **staging** `WEBXPAY_PUBLIC_KEY` + `WEBXPAY_SECRET_KEY` (PEM from Dashboard → Settings → Integration). Set Return URL to `{APP_URL}/api/payments/webhook/WEBXPAY`. Do **not** set `WEBXPAY_ENV=live` until staging smoke passes.
+**Action required from merchant:** add WebXPay **staging** `WEBXPAY_PUBLIC_KEY` + `WEBXPAY_SECRET_KEY` on Vercel (Production + Preview). Dashboard Return URL: `{APP_URL}/api/payments/webhook/WEBXPAY`. Do **not** set `WEBXPAY_ENV=live` until staging smoke passes.
 
 Guide: https://developers.webxpay.com/Guides/Redirect-Integration/redirect.html
 
@@ -27,10 +28,10 @@ Guide: https://developers.webxpay.com/Guides/Redirect-Integration/redirect.html
 
 | ID | Item | Status | Evidence |
 |----|------|--------|----------|
-| P1-2 | POS card forces pending + gateway | ✅ code | `BillPanel` sends `status/paymentStatus=pending`; `/api/pos/pay` builds WebXPay form; stock waits for webhook |
-| P1-4 | Distributed rate limit | ⚠ code ready, env pending | `rateLimitAsync` + Upstash REST pipeline; proxy awaits it. Needs `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` on Vercel |
-| P1-5 | Live DB concurrency | ✅ partial | `claim_payment_event` 20× → 1 win (MCP SQL); `next_receipt_no` 10× → 10 distinct. Script: `scripts/db-concurrency-cert.mjs` |
-| P1-6 | Reporting UI | ✅ | Reports page shows gross / discounts / refunds / net / COGS / profit / margin / tax + date filters |
+| P1-2 | POS card forces pending + gateway | ✅ code | `BillPanel` pending + `/api/pos/pay`; stock waits for webhook |
+| P1-4 | Distributed rate limit | ⚠ code ready, env pending | Upstash-ready `rateLimitAsync` in proxy; needs `UPSTASH_REDIS_*` on Vercel |
+| P1-5 | Live DB concurrency | ✅ partial | `claim_payment_event` 20→1; `next_receipt_no` 10 distinct; script ready |
+| P1-6 | Reporting UI | ✅ | Gross / discounts / refunds / net / COGS / profit / margin / tax |
 
 ---
 
@@ -38,10 +39,10 @@ Guide: https://developers.webxpay.com/Guides/Redirect-Integration/redirect.html
 
 | Step | Status |
 |------|--------|
-| Commit Phase 2 + P1 code | 🔄 in progress |
-| Deploy `production-hardening` | ⏸ after commit + keys |
-| Gate 3 re-smoke 79/79 | ⏸ after deploy |
-| Gate 4 | **BLOCKED** until above + WebXPay staging smoke |
+| Commit Phase 2 + P1 code | ✅ `7bcc860` + `6d8551f` on `production-hardening` |
+| Deploy `production-hardening` | ✅ production Ready |
+| Gate 3 re-smoke 79/79 | ✅ **PASS** — 79/79, 0 critical/high (2026-08-25) |
+| Gate 4 | **BLOCKED** until WebXPay staging keys + card smoke + Upstash (optional but P1) |
 
 ---
 
