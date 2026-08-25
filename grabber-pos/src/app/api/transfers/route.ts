@@ -3,13 +3,21 @@ import {
   listTransfers,
   createTransferRequest,
 } from "@/lib/server/transfer-store";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 export async function GET() {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
   const data = await listTransfers();
   return NextResponse.json({ success: true, data, error: null });
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   let body: {
     sourceBranch?: string;
     targetBranch?: string;
@@ -40,7 +48,7 @@ export async function POST(req: NextRequest) {
       productId: body.productId,
       productName: body.productName || body.productId,
       quantity: Number(body.quantity) || 1,
-      dispatchedBy: body.dispatchedBy || "staff",
+      dispatchedBy: auth.session.email ?? body.dispatchedBy ?? "staff",
       notes: body.notes,
     });
     return NextResponse.json({ success: true, data, error: null });

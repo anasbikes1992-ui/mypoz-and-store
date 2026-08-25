@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "crypto";
 import { findById } from "@/lib/server/product-repo";
 import { upsertOverride } from "@/lib/server/product-write-store";
 import {
@@ -17,6 +18,22 @@ import {
 
 const SALES_FILE = dataFile("sales.json");
 
+function deterministicClientUuid(seed: string): string {
+  const hex = createHash("sha256").update(seed).digest("hex");
+  const base = hex.slice(0, 32).split("");
+  base[12] = "4";
+  const variant = Number.parseInt(base[16] ?? "0", 16);
+  base[16] = ((variant & 0x3) | 0x8).toString(16);
+  const compact = base.join("");
+  return [
+    compact.slice(0, 8),
+    compact.slice(8, 12),
+    compact.slice(12, 16),
+    compact.slice(16, 20),
+    compact.slice(20, 32),
+  ].join("-");
+}
+
 /**
  * Complete a PENDING storefront/card sale after verified gateway webhook.
  * This is the ONLY path that flips pending → completed and decrements stock
@@ -34,8 +51,8 @@ export async function completePendingSale(
       return await completePendingSaleDurable(saleIdOrReceipt);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      // Fall through to local file path when no web order exists (demo hybrid).
-      if (!msg.startsWith("PENDING_SALE_NOT_FOUND")) throw e;
+      // Fail closed when the durable service ledger is active.
+      throw new Error(msg);
     }
   }
 
@@ -152,7 +169,7 @@ async function completePendingSaleDurable(saleIdOrReceipt: string): Promise<Sale
     p_payload: {
       customerName: order.customerName,
       customerMobile: order.customerMobile,
-      clientUuid: null,
+      clientUuid: deterministicClientUuid(order.id || order.receiptNo || saleIdOrReceipt),
       address: order.address,
       fulfilment: order.fulfilment,
       paymentMethod: order.paymentMethod,

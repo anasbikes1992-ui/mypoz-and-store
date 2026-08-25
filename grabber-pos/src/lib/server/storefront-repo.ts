@@ -447,6 +447,8 @@ export async function placeStorefrontOrder(
   boardId: string | null;
   boardKind: "click-collect" | "delivery" | null;
   pendingPayment?: boolean;
+  /** Server-resolved line names/prices for receipts and email (never trust client). */
+  lines: { productId: string; name: string; quantity: number; unitPrice: number }[];
 }> {
   // Fail early before we commit a sale if the service-role ledger is required
   // for storefront order persistence but is not configured.
@@ -876,6 +878,12 @@ export async function placeStorefrontOrder(
     boardId,
     boardKind,
     pendingPayment: isCardPending,
+    lines: resolvedLines.map((l) => ({
+      productId: l.productId,
+      name: l.name,
+      quantity: l.quantity,
+      unitPrice: l.unitPrice,
+    })),
   };
 }
 

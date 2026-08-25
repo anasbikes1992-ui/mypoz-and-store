@@ -37,24 +37,32 @@ export async function listCatalogEntity(
   db: Db,
   name: string,
 ): Promise<Entity[]> {
+  const raw = db as any;
   if (name === "categories") {
-    const { data, error } = await db
+    const { data, error } = await raw
       .from("categories")
       .select("id, name, created_at")
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row) =>
+    return ((data ?? []) as { id: string; name: string; created_at: string }[]).map((row) =>
       toEntity(row, { name: row.name, description: "" }),
     );
   }
 
   if (name === "suppliers") {
-    const { data, error } = await db
+    const { data, error } = await raw
       .from("suppliers")
       .select("id, name, phone, email, address, created_at")
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row) =>
+    return ((data ?? []) as {
+      id: string;
+      name: string;
+      phone?: string | null;
+      email?: string | null;
+      address?: string | null;
+      created_at: string;
+    }[]).map((row) =>
       toEntity(row, {
         name: row.name,
         phone: row.phone ?? "",
@@ -65,7 +73,7 @@ export async function listCatalogEntity(
   }
 
   if (name === "brands") {
-    const { data, error } = await db
+    const { data, error } = await raw
       .from("products")
       .select("brand")
       .not("brand", "is", null)
@@ -73,11 +81,11 @@ export async function listCatalogEntity(
     if (error) throw new Error(error.message);
     const names = [
       ...new Set(
-        (data ?? [])
+        ((data ?? []) as { brand?: string | null }[])
           .map((row) => String(row.brand ?? "").trim())
           .filter(Boolean),
       ),
-    ].sort((a, b) => a.localeCompare(b));
+    ].sort((a: string, b: string) => a.localeCompare(b));
     return names.map((name) => ({
       id: brandId(name),
       name,
@@ -94,8 +102,9 @@ export async function getCatalogEntity(
   name: string,
   id: string,
 ): Promise<Entity | null> {
+  const raw = db as any;
   if (name === "categories") {
-    const { data, error } = await db
+    const { data, error } = await raw
       .from("categories")
       .select("id, name, created_at")
       .eq("id", id)
@@ -106,7 +115,7 @@ export async function getCatalogEntity(
   }
 
   if (name === "suppliers") {
-    const { data, error } = await db
+    const { data, error } = await raw
       .from("suppliers")
       .select("id, name, phone, email, address, created_at")
       .eq("id", id)
@@ -124,7 +133,7 @@ export async function getCatalogEntity(
   if (name === "brands") {
     const brandName = brandNameFromId(id);
     if (!brandName) return null;
-    const { data, error } = await db
+    const { data, error } = await raw
       .from("products")
       .select("brand")
       .eq("brand", brandName)
@@ -143,10 +152,11 @@ export async function createCatalogEntity(
   name: string,
   data: Record<string, unknown>,
 ): Promise<Entity> {
+  const raw = db as any;
   if (name === "categories") {
     const trimmed = String(data.name ?? "").trim();
     if (!trimmed) throw new Error("Name is required");
-    const { data: row, error } = await db
+    const { data: row, error } = await raw
       .from("categories")
       .insert({ name: trimmed })
       .select("id, name, created_at")
@@ -161,7 +171,7 @@ export async function createCatalogEntity(
   if (name === "suppliers") {
     const trimmed = String(data.name ?? "").trim();
     if (!trimmed) throw new Error("Name is required");
-    const { data: row, error } = await db
+    const { data: row, error } = await raw
       .from("suppliers")
       .insert({
         name: trimmed,
@@ -200,10 +210,11 @@ export async function updateCatalogEntity(
   id: string,
   data: Record<string, unknown>,
 ): Promise<Entity | null> {
+  const raw = db as any;
   if (name === "categories") {
     const trimmed = String(data.name ?? "").trim();
     if (!trimmed) throw new Error("Name is required");
-    const { data: row, error } = await db
+    const { data: row, error } = await raw
       .from("categories")
       .update({ name: trimmed })
       .eq("id", id)
@@ -220,7 +231,7 @@ export async function updateCatalogEntity(
   if (name === "suppliers") {
     const trimmed = String(data.name ?? "").trim();
     if (!trimmed) throw new Error("Name is required");
-    const { data: row, error } = await db
+    const { data: row, error } = await raw
       .from("suppliers")
       .update({
         name: trimmed,
@@ -246,7 +257,7 @@ export async function updateCatalogEntity(
     if (!oldName) return null;
     const newName = String(data.name ?? "").trim();
     if (!newName) throw new Error("Name is required");
-    const { error } = await db
+    const { error } = await raw
       .from("products")
       .update({ brand: newName })
       .eq("brand", oldName);
@@ -267,8 +278,9 @@ export async function deleteCatalogEntity(
   name: string,
   id: string,
 ): Promise<boolean> {
+  const raw = db as any;
   if (name === "categories") {
-    const { error, count } = await db
+    const { error, count } = await raw
       .from("categories")
       .delete({ count: "exact" })
       .eq("id", id);
@@ -277,7 +289,7 @@ export async function deleteCatalogEntity(
   }
 
   if (name === "suppliers") {
-    const { error, count } = await db
+    const { error, count } = await raw
       .from("suppliers")
       .delete({ count: "exact" })
       .eq("id", id);
@@ -288,7 +300,7 @@ export async function deleteCatalogEntity(
   if (name === "brands") {
     const brandName = brandNameFromId(id);
     if (!brandName) return false;
-    const { error } = await db
+    const { error } = await raw
       .from("products")
       .update({ brand: null })
       .eq("brand", brandName);

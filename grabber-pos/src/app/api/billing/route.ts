@@ -11,6 +11,7 @@ import {
   licenceAmountLkr,
   recordLicenceInvoice,
 } from "@/lib/server/licence-payment";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 const upgradeSchema = z.object({
   plan: z.enum(["starter", "business", "enterprise"]),
@@ -19,6 +20,8 @@ const upgradeSchema = z.object({
 });
 
 export async function GET() {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
   const tenant = await readTenant();
   const plans = (Object.keys(PLAN_PRICES_LKR) as PlanTier[]).map((id) => ({
     id,
@@ -40,6 +43,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   let body: unknown;
   try {
     body = await req.json();

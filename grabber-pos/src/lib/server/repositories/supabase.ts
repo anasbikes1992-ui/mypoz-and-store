@@ -67,7 +67,7 @@ export class SupabaseRepository implements PosRepository {
     const { data, error } = await this.db
       .from("sales")
       .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
+        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, status, sale_lines(id, product_id, name, unit_price, quantity, discount, line_total)",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -135,25 +135,23 @@ export class SupabaseRepository implements PosRepository {
   }
 
   async voidSale(id: string, reason: string, _actor?: string): Promise<Sale> {
-    const { data, error } = await this.db
-      .from("sales")
-      .update({
-        status: "voided",
-        // columns may not exist on all schemas — best-effort
-      } as Record<string, unknown>)
-      .eq("id", id)
-      .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
-      )
-      .maybeSingle();
-    if (error) {
-      throw new Error(
-        `Void sale failed in durable mode: ${error.message}. Reason recorded: ${reason}`,
-      );
+    let saleId = id;
+    if (!/^[0-9a-f-]{36}$/i.test(id)) {
+      const { data: byReceipt, error: lookupError } = await this.db
+        .from("sales")
+        .select("id")
+        .eq("receipt_no", id)
+        .maybeSingle();
+      if (lookupError) throw new Error(lookupError.message);
+      if (!byReceipt?.id) throw new Error("Sale not found");
+      saleId = byReceipt.id;
     }
-    if (!data) throw new Error("Sale not found");
-    const sale = mapSaleRow(data as SaleRpcRow);
-    return { ...sale, status: "voided", voidReason: reason, voidedAt: new Date().toISOString() };
+    const { data, error } = await this.db.rpc("void_sale", {
+      p_sale: saleId,
+      p_reason: reason,
+    });
+    if (error) throw new Error(error.message);
+    return mapSaleRow(data as SaleRpcRow);
   }
 }
 
@@ -181,6 +179,7 @@ interface SaleRpcRow {
 }
 
 interface RawLine {
+  id?: string;
   product_id: string | null;
   name: string;
   unit_price: number;
@@ -192,7 +191,8 @@ interface RawLine {
 function mapSaleRow(row: SaleRpcRow): Sale {
   const rawLines = row.lines ?? row.sale_lines ?? [];
   return {
-    id: row.receipt_no ?? row.id,
+    id: row.id,
+    receiptNo: row.receipt_no ?? undefined,
     createdAt: row.created_at,
     subtotal: Number(row.subtotal),
     discountTotal: Number(row.discount_total),
@@ -211,6 +211,7 @@ function mapSaleRow(row: SaleRpcRow): Sale {
     voidedAt: row.voided_at ?? null,
     source: (row.source as Sale["source"]) ?? "POS",
     lines: rawLines.map((l) => ({
+      id: l.id,
       productId: l.product_id ?? "",
       name: l.name,
       unitPrice: Number(l.unit_price),

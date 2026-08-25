@@ -33,6 +33,14 @@ const MIGRATIONS = [
   "0016_media_and_storefront_discount",
   "0017_storefront_public_documents",
   "0018_ux_events",
+  "0019_rls_select_wrappers",
+  "0020_collection_matches_stable",
+  "0021_receipt_indexes_domain_stock",
+  "0022_wholesale_tiers",
+  "0023_launch_rls_hardening",
+  "0024_p0_auth_and_ops_hardening",
+  "0025_returns_refunds",
+  "0026_register_shift_summaries",
 ];
 
 const sql = postgres({

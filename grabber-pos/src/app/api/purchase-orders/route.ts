@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { listPOs, createPO } from "@/lib/server/po-store";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 const poSchema = z.object({
   supplier: z.string().max(160).optional(),
@@ -17,11 +18,18 @@ const poSchema = z.object({
 });
 
 export async function GET() {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
   const pos = await listPOs();
   return NextResponse.json({ success: true, data: pos, error: null });
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   let body: unknown;
   try {
     body = await req.json();

@@ -5,8 +5,14 @@ import {
   readAiSettings,
   writeAiSettings,
 } from "@/lib/server/ai-keys";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 export async function GET() {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   const settings = await readAiSettings();
   return NextResponse.json({
     success: true,
@@ -20,6 +26,11 @@ const patch = z.object({
 });
 
 export async function PUT(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   let body: unknown;
   try {
     body = await req.json();

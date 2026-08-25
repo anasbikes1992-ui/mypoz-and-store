@@ -96,7 +96,7 @@ begin
     'source',             'WHATSAPP',
     'channel',            'whatsapp',
     'fulfillment_status', 'pending',
-    'payment_status',     'unpaid',
+    'payment_status',     'pending',
     'lines',              v_lines
   ));
 end;

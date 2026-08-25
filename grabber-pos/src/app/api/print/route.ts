@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kickCashDrawer, printTicket } from "@/lib/server/ticket-printer";
 import type { TicketStation } from "@/lib/types";
+import { requireTenantSession } from "@/lib/server/auth-session";
 
 const STATIONS: TicketStation[] = ["KOT", "BOT", "RECEIPT", "DRAWER"];
 const MAX_CONTENT_LENGTH = 4000;
 
 export async function POST(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+
   let body: { station?: string; content?: string; kick?: boolean };
   try {
     body = await req.json();

@@ -1,5 +1,5 @@
 import "server-only";
-import { docStore } from "./persistence/doc-store";
+import { recordStore } from "./persistence/record-store";
 
 export interface AuditLogEvent {
   id: string;
@@ -22,8 +22,8 @@ export interface AuditLogEvent {
   metadata?: Record<string, unknown>;
 }
 
-const store = docStore<AuditLogEvent[]>({
-  key: "audit_logs",
+const store = recordStore<AuditLogEvent>({
+  collection: "audit-logs",
   file: "audit_logs.json",
 });
 
@@ -33,7 +33,6 @@ export async function logAuditEvent(
   actor = "Cashier",
   metadata?: Record<string, unknown>,
 ): Promise<AuditLogEvent> {
-  const current = await store.read([]);
   const event: AuditLogEvent = {
     id: "AUD-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6),
     timestamp: new Date().toISOString(),
@@ -42,12 +41,12 @@ export async function logAuditEvent(
     details,
     metadata,
   };
-  const updated = [event, ...current].slice(0, 500); // keep last 500 logs
-  await store.write(updated);
+  await store.put(event);
   return event;
 }
 
 export async function listAuditEvents(limit = 100): Promise<AuditLogEvent[]> {
-  const logs = await store.read([]);
-  return logs.slice(0, limit);
+  return (await store.list())
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+    .slice(0, limit);
 }

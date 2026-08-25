@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { templateBuffer } from "@/lib/server/product-excel";
+import { requireTenantSession } from "@/lib/server/auth-session";
 
-export function GET() {
+export async function GET() {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
   const buffer = templateBuffer();
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

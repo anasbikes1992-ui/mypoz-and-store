@@ -4,6 +4,7 @@ import {
   listVariants,
   replaceProductVariants,
 } from "@/lib/server/variants-repo";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 const draftSchema = z.object({
   id: z.string().max(64).optional(),
@@ -26,6 +27,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
   const { id } = await params;
   const variants = await listVariants(id);
   return NextResponse.json({ success: true, data: variants, error: null });
@@ -35,6 +38,11 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   const { id } = await params;
   let body: unknown;
   try {

@@ -171,13 +171,19 @@ export async function applyGatewayWebhook(opts: {
   if (opts.status === "PAID") {
     const kind = existing.meta?.kind;
     if (kind === "licence") {
+      if (existing.meta?.licenceAppliedAt) {
+        return { ok: true, payment: existing };
+      }
       const { applyLicencePayment } = await import("@/lib/server/licence-payment");
-      await applyLicencePayment(existing);
+      await applyLicencePayment(updated);
       updated.meta = {
         ...updated.meta,
         licenceAppliedAt: new Date().toISOString(),
       };
     } else {
+      if (existing.meta?.completedAt) {
+        return { ok: true, payment: existing };
+      }
       const saleRef =
         (typeof existing.meta?.saleId === "string" && existing.meta.saleId) ||
         existing.reference;

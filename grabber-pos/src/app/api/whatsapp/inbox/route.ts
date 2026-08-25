@@ -12,8 +12,14 @@ import {
 } from "@/lib/server/whatsapp-inbox-store";
 import { sendWhatsAppText } from "@/lib/server/whatsapp";
 import { resolveMetaAccessToken } from "@/lib/whatsapp/phone-number-id";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   const id = req.nextUrl.searchParams.get("id");
   try {
     if (id) {
@@ -66,6 +72,11 @@ export async function POST(req: NextRequest) {
 }
 
 async function mutateInbox(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   let body: unknown;
   try {
     body = await req.json();

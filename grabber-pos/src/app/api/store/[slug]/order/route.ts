@@ -151,11 +151,11 @@ export async function POST(
             businessName, accentColor,
             receiptNo: order.receiptNo,
             customerName: data.customerName,
-            // Use cart lines from the request since the order response is minimal.
-            items: data.lines.map((l) => ({
-              name: String(l.productId),
+            // Prefer server-resolved catalog names — never email raw product UUIDs.
+            items: (order.lines?.length ? order.lines : []).map((l) => ({
+              name: l.name?.trim() || "Item",
               qty: l.quantity,
-              price: "",
+              price: `Rs ${Number(l.unitPrice ?? 0).toLocaleString("en-LK")}`,
             })),
             subtotal: `Rs ${(order.total ?? 0).toLocaleString("en-LK")}`,
             total: `Rs ${(order.total ?? 0).toLocaleString("en-LK")}`,

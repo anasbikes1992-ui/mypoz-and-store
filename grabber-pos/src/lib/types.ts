@@ -66,6 +66,8 @@ export interface CartLine {
 export type PaymentMethod = "cash" | "card" | "wholesale" | "split";
 
 export interface SaleLine {
+  /** Durable sale_lines.id when present (required for linked returns). */
+  id?: string;
   productId: string;
   name: string;
   unitPrice: number;
@@ -78,6 +80,8 @@ export interface SaleLine {
 
 export interface Sale {
   id: string;
+  /** Human receipt number when distinct from durable UUID id. */
+  receiptNo?: string;
   createdAt: string;
   lines: SaleLine[];
   subtotal: number;

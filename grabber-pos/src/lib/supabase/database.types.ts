@@ -168,6 +168,17 @@ export interface Database {
         id: string;
         org_id: string;
         name: string;
+        parent_id: string | null;
+        created_at: string;
+      }>;
+      suppliers: Table<{
+        id: string;
+        org_id: string;
+        name: string;
+        phone: string | null;
+        email: string | null;
+        address: string | null;
+        created_at: string;
       }>;
       profiles: Table<{
         id: string;
@@ -175,6 +186,7 @@ export interface Database {
         full_name: string;
         role: string;
         is_active: boolean;
+        created_at: string;
       }>;
       product_variants: Table<
         {

@@ -7,6 +7,8 @@ import {
   verifyManagerPin,
 } from "@/lib/server/permissions-store";
 import { resolvePermission } from "@/lib/permissions";
+import { requireTenantSession } from "@/lib/server/auth-session";
+import { businessErrorResponse } from "@/lib/server/business-errors";
 
 const bodySchema = z.object({
   reason: z.string().min(1, "Reason is required").max(500),
@@ -19,6 +21,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+
   const { id } = await params;
 
   let body: unknown;
@@ -64,8 +69,8 @@ export async function POST(
   }
 
   const allowed = resolvePermission(cfg, "void_sale", {
-    userId: parsed.data.userId,
-    role: parsed.data.role ?? "manager",
+    userId: parsed.data.userId ?? auth.session.userId,
+    role: parsed.data.role ?? auth.session.role,
   });
   if (!allowed) {
     return NextResponse.json(
@@ -76,15 +81,13 @@ export async function POST(
 
   try {
     const repo = await getRepository();
-    const sale = await repo.voidSale(id, parsed.data.reason, "manager");
+    const sale = await repo.voidSale(
+      id,
+      parsed.data.reason,
+      auth.session.email ?? auth.session.userId,
+    );
     return NextResponse.json({ success: true, data: sale, error: null });
   } catch (error) {
-    const msg = error instanceof Error ? error.message : "Void failed";
-    const status =
-      msg.includes("admin RPC") || msg.includes("durable mode") ? 501 : 422;
-    return NextResponse.json(
-      { success: false, data: null, error: msg },
-      { status },
-    );
+    return businessErrorResponse(error);
   }
 }

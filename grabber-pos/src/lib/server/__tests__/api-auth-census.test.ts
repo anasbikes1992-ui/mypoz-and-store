@@ -30,18 +30,12 @@ const PUBLIC_PREFIXES = [
   "whatsapp/webhook/",
   "health/",
   "auth/login/",
+  "auth/forgot-password/",
   "waf-deny/",
 ];
 
 /** Documented residuals — expand only when intentional; prefer adding auth. */
-const KNOWN_RESIDUAL = [
-  "ai/settings/route.ts",
-  "audit/route.ts",
-  "commerce/discounts/validate/route.ts",
-  "print/route.ts",
-  "products/template/route.ts",
-  "products/[id]/variants/route.ts",
-].sort();
+const KNOWN_RESIDUAL: string[] = [];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

@@ -27,7 +27,7 @@ function demoAllowlist(): string[] {
   return [(process.env.POS_USER ?? "admin").trim().toLowerCase()];
 }
 
-/** Supabase emails allowed into `/hq` (plus app_metadata.role = gms_admin). */
+/** Supabase emails allowed into `/hq` (plus server-controlled app_metadata.role = gms_admin). */
 function emailAllowlist(): string[] {
   return parseList(process.env.GMS_ADMIN_EMAILS);
 }
@@ -53,13 +53,11 @@ export async function getGmsAdmin(): Promise<GmsIdentity | null> {
       if (!user?.email) return null;
 
       const email = user.email.toLowerCase();
-      const metaOk =
-        hasGmsMetadata(user.app_metadata as Record<string, unknown>) ||
-        hasGmsMetadata(user.user_metadata as Record<string, unknown>);
+      const metaOk = hasGmsMetadata(user.app_metadata as Record<string, unknown>);
       const allow = emailAllowlist();
       const emailOk = allow.length === 0 ? false : allow.includes(email);
 
-      // Allow if metadata role is set, OR email is on the allowlist.
+      // Allow if server-controlled app_metadata role is set, OR email is on the allowlist.
       // Empty allowlist alone is not enough (avoids opening HQ to every tenant owner).
       if (!metaOk && !emailOk) return null;
 

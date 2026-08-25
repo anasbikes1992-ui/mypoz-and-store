@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { approveTransferReceipt } from "@/lib/server/transfer-store";
 import { logAuditEvent } from "@/lib/server/audit-logger";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   const { id } = await ctx.params;
-  let receivedBy = "staff";
+  const receivedBy = auth.session.email ?? "staff";
   try {
-    const body = await req.json();
-    if (body?.receivedBy) receivedBy = String(body.receivedBy);
+    await req.json();
   } catch {
     // optional body
   }

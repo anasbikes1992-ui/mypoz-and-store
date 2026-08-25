@@ -14,6 +14,9 @@ create index if not exists products_featured_idx on products (org_id, featured) 
 create index if not exists products_tags_idx on products using gin (tags);
 
 -- Extend storefront catalog RPC to return commerce fields.
+-- Drop first: CREATE OR REPLACE cannot rename parameters (p_size → p_page_size).
+drop function if exists storefront_catalog(text, text, text, text, integer, integer);
+
 create or replace function storefront_catalog(
   p_host text, p_slug text, p_search text, p_category text, p_page int, p_page_size int
 ) returns jsonb

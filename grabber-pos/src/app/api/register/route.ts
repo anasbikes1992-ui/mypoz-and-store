@@ -6,8 +6,11 @@ import {
   xReport,
   listShiftHistory,
 } from "@/lib/server/register-store";
+import { requireTenantSession } from "@/lib/server/auth-session";
 
 export async function GET() {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
   const [open, history] = await Promise.all([
     getOpenShift(),
     listShiftHistory(50),
@@ -20,6 +23,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+
   let body: {
     action?: string;
     openedBy?: string;
@@ -41,7 +47,7 @@ export async function POST(req: NextRequest) {
     switch (body.action) {
       case "open": {
         const shift = await openShift({
-          openedBy: body.openedBy ?? "cashier",
+          openedBy: auth.session.email ?? body.openedBy ?? "cashier",
           openingFloat: Number(body.openingFloat) || 0,
           note: body.note,
         });
@@ -49,7 +55,7 @@ export async function POST(req: NextRequest) {
       }
       case "close": {
         const shift = await closeShift({
-          closedBy: body.closedBy ?? "cashier",
+          closedBy: auth.session.email ?? body.closedBy ?? "cashier",
           closingDeclared: Number(body.closingDeclared) || 0,
           note: body.note,
         });

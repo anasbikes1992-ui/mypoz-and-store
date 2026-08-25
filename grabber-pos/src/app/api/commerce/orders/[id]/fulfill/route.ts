@@ -7,6 +7,7 @@ import {
   updateStorefrontWebOrder,
 } from "@/lib/server/storefront-orders-store";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
+import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 
 const bodySchema = z.object({
   status: z.enum(FULFILLMENT_STATUSES),
@@ -16,6 +17,11 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+  const forbidden = requireRoles(auth.session, ["owner", "manager"]);
+  if (forbidden) return forbidden;
+
   const { id } = await params;
   let body: unknown;
   try {

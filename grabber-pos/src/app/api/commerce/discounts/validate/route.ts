@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { validateDiscountCode, consumeDiscountCode } from "@/lib/server/discount-codes";
+import { requireTenantSession } from "@/lib/server/auth-session";
 
 const bodySchema = z.object({
   code: z.string().trim().min(1).max(40),
@@ -9,6 +10,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const auth = await requireTenantSession();
+  if (!auth.ok) return auth.response;
+
   let body: unknown;
   try {
     body = await req.json();

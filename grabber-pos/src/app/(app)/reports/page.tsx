@@ -1,53 +1,65 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import type { Product, Sale } from "@/lib/types";
+import type { Product } from "@/lib/types";
 import { formatMoney } from "@/lib/format";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
-import { salesByChannel } from "@/lib/commerce/channel-report";
+
+type ReportSummary = {
+  revenue: number;
+  count: number;
+  avg: number;
+  itemsSold: number;
+  byMethod: { method: string; count: number; total: number }[];
+  byDay: { label: string; total: number }[];
+  byChannel: { source: string; count: number; revenue: number }[];
+  topProducts: { name: string; qty: number }[];
+};
+
+type LeaderboardRow = {
+  name: string;
+  total: number;
+  count: number;
+};
 
 export default function ReportsPage() {
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [report, setReport] = useState<ReportSummary | null>(null);
+  const [deadStock, setDeadStock] = useState<Product[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+  const [salesCount, setSalesCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/sales").then((r) => r.json()),
-      fetch("/api/products?pageSize=200").then((r) => r.json()),
-    ])
-      .then(([sj, pj]) => {
-        if (sj.success) setSales(sj.data);
-        if (pj.success) setProducts(pj.data.items ?? pj.data ?? []);
+    fetch("/api/reports/summary")
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.success) return;
+        setReport(j.data.report ?? null);
+        setDeadStock(j.data.deadStock ?? []);
+        setLeaderboard(j.data.leaderboard ?? []);
+        setSalesCount(Number(j.data.salesCount ?? 0));
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
   }, []);
 
-  const report = useMemo(() => buildReport(sales), [sales]);
-  const deadStock = useMemo(
-    () => buildDeadStock(products, sales),
-    [products, sales],
-  );
-  const leaderboard = useMemo(() => buildLeaderboard(sales), [sales]);
-
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       <ModuleHeader
         title="Reports"
-        subtitle={`${sales.length} transactions analysed`}
+        subtitle={`${salesCount} transactions analysed`}
       />
 
       {loading ? (
         <p className="mt-10 text-center text-sm text-text-dim">Loading…</p>
-      ) : sales.length === 0 && products.length === 0 ? (
+      ) : !report ? (
         <p className="mt-10 rounded-xl border border-dashed border-line p-10 text-center text-sm text-text-dim">
           No sales yet — make a sale to see reports.
         </p>
       ) : (
         <div className="mt-8 space-y-8">
-          {sales.length > 0 && (
+          {salesCount > 0 && (
             <>
               <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <Kpi label="Revenue" value={formatMoney(report.revenue)} />
@@ -87,14 +99,14 @@ export default function ReportsPage() {
                 </Panel>
               </div>
               <Panel title="Top products">
-                  <BarList
-                    rows={report.topProducts.map((p) => ({
-                      label: p.name,
-                      value: p.qty,
-                      display: `${p.qty} sold`,
-                    }))}
-                  />
-                </Panel>
+                <BarList
+                  rows={report.topProducts.map((p) => ({
+                    label: p.name,
+                    value: p.qty,
+                    display: `${p.qty} sold`,
+                  }))}
+                />
+              </Panel>
             </>
           )}
 
@@ -194,98 +206,4 @@ function BarList({
       ))}
     </div>
   );
-}
-
-function buildReport(sales: Sale[]) {
-  const revenue = sales.reduce((s, x) => s + x.total, 0);
-  const count = sales.length;
-  const itemsSold = sales.reduce(
-    (s, x) => s + x.lines.reduce((n, l) => n + l.quantity, 0),
-    0,
-  );
-
-  const methodMap = new Map<string, { count: number; total: number }>();
-  for (const s of sales) {
-    const m = methodMap.get(s.paymentMethod) ?? { count: 0, total: 0 };
-    m.count += 1;
-    m.total += s.total;
-    methodMap.set(s.paymentMethod, m);
-  }
-
-  const dayMap = new Map<string, number>();
-  const days: { key: string; label: string }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    days.push({
-      key,
-      label: d.toLocaleDateString("en-GB", { weekday: "short" }),
-    });
-    dayMap.set(key, 0);
-  }
-  for (const s of sales) {
-    const key = s.createdAt.slice(0, 10);
-    if (dayMap.has(key)) dayMap.set(key, (dayMap.get(key) ?? 0) + s.total);
-  }
-
-  const productMap = new Map<string, number>();
-  for (const s of sales) {
-    for (const l of s.lines) {
-      productMap.set(l.name, (productMap.get(l.name) ?? 0) + l.quantity);
-    }
-  }
-
-  return {
-    revenue,
-    count,
-    avg: count ? revenue / count : 0,
-    itemsSold,
-    byMethod: [...methodMap.entries()].map(([method, v]) => ({
-      method,
-      ...v,
-    })),
-    byDay: days.map((d) => ({ label: d.label, total: dayMap.get(d.key) ?? 0 })),
-    byChannel: salesByChannel(sales),
-    topProducts: [...productMap.entries()]
-      .map(([name, qty]) => ({ name, qty }))
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 5),
-  };
-}
-
-function buildDeadStock(products: Product[], sales: Sale[]) {
-  const soldIds = new Set<string>();
-  const soldNames = new Set<string>();
-  for (const s of sales) {
-    for (const l of s.lines) {
-      soldIds.add(l.productId);
-      soldNames.add(l.name.toLowerCase());
-    }
-  }
-  return products
-    .filter(
-      (p) =>
-        p.quantity > 0 &&
-        !soldIds.has(p.id) &&
-        !soldNames.has(p.name.toLowerCase()),
-    )
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 20);
-}
-
-function buildLeaderboard(sales: Sale[]) {
-  const map = new Map<string, { count: number; total: number }>();
-  for (const s of sales) {
-    if (s.status === "voided") continue;
-    const name = (s.employee || "Unassigned").replace(/^\[TRAINING\]/, "");
-    const row = map.get(name) ?? { count: 0, total: 0 };
-    row.count += 1;
-    row.total += s.total;
-    map.set(name, row);
-  }
-  return [...map.entries()]
-    .map(([name, v]) => ({ name, ...v }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
 }
