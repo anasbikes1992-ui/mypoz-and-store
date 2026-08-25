@@ -42,12 +42,12 @@ export interface CreateSaleInput {
   cardAmount?: number;
   managerPin?: string;
   clientUuid?: string;
-  status?: "pending" | "completed";
+  status?: "pending" | "completed" | "voided";
   /** Commerce channel — stamped on sales.source in durable mode. */
   source?: "POS" | "ONLINE_STORE" | "WHATSAPP" | "PHONE" | "OTHER";
   channel?: string;
   fulfillmentStatus?: string;
-  paymentStatus?: string;
+  paymentStatus?: "paid" | "pending" | "failed" | "refunded" | string;
   deliveryAddress?: string;
   deliveryFee?: number;
   codFee?: number;
