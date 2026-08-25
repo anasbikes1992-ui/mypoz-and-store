@@ -4,10 +4,11 @@
 **Stage:** Production certification + architecture cleanup — **not** feature expansion  
 **Freeze:** branch `production-hardening` · tag `mypoz-pre-final-hardening`  
 **Master plans:**  
+- `docs/MYPOZ_FINAL_MASTER_PRODUCTION_BLUEPRINT.md` ← **authority**  
 - `docs/MYPOZ_FINAL_DURABLE_ARCHITECTURE_AND_MIGRATION_PLAN.md`  
 - `docs/MYPOZ_FINAL_PRODUCTION_HARDENING_AND_DATABASE_RECONCILIATION.md`
 
-**Rule:** Do not restore catalog / Aug-24 JSON. Do not delete migrations 0001–0026. Do not start Gate 4 until P0 remediation passes.
+**Rule:** Do not restore catalog / Aug-24 JSON. Do not rewrite migrations 0001–0029 destructively. No aaPanel/Webuzo. No mass legacy delete until Gate 4 P1 + Gate 5 pass.
 
 ---
 
