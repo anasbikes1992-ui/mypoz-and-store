@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
   "/sitemap.xml",
   "/robots.txt",
   "/api/payments/webhook",
+  "/api/payments/status",
   "/api/whatsapp/webhook",
 ];
 
