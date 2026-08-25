@@ -43,7 +43,7 @@ Counting tables alone never proves readiness. A **stale Vercel deploy** also nev
 | 1 | Initial DB reconstruction | ✅ PASS |
 | 2A | Clean migration replay `0001→0026` | ✅ PASS |
 | **2B** | Code ↔ DB ↔ API completeness (read-only audit) | ⏳ NEXT (can run **in parallel** with Step A) |
-| **3** | Security / auth / tenant isolation (deployed) | ❌ FAIL — must close after redeploy |
+| **3** | Security / auth / tenant isolation (deployed) | ✅ **PASS** — see `GATE3_SECURITY_CERTIFICATION_FINAL.md` |
 | 4 | Commerce + inventory + payment E2E | 🔒 Blocked on Gate 3 PASS |
 | 5 | Backup / restore / DR | ⏳ After Gate 4 (or parallel once backup tooling fixed) |
 | 6 | Client onboarding acceptance | ⏳ After Gate 4 |

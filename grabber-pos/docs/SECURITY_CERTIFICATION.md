@@ -5,7 +5,8 @@
 **Date:** 2026-08-25  
 **Runner:** `scripts/gate3-security-cert.mjs`  
 **Evidence:** `data/backups/gate3-security-results.json` (gitignored)  
-**Verdict:** **FAIL** — CRITICAL/HIGH issues remain. Gate 3 is **not** closed.
+**Verdict:** **PASS** — see [`docs/GATE3_SECURITY_CERTIFICATION_FINAL.md`](./GATE3_SECURITY_CERTIFICATION_FINAL.md)  
+**Superseded by:** Final Phase A certification on commit `530b65b` (2026-08-25).
 
 > Do not restore catalog / production commerce data until this gate passes.
 
