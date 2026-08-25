@@ -138,17 +138,24 @@ async function main() {
   const cashierCk = cookieHeader(sessions.aCashier);
   const ownerDb = userDb(sessions.aOwner.access_token);
 
-  // Ensure manager PIN for void API
-  const pinSave = await api("/api/permissions", {
-    method: "POST",
-    cookie: ownerCk,
-    body: { managerPin: PIN },
-  });
-  record(
-    "4B_manager_pin_configured",
-    Boolean(pinSave.json?.success && pinSave.json?.data?.hasPin),
-    `status=${pinSave.status} hasPin=${pinSave.json?.data?.hasPin} err=${pinSave.json?.error || ""}`,
-  );
+  // Ensure manager PIN for void API (idempotent if already set)
+  const pinGet = await api("/api/permissions", { method: "GET", cookie: ownerCk });
+  let pinOk = Boolean(pinGet.json?.data?.hasPin);
+  if (!pinOk) {
+    const pinSave = await api("/api/permissions", {
+      method: "POST",
+      cookie: ownerCk,
+      body: { managerPin: PIN },
+    });
+    pinOk = Boolean(pinSave.json?.success && pinSave.json?.data?.hasPin);
+    record(
+      "4B_manager_pin_configured",
+      pinOk,
+      `status=${pinSave.status} hasPin=${pinSave.json?.data?.hasPin} err=${pinSave.json?.error || ""}`,
+    );
+  } else {
+    record("4B_manager_pin_configured", true, "already configured");
+  }
 
   await setStock(ownerDb, 40, BRANCH_A);
   await setStock(ownerDb, 0, BRANCH_B).catch(async () => {
