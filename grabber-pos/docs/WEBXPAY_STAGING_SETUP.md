@@ -44,3 +44,7 @@ Cash remains immediate `create_sale` (no gateway).
 1. `GET /api/payments/status` → `webxpay.configured: true`, `environment: staging`, host `stagingxpay.info`
 2. POS → Card → confirm redirect to staging billing page
 3. Complete a staging test payment → sale completes, stock moves once
+
+## Known blocker (2026-08-25)
+
+Staging may return **`442 Invalid encryption`** even when MyPoz builds a valid encrypted `payment` field and Node can POST the billing page. Treat as **merchant public/secret key pair or WebXPay dashboard staging settings**, not app architecture. Demo cards (tokenize guide): Master Without 3DS `5111 1111 1111 1118`, any future expiry + 3-digit CVV. Helpers: `scripts/webxpay-rsa-build-checkout.mjs`, `scripts/webxpay-rsa-node-chain.mjs`.

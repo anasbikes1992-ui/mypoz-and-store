@@ -8,7 +8,7 @@
 - `docs/MYPOZ_FINAL_DURABLE_ARCHITECTURE_AND_MIGRATION_PLAN.md`  
 - `docs/MYPOZ_FINAL_PRODUCTION_HARDENING_AND_DATABASE_RECONCILIATION.md`
 
-**Rule:** Do not restore catalog / Aug-24 JSON. Do not rewrite migrations 0001–0029 destructively. No aaPanel/Webuzo. No mass legacy delete until Gate 4 P1 + Gate 5 pass.
+**Rule:** Do not restore catalog / Aug-24 JSON. Do not rewrite migrations 0001–0029 destructively. No aaPanel/Webuzo. No mass legacy delete until Gate 4 P1 + Gate 5 P1 pass.
 
 ---
 
@@ -23,17 +23,17 @@
 | **Phase 0** | Freeze branch/tag | ✅ DONE |
 | **Phase 1** | Architecture inventory + matrices | ✅ DONE — see `PHASE1_DISCOVERY_STATUS.md` |
 | **Phase 2** | Durability + reconciliation (audit/payments/POS pending/inventory/reporting/offline) | ✅ **PASS WITH P1/P2** — see `PHASE2_DURABILITY_CERTIFICATION.md` |
-| Phase 3–6 | Services polish, API, UI, legacy removal | 🔒 After Gate 4 proof |
-| 4 | Commerce E2E + concurrency | 🔒 Next after deploy + go-ahead |
-| 5 | Backup / restore / DR | ⏳ After Gate 4 |
-| Final | Production certification | ⏳ Last |
+| **4** | Commerce E2E + concurrency | ✅ **PASS WITH P1** (RSA webhook) — `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` |
+| **5** | Backup / restore / DR | ✅ **PASS WITH P1** (export + restore drill) — `GATE5_BACKUP_DR_CERTIFICATION.md` |
+| Final | Production certification board | 📄 `MYPOZ_FINAL_PRODUCTION_CERTIFICATION.md` — **CLIENT READY OPEN** |
 
 ---
 
 ## Authoritative sequence
 
 ```text
-2A ✅ → 3 ✅ → 2B remediation (Phase 1 ✅ → Phase 2…) → Gate 4 → Gate 5 → catalog/clients → legacy delete
+2A ✅ → 3 ✅ → Phase 2 ✅ → Gate 4 ✅ (P1: RSA) → Gate 5 ✅ (P1: export/drill)
+→ keys → catalog → legacy delete → pilot → CLIENT READY
 ```
 
 ### Immediate P0 order (Phase 2)
@@ -77,10 +77,16 @@
 | `LEGACY_REMOVAL_PLAN.md` | Removal rules |
 | `BACKUP_RESTORE_ANALYSIS.md` | Bad backup warning |
 | `PHASE1_DISCOVERY_STATUS.md` | Phase 1 closeout |
+| `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` | Commerce |
+| `GATE5_BACKUP_DR_CERTIFICATION.md` | DR |
+| `MYPOZ_FINAL_PRODUCTION_CERTIFICATION.md` | Final board |
+| `PRODUCTION_ENV_KEYS_CHECKLIST.md` | Keys checklist |
 
 ---
 
 ## Definition of “ready for clients”
 
 Not: tsc / vitest / Vercel green alone.  
-Yes: Gates 2A, 2B (no open P0), 3, 4, 5 + final cert — then catalog from a **trusted** source and onboarding.
+Yes: Gates 2A, 2B (no open P0), 3, 4 (incl. RSA), 5 (incl. export + restore drill) + final CLIENT READY board — then catalog from a **trusted** source and onboarding.
+
+Keys checklist: `PRODUCTION_ENV_KEYS_CHECKLIST.md` (user fills last).

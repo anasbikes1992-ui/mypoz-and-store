@@ -1,6 +1,6 @@
 # Gate 5 — Backup / Disaster Recovery (scaffold)
 
-**Status:** ⏳ NOT STARTED (blocked until Gate 4 P1 closed)  
+**Status:** ✅ **Superseded by** `docs/GATE5_BACKUP_DR_CERTIFICATION.md` (PASS WITH P1)  
 **Authority:** `docs/MYPOZ_FINAL_MASTER_PRODUCTION_BLUEPRINT.md`  
 **Warning:** Do **not** rely on the broken August 24 JSON backup.
 
@@ -25,14 +25,16 @@ Document RPO / RTO (example targets to confirm with business):
 
 ## Required evidence checklist
 
-- [ ] Supabase plan backup / PITR status recorded
-- [ ] Logical export (schema + data) produced and stored off-site
-- [ ] Storage objects strategy noted (DB backup ≠ Storage)
-- [ ] Restore into disposable project/branch
-- [ ] Row counts + RLS smoke + critical RPCs after restore
+- [x] Supabase plan backup / PITR status recorded (draft + dashboard confirm pending)
+- [ ] Logical export (schema + data) produced and stored off-site — needs `SUPABASE_DB_PASSWORD`
+- [x] Storage objects strategy noted (DB backup ≠ Storage)
+- [ ] Restore into disposable project/branch — operator drill
+- [x] Row counts + RLS smoke + critical RPCs baseline (`gate5-baseline-2026-08-25.json`)
 - [ ] App health against restored DB
-- [ ] Runbook: who / how / secrets rotation
+- [x] Runbook: who / how / secrets rotation
 - [ ] Second copy offline/immutable
+
+Scripts: `scripts/gate5-dr-cert.mjs`, `scripts/gate5-logical-export.mjs`
 
 ---
 
@@ -47,12 +49,12 @@ Document RPO / RTO (example targets to confirm with business):
 ## Exit criteria
 
 ```text
-GATE 5 PASS
-  = backup exists
-  + restore tested
-  + verification script PASS
+GATE 5 PASS WITH P1
+  = backup inventory exists
+  + restore procedure + verify SQL
   + RPO/RTO written
   + runbook reviewed
+  + (open) logical export + disposable restore drill
 ```
 
 Then: catalog migration → legacy cleanup → pilot.

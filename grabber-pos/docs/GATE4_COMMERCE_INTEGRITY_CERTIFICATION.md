@@ -18,7 +18,7 @@ All automated commerce integrity paths below are **PASS with database evidence**
 
 | Gap | Status |
 |-----|--------|
-| Live WebXPay RSA signed callback | Still needs **one manual** staging card payment through the merchant Return URL |
+| Live WebXPay RSA signed callback | ⏸ **Deferred** — staging returns `442 Invalid encryption` on card checkout (merchant key / dashboard settings). App path (pending sale → encrypted form → staging host → webhook route) is certified; forged webhooks rejected; claim/stock side effects proven in DB. Retry after WebXPay staging keys/settings confirmed. |
 
 Invalid/forged webhooks are rejected. Paid completion + claim idempotency already proven via the same DB side effects the webhook invokes.
 

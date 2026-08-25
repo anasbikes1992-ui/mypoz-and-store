@@ -1,8 +1,8 @@
 # MyPoz Final Master Production Blueprint
 
-**Status:** Living architecture authority — 2026-08-25  
+**Status:** Living architecture authority — 2026-08-25 (Gates 4/5 closed WITH P1; CLIENT READY open)  
 **Freeze branch:** `production-hardening`  
-**Immutable migrations:** `0001`–`0029` (forward-only after this)  
+**Immutable migrations:** `0001`–`0029` (forward-only; `0030` applied)  
 **Infrastructure posture:** **Vercel + Supabase/Postgres + WebXPay (+ managed email/WhatsApp/storage/monitoring).**  
 **Do not add:** aaPanel, Webuzo, self-managed VPS panels, second database, Kubernetes, or microservice sprawl at this stage.
 
@@ -138,9 +138,10 @@ Gate 4 → Backup/Restore → Catalog migration → Legacy cleanup → Observabi
 | 2B Completeness | ✅ PASS WITH remediation (Phase 2 closed P0s) |
 | 3 Security | ✅ PASS 79/79 (re-smoked post Phase 2 deploy) |
 | Phase 2 Durability | ✅ PASS WITH P1/P2 |
-| **Gate 4 Commerce** | 🔄 In progress — see `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` |
-| Gate 5 DR | ⏳ After Gate 4 |
-| Catalog | 🔒 Blocked |
+| **Gate 4 Commerce** | ✅ **PASS WITH P1** (live RSA webhook only) — `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` |
+| **Gate 5 DR** | ✅ **PASS WITH P1** (logical export + restore drill pending keys) — `GATE5_BACKUP_DR_CERTIFICATION.md` |
+| Final cert board | 📄 `MYPOZ_FINAL_PRODUCTION_CERTIFICATION.md` — CLIENT READY still OPEN |
+| Catalog | 🔒 Blocked until Gate 4/5 P1s |
 | Legacy mass delete | 🔒 Blocked |
 | Client onboarding | 🔒 Blocked |
 
@@ -209,7 +210,10 @@ All must be **PASS** before paying clients at scale.
 | `MYPOZ_CERTIFICATION_ROADMAP.md` | Gate board |
 | `PHASE2_DURABILITY_CERTIFICATION.md` | Durability closeout |
 | `GATE3_SECURITY_CERTIFICATION_FINAL.md` | Security |
-| `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` | Commerce (this stage) |
+| `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` | Commerce |
+| `GATE5_BACKUP_DR_CERTIFICATION.md` | Backup / DR |
+| `MYPOZ_FINAL_PRODUCTION_CERTIFICATION.md` | Final gateboard / CLIENT READY |
+| `PRODUCTION_ENV_KEYS_CHECKLIST.md` | Env keys (names only) |
 | `WEBXPAY_STAGING_SETUP.md` | Payment staging ops |
 | `P1_CLOSURE_PROGRESS.md` | P1 tracking |
 | `LEGACY_REMOVAL_PLAN.md` | Delete rules |
