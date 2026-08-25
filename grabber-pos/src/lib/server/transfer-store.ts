@@ -1,4 +1,5 @@
 import "server-only";
+import { randomUUID } from "crypto";
 import { docStore } from "./persistence/doc-store";
 import { resolveDb } from "./persistence/backend";
 
@@ -37,8 +38,16 @@ export async function createTransferRequest(input: {
       throw new Error("Source and target branch must be different");
     }
     const typed = db as any;
+    const { data: srcBranch, error: srcErr } = await typed
+      .from("branches")
+      .select("id, org_id")
+      .eq("id", input.sourceBranch)
+      .maybeSingle();
+    if (srcErr) throw new Error(srcErr.message);
+    if (!srcBranch?.org_id) throw new Error("Source branch not found");
+
     const request: StockTransferRequest = {
-      id: "TRF-" + Date.now().toString(36),
+      id: randomUUID(),
       sourceBranch: input.sourceBranch,
       targetBranch: input.targetBranch,
       productId: input.productId,
@@ -51,6 +60,7 @@ export async function createTransferRequest(input: {
     };
     const { error: headerError } = await typed.from("stock_transfers").insert({
       id: request.id,
+      org_id: srcBranch.org_id,
       source_branch_id: request.sourceBranch,
       target_branch_id: request.targetBranch,
       status: request.status,

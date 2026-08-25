@@ -73,12 +73,13 @@ export async function createPO(input: {
     const typed = db as any;
     const { data: branch } = await typed
       .from("branches")
-      .select("id")
+      .select("id, org_id")
       .eq("is_active", true)
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     if (!branch?.id) throw new Error("No active branch for this organization");
+    if (!branch.org_id) throw new Error("Branch missing organization");
 
     let supplierId: string | null = null;
     const supplierName = input.supplier?.trim();
@@ -124,6 +125,7 @@ export async function createPO(input: {
     const { data: purchase, error: purchaseError } = await typed
       .from("purchases")
       .insert({
+        org_id: branch.org_id,
         branch_id: branch.id,
         supplier_id: supplierId,
         reference: input.reference?.trim() || null,
