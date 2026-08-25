@@ -94,7 +94,12 @@ export class SupabaseRepository implements PosRepository {
   async createSale(input: CreateSaleInput): Promise<Sale> {
     await assertLicenceActive();
 
-    if (input.status === "pending" || input.paymentStatus === "pending") {
+    // Card / online must never complete stock before gateway verification.
+    const forcePending =
+      input.status === "pending" ||
+      input.paymentStatus === "pending" ||
+      input.paymentMethod === "card";
+    if (forcePending) {
       return this.createPendingCardSale(input);
     }
 

@@ -29,6 +29,9 @@ export const createSaleSchema = z.object({
   clientUuid: z.string().min(8).max(64).optional(),
   source: z.enum(["POS", "ONLINE_STORE", "WHATSAPP", "PHONE", "OTHER"]).optional(),
   channel: z.string().max(40).optional(),
+  // Card/gateway: keep pending until webhook verifies payment.
+  status: z.enum(["completed", "pending", "voided"]).optional(),
+  paymentStatus: z.enum(["paid", "pending", "failed", "refunded"]).optional(),
 });
 
 export const productQuerySchema = z.object({
