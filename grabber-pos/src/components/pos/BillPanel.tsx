@@ -489,6 +489,10 @@ export function BillPanel() {
       cashAmount: method === "split" ? splitCashN : undefined,
       cardAmount: method === "split" ? splitCardN : undefined,
       clientUuid: crypto.randomUUID(),
+      // Card/online must stay pending until gateway webhook verifies payment.
+      ...(method === "card"
+        ? { status: "pending" as const, paymentStatus: "pending" }
+        : {}),
     };
 
     setError(null);
@@ -505,6 +509,61 @@ export function BillPanel() {
         return;
       }
       const sale = json.data as Sale;
+
+      if (method === "card" && sale.status === "pending") {
+        const payRes = await fetch("/api/pos/pay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reference: sale.receiptNo || sale.id,
+            amountMinor: Math.round(Number(sale.total) * 100),
+            currency: "LKR",
+            description: `POS ${sale.receiptNo || sale.id}`,
+            customer: {
+              name: store.customerName || store.employee || "Walk-in",
+              email: "",
+              phone: store.customerMobile || undefined,
+            },
+          }),
+        });
+        const payJson = await payRes.json();
+        if (!payJson.success) {
+          setError(
+            payJson.error ??
+              "Card gateway not configured. Set WebXPay staging keys, or use cash.",
+          );
+          return;
+        }
+        const checkout = payJson.data as {
+          mode?: string;
+          formAction?: string;
+          formFields?: Record<string, string>;
+          url?: string;
+        };
+        if (checkout.mode === "form" && checkout.formAction && checkout.formFields) {
+          const form = document.createElement("form");
+          form.method = "POST";
+          form.action = checkout.formAction;
+          form.style.display = "none";
+          for (const [k, v] of Object.entries(checkout.formFields)) {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = k;
+            input.value = v;
+            form.appendChild(input);
+          }
+          document.body.appendChild(form);
+          form.submit();
+          return;
+        }
+        if (checkout.url) {
+          window.location.href = checkout.url;
+          return;
+        }
+        setError("Gateway did not return a checkout form");
+        return;
+      }
+
       setDone(sale);
       setPayOpen(false);
       setExpandedLine(null);
@@ -537,8 +596,12 @@ export function BillPanel() {
       setSplitCash("");
       setSplitCard("");
     } catch {
-      enqueueFailedSale(saleBody);
-      setError("Offline — sale queued; will sync when online");
+      const queued = enqueueFailedSale(saleBody);
+      setError(
+        queued
+          ? "Offline — sale queued; will sync when online"
+          : "Sale failed — connection error. Offline POS is disabled; retry when online.",
+      );
     } finally {
       setPending(false);
     }
@@ -1169,6 +1232,12 @@ export function BillPanel() {
                 </button>
               ))}
             </div>
+            {method === "card" && (
+              <p className="rounded-lg border border-line bg-surface-2 px-2.5 py-2 text-[11px] text-text-dim">
+                Card charges stay <span className="font-medium text-text-body">pending</span> until
+                WebXPay verifies payment. Stock is not reduced until the gateway callback succeeds.
+              </p>
+            )}
 
             <div>
               {store.customerId ? (
@@ -1311,7 +1380,11 @@ export function BillPanel() {
               onClick={() => void proceed()}
               className="w-full rounded-xl bg-accent py-3.5 font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {pending ? "Processing…" : `Charge · ${formatMoney(chargedTotal)}`}
+              {pending
+                ? "Processing…"
+                : method === "card"
+                  ? `Pay by card · ${formatMoney(chargedTotal)}`
+                  : `Charge · ${formatMoney(chargedTotal)}`}
             </motion.button>
           </div>
         )}

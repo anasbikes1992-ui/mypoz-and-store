@@ -7,8 +7,18 @@ export async function GET() {
   if (!auth.ok) return auth.response;
   const forbidden = requireRoles(auth.session, ["owner", "manager"]);
   if (forbidden) return forbidden;
-  const logs = await listAuditEvents(100);
-  return NextResponse.json({ success: true, data: logs, error: null });
+
+  try {
+    const logs = await listAuditEvents(100);
+    return NextResponse.json({ success: true, data: logs, error: null });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Audit list failed";
+    const status = message.includes("DEPENDENCY_UNAVAILABLE") ? 503 : 500;
+    return NextResponse.json(
+      { success: false, data: null, error: message },
+      { status },
+    );
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -17,22 +27,50 @@ export async function POST(req: NextRequest) {
   const forbidden = requireRoles(auth.session, ["owner", "manager", "cashier"]);
   if (forbidden) return forbidden;
 
-  let body: { action?: string; details?: string; actor?: string; metadata?: Record<string, unknown> };
+  let body: {
+    action?: string;
+    details?: string;
+    actor?: string;
+    metadata?: Record<string, unknown>;
+    entity?: string;
+    entityId?: string;
+  };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ success: false, data: null, error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, data: null, error: "Invalid JSON" },
+      { status: 400 },
+    );
   }
 
   if (!body.action || !body.details) {
-    return NextResponse.json({ success: false, data: null, error: "action and details are required" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, data: null, error: "action and details are required" },
+      { status: 400 },
+    );
   }
 
-  const log = await logAuditEvent(
-    body.action as any,
-    body.details,
-    auth.session.email || auth.session.userId,
-    body.metadata,
-  );
-  return NextResponse.json({ success: true, data: log, error: null });
+  // Actor is server-derived from session — ignore body.actor as authority.
+  try {
+    const log = await logAuditEvent(
+      body.action,
+      body.details,
+      auth.session.email || auth.session.userId,
+      {
+        ...(body.metadata ?? {}),
+        entity: body.entity,
+        entityId: body.entityId,
+        requestedActorIgnored: body.actor ? true : undefined,
+      },
+    );
+    return NextResponse.json({ success: true, data: log, error: null });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Audit write failed";
+    const status = message.includes("DEPENDENCY_UNAVAILABLE") ? 503 : 500;
+    return NextResponse.json(
+      { success: false, data: null, error: message },
+      { status },
+    );
+  }
 }

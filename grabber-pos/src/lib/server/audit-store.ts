@@ -1,6 +1,14 @@
 import "server-only";
-import { randomUUID } from "crypto";
-import { recordStore } from "./persistence/record-store";
+import {
+  listAuditEventsFromDb,
+  writeAuditEvent,
+  type AuditListItem,
+} from "./audit-service";
+
+/**
+ * Compatibility facade — writeAudit/listAudit now target SQL audit_events.
+ * Do not use app_collections for audit.
+ */
 
 export interface AuditEvent {
   id: string;
@@ -12,10 +20,17 @@ export interface AuditEvent {
   detail: string;
 }
 
-const store = recordStore<AuditEvent>({
-  collection: "audit-events",
-  file: "audit-events.json",
-});
+function toEvent(row: AuditListItem): AuditEvent {
+  return {
+    id: row.id,
+    createdAt: row.timestamp,
+    actor: row.actor,
+    action: row.action,
+    entity: row.entity,
+    entityId: row.entityId ?? "",
+    detail: row.details,
+  };
+}
 
 export async function writeAudit(input: {
   actor?: string;
@@ -23,21 +38,24 @@ export async function writeAudit(input: {
   entity: string;
   entityId: string;
   detail?: string;
+  orgId?: string;
+  useServiceRole?: boolean;
+  correlationId?: string;
 }): Promise<AuditEvent> {
-  const event: AuditEvent = {
-    id: "AUD-" + randomUUID().slice(0, 8),
-    createdAt: new Date().toISOString(),
-    actor: input.actor?.trim() || "system",
+  const row = await writeAuditEvent({
     action: input.action,
     entity: input.entity,
     entityId: input.entityId,
-    detail: input.detail?.trim() || "",
-  };
-  return store.put(event);
+    details: input.detail,
+    actorLabel: input.actor ?? null,
+    orgId: input.orgId ?? null,
+    useServiceRole: input.useServiceRole,
+    correlationId: input.correlationId ?? null,
+  });
+  return toEvent(row);
 }
 
 export async function listAudit(limit = 100): Promise<AuditEvent[]> {
-  return (await store.list())
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .slice(0, limit);
+  const rows = await listAuditEventsFromDb(limit);
+  return rows.map(toEvent);
 }

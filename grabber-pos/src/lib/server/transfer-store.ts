@@ -136,6 +136,8 @@ export async function approveTransferReceipt(
         p_product: line.product_id,
         p_delta: -quantity,
         p_note: `transfer_out:${transferId}`,
+        p_reason: "transfer_out",
+        p_reference_id: transferId,
       });
       if (sourceError) throw new Error(sourceError.message);
       const { error: targetError } = await typed.rpc("adjust_stock", {
@@ -143,6 +145,8 @@ export async function approveTransferReceipt(
         p_product: line.product_id,
         p_delta: quantity,
         p_note: `transfer_in:${transferId}`,
+        p_reason: "transfer_in",
+        p_reference_id: transferId,
       });
       if (targetError) throw new Error(targetError.message);
     }

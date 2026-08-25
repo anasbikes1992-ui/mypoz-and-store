@@ -135,6 +135,8 @@ export async function createReturn(input: {
       p_product: line.productId,
       p_delta: line.quantity,
       p_note: `return:${inserted.id}`,
+      p_reason: "return",
+      p_reference_id: inserted.id,
     });
     if (adjustError) throw new Error(adjustError.message);
   }

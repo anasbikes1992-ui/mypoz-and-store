@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { verifySessionToken } from "@/lib/server/session";
 import { inspectRequest } from "@/lib/server/waf";
-import { apiRateLimit, clientIpFromHeaders } from "@/lib/server/rate-limit";
+import { apiRateLimitAsync, clientIpFromHeaders } from "@/lib/server/rate-limit";
 import {
   resolveStoreSlugAlias,
   rewriteStorePath,
@@ -75,7 +75,7 @@ function blocked(status: number, reason: string, retryAfterSec?: number) {
  * Front door for POS, store, and HQ: WAF, adaptive IP ban, then auth.
  * Also stamps storefront host/slug so anonymous shoppers load that tenant.
  */
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   // When matching broadly, explicitly skip Next static assets.
   if (
@@ -101,8 +101,13 @@ export function proxy(req: NextRequest) {
   const waf = inspectRequest(req);
   if (!waf.ok) return blocked(waf.status, waf.reason);
 
+  // Health stays unlimited; WhatsApp has its own signature gate.
+  // Payments webhooks stay rate-limited (shared Upstash when configured).
   if (pathname !== "/api/health" && pathname !== "/api/whatsapp/webhook") {
-    const decision = apiRateLimit(clientIpFromHeaders(req.headers), pathname);
+    const decision = await apiRateLimitAsync(
+      clientIpFromHeaders(req.headers),
+      pathname,
+    );
     if (decision.limited) {
       return blocked(
         429,

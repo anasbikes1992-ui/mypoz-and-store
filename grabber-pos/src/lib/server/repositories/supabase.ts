@@ -94,10 +94,8 @@ export class SupabaseRepository implements PosRepository {
   async createSale(input: CreateSaleInput): Promise<Sale> {
     await assertLicenceActive();
 
-    if (input.status === "pending") {
-      throw new Error(
-        "PENDING card sales are not supported on the durable create_sale RPC yet. Use local pending path or complete via webhook after a pending ledger row.",
-      );
+    if (input.status === "pending" || input.paymentStatus === "pending") {
+      return this.createPendingCardSale(input);
     }
 
     const { data, error } = await this.db.rpc("create_sale", {
@@ -132,6 +130,98 @@ export class SupabaseRepository implements PosRepository {
     });
     if (error) throw new Error(error.message);
     return mapSaleRow(data as SaleRpcRow);
+  }
+
+  /**
+   * Card/gateway pending: create payment_intent only — no stock movement.
+   * Webhook PAID → completePendingSale → create_sale_internal / storefront path.
+   */
+  private async createPendingCardSale(input: CreateSaleInput): Promise<Sale> {
+    const clientUuid = input.clientUuid ?? crypto.randomUUID();
+    const amountMinor = Math.round(
+      (input.lines.reduce((sum, line) => {
+        const unit = Number(line.unitPrice ?? 0);
+        return sum + (unit - Number(line.discount ?? 0)) * Number(line.quantity);
+      }, 0) +
+        Number(input.serviceCharge ?? 0) -
+        Number(input.finalDiscount ?? 0)) *
+        100,
+    );
+
+    const pendingSale = {
+      branch_id: this.branchId,
+      payment_method: input.paymentMethod,
+      service_charge: input.serviceCharge ?? 0,
+      final_discount: input.finalDiscount ?? 0,
+      customer_name: input.customerName ?? null,
+      customer_mobile: input.customerMobile ?? null,
+      employee: input.employee ?? null,
+      source: input.source ?? "POS",
+      lines: input.lines.map((l) => {
+        const parsed = parseCommerceLineId(l.productId);
+        return {
+          product_id: parsed.productId,
+          variant_id: l.variantId ?? parsed.variantId,
+          quantity: l.quantity,
+          discount: l.discount,
+          name: l.name,
+          unit_price: l.unitPrice,
+        };
+      }),
+    };
+
+    const { data, error } = await (this.db as any).rpc("create_pos_payment_intent", {
+      payload: {
+        branch_id: this.branchId,
+        client_uuid: clientUuid,
+        amount_minor: Math.max(amountMinor, 1),
+        currency: "LKR",
+        provider: "POS_GATEWAY",
+        customer_name: input.customerName ?? null,
+        customer_email: null,
+        pending_sale: pendingSale,
+        reference: `POS-${clientUuid.replace(/-/g, "").slice(0, 12).toUpperCase()}`,
+      },
+    });
+    if (error) throw new Error(error.message);
+    const row = data as {
+      reference: string;
+      created_at: string;
+      amount_minor: number;
+      client_uuid?: string;
+    };
+
+    return {
+      id: row.reference,
+      receiptNo: row.reference,
+      createdAt: row.created_at,
+      subtotal: row.amount_minor / 100,
+      discountTotal: Number(input.finalDiscount ?? 0),
+      finalDiscount: Number(input.finalDiscount ?? 0),
+      serviceCharge: Number(input.serviceCharge ?? 0),
+      total: row.amount_minor / 100,
+      paymentMethod: input.paymentMethod,
+      isWholesale: input.paymentMethod === "wholesale",
+      customerName: input.customerName ?? null,
+      customerMobile: input.customerMobile ?? null,
+      employee: input.employee ?? null,
+      cashReceived: null,
+      change: null,
+      status: "pending",
+      voidReason: null,
+      voidedAt: null,
+      source: input.source ?? "POS",
+      paymentStatus: "pending",
+      lines: input.lines.map((l) => ({
+        productId: l.productId,
+        name: l.name ?? l.productId,
+        unitPrice: Number(l.unitPrice ?? 0),
+        quantity: l.quantity,
+        discount: l.discount,
+        lineTotal:
+          (Number(l.unitPrice ?? 0) - Number(l.discount ?? 0)) * l.quantity,
+      })),
+    };
   }
 
   async voidSale(id: string, reason: string, _actor?: string): Promise<Sale> {

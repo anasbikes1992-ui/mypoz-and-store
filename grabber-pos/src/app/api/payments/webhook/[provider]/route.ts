@@ -37,8 +37,12 @@ export async function POST(
   const applied = await applyGatewayWebhook({
     reference: result.reference,
     status: result.status,
+    provider,
     providerRef: result.providerRef,
     amountMinor: result.amountMinor,
+    providerEventId: result.providerRef
+      ? `${provider}:${result.providerRef}:${result.status}`
+      : undefined,
   });
 
   if (!applied.ok) {

@@ -9,12 +9,12 @@ import {
   withFileLock,
 } from "./persistence/local-json";
 import type { Sale } from "@/lib/types";
-import { writeAudit } from "./audit-store";
-import { isSupabaseEnabled } from "@/lib/supabase/config";
+import { isSupabaseEnabled, requireSupabase } from "@/lib/supabase/config";
 import { createServiceSupabase } from "@/lib/supabase/server";
 import {
   findStorefrontOrderBySaleOrReceipt,
 } from "./storefront-orders-store";
+import { writeAuditEvent } from "./audit-service";
 
 const SALES_FILE = dataFile("sales.json");
 
@@ -54,6 +54,12 @@ export async function completePendingSale(
       // Fail closed when the durable service ledger is active.
       throw new Error(msg);
     }
+  }
+
+  if (requireSupabase || isSupabaseEnabled) {
+    throw new Error(
+      "DEPENDENCY_UNAVAILABLE: pending sale completion requires service role",
+    );
   }
 
   let completed: Sale | undefined;
@@ -113,18 +119,146 @@ export async function completePendingSale(
     // No open shift — non-fatal for storefront
   }
 
-  await writeAudit({
-    actor: "payments-webhook",
+  await writeAuditEvent({
     action: "sale.complete_pending",
     entity: "sale",
     entityId: sale.id,
-    detail: "Gateway verified PAID",
+    details: "Gateway verified PAID",
+    actorLabel: "payments-webhook",
+    useServiceRole: false,
   });
 
   return sale;
 }
 
+async function completePosPaymentIntent(
+  saleIdOrReceipt: string,
+): Promise<Sale | null> {
+  const db = createServiceSupabase();
+  const { data: intent, error } = await (db as any)
+    .from("payment_intents")
+    .select("*")
+    .eq("reference", saleIdOrReceipt)
+    .eq("source", "pos")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!intent) return null;
+
+  const meta = (intent.metadata ?? {}) as Record<string, unknown>;
+  if (meta.completedAt && intent.sale_id) {
+    const { data: existing } = await db
+      .from("sales")
+      .select(
+        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, status, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
+      )
+      .eq("id", intent.sale_id)
+      .maybeSingle();
+    if (existing) {
+      return mapSaleRowCompat(existing as any);
+    }
+  }
+
+  const pendingSale = (meta.pendingSale ?? {}) as Record<string, unknown>;
+  const lines = Array.isArray(pendingSale.lines) ? pendingSale.lines : [];
+  if (lines.length === 0) {
+    throw new Error(`PENDING_SALE_NOT_FOUND:${saleIdOrReceipt}`);
+  }
+
+  const clientUuid =
+    intent.client_uuid ||
+    deterministicClientUuid(String(intent.reference || saleIdOrReceipt));
+
+  const { data, error: saleError } = await db.rpc("create_sale_internal", {
+    p_org: intent.org_id,
+    p_actor: null,
+    payload: {
+      branch_id: intent.branch_id ?? pendingSale.branch_id,
+      client_uuid: clientUuid,
+      payment_method: pendingSale.payment_method ?? "card",
+      service_charge: pendingSale.service_charge ?? 0,
+      final_discount: pendingSale.final_discount ?? 0,
+      customer_name: pendingSale.customer_name ?? intent.customer_name,
+      customer_mobile: pendingSale.customer_mobile ?? null,
+      employee: pendingSale.employee ?? null,
+      source: pendingSale.source ?? "POS",
+      payment_status: "paid",
+      lines: lines.map((l: any) => ({
+        product_id: l.product_id,
+        variant_id: l.variant_id,
+        quantity: l.quantity,
+        discount: l.discount ?? 0,
+      })),
+    } as any,
+  });
+  if (saleError) throw new Error(saleError.message);
+
+  const posted = data as Record<string, unknown>;
+  const saleId = String(posted.id);
+  await (db as any)
+    .from("payment_intents")
+    .update({
+      status: "paid",
+      sale_id: saleId,
+      metadata: {
+        ...meta,
+        completedAt: new Date().toISOString(),
+        saleId,
+      },
+    })
+    .eq("id", intent.id);
+
+  await writeAuditEvent({
+    action: "sale.complete_pending",
+    entity: "sale",
+    entityId: saleId,
+    details: "POS gateway verified PAID",
+    orgId: intent.org_id,
+    useServiceRole: true,
+    actorLabel: "payments-webhook",
+    correlationId: String(intent.reference),
+  });
+
+  return mapSaleRowCompat(posted);
+}
+
+function mapSaleRowCompat(row: any): Sale {
+  const rawLines = row.lines ?? row.sale_lines ?? [];
+  return {
+    id: String(row.receipt_no ?? row.id),
+    receiptNo: row.receipt_no,
+    createdAt: row.created_at ?? new Date().toISOString(),
+    subtotal: Number(row.subtotal ?? 0),
+    discountTotal: Number(row.discount_total ?? 0),
+    finalDiscount: Number(row.final_discount ?? 0),
+    serviceCharge: Number(row.service_charge ?? 0),
+    total: Number(row.total ?? 0),
+    paymentMethod: (row.payment_method ?? "card") as Sale["paymentMethod"],
+    isWholesale: row.payment_method === "wholesale",
+    customerName: row.customer_name ?? null,
+    customerMobile: row.customer_mobile ?? null,
+    employee: row.employee ?? null,
+    cashReceived: row.cash_received != null ? Number(row.cash_received) : null,
+    change: row.change_due != null ? Number(row.change_due) : null,
+    status: (row.status as Sale["status"]) ?? "completed",
+    voidReason: null,
+    voidedAt: null,
+    source: "POS",
+    lines: (rawLines as any[]).map((l) => ({
+      productId: l.product_id ?? "",
+      name: l.name ?? "",
+      unitPrice: Number(l.unit_price ?? 0),
+      quantity: Number(l.quantity ?? 0),
+      discount: Number(l.discount ?? 0),
+      lineTotal: Number(l.line_total ?? 0),
+    })),
+  };
+}
+
 async function completePendingSaleDurable(saleIdOrReceipt: string): Promise<Sale> {
+  // POS pending payment_intent path (reference = POS-…)
+  const posSale = await completePosPaymentIntent(saleIdOrReceipt);
+  if (posSale) return posSale;
+
   const order = await findStorefrontOrderBySaleOrReceipt(
     saleIdOrReceipt,
     saleIdOrReceipt,
@@ -226,12 +360,14 @@ async function completePendingSaleDurable(saleIdOrReceipt: string): Promise<Sale
     })),
   };
 
-  await writeAudit({
-    actor: "payments-webhook",
+  await writeAuditEvent({
     action: "sale.complete_pending",
     entity: "sale",
     entityId: sale.id,
-    detail: "Gateway verified PAID (durable)",
+    details: "Gateway verified PAID (durable)",
+    actorLabel: "payments-webhook",
+    useServiceRole: true,
+    orgId: (posted?.org_id as string) || undefined,
   });
 
   return sale;

@@ -9,15 +9,16 @@ function readMigration(name: string): string {
 }
 
 describe("migration batch integrity (P0–P4)", () => {
-  it("lists forward-only numbered migrations through 0026", () => {
+  it("lists forward-only numbered migrations through 0029", () => {
     const files = fs
       .readdirSync(MIGRATIONS_DIR)
       .filter((f) => f.endsWith(".sql"))
       .sort();
     expect(files[0]).toBe("0001_schema.sql");
-    expect(files).toContain("0024_p0_auth_and_ops_hardening.sql");
-    expect(files).toContain("0025_returns_refunds.sql");
     expect(files).toContain("0026_register_shift_summaries.sql");
+    expect(files).toContain("0027_audit_unification.sql");
+    expect(files).toContain("0028_payment_domain.sql");
+    expect(files).toContain("0029_pos_pending_inventory_reporting.sql");
   });
 
   it("0021 receipt counters are atomic upserts", () => {

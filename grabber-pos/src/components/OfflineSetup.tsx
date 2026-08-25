@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
-import { flushOfflineSales } from "@/lib/offline-queue";
+import {
+  flushOfflineSales,
+  isOfflinePosEnabled,
+} from "@/lib/offline-queue";
 
 /**
- * Registers the minimal service worker and flushes the offline sale queue
- * when connectivity returns.
+ * Optional service worker + offline sale flush.
+ * Production: offline POS deferred — no localStorage sale queue unless
+ * NEXT_PUBLIC_ALLOW_OFFLINE_POS=true.
  */
 export function OfflineSetup() {
   useEffect(() => {
+    if (!isOfflinePosEnabled()) {
+      return;
+    }
+
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }

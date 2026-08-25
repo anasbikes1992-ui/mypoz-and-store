@@ -1,6 +1,8 @@
 /**
- * Client-side offline sale queue. Failed POSTs are stored in localStorage and
- * flushed when the browser comes back online.
+ * Client-side offline sale queue — DEFERRED / non-production.
+ *
+ * Production must not enqueue or flush sales via localStorage.
+ * Enable only with NEXT_PUBLIC_ALLOW_OFFLINE_POS=true (explicit opt-in).
  */
 
 const QUEUE_KEY = "grabber-pos-offline-sales";
@@ -11,8 +13,13 @@ export interface QueuedSale {
   queuedAt: string;
 }
 
+function offlinePosAllowed(): boolean {
+  return process.env.NEXT_PUBLIC_ALLOW_OFFLINE_POS === "true";
+}
+
 function readQueue(): QueuedSale[] {
   if (typeof window === "undefined") return [];
+  if (!offlinePosAllowed()) return [];
   try {
     const raw = localStorage.getItem(QUEUE_KEY);
     if (!raw) return [];
@@ -24,10 +31,25 @@ function readQueue(): QueuedSale[] {
 }
 
 function writeQueue(items: QueuedSale[]) {
+  if (!offlinePosAllowed()) {
+    try {
+      localStorage.removeItem(QUEUE_KEY);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
   localStorage.setItem(QUEUE_KEY, JSON.stringify(items));
 }
 
-export function enqueueFailedSale(body: unknown): QueuedSale {
+export function isOfflinePosEnabled(): boolean {
+  return offlinePosAllowed();
+}
+
+export function enqueueFailedSale(body: unknown): QueuedSale | null {
+  if (!offlinePosAllowed()) {
+    return null;
+  }
   const item: QueuedSale = {
     id: "Q-" + crypto.randomUUID().slice(0, 8),
     body,
@@ -46,7 +68,12 @@ export function pendingOfflineCount(): number {
 export async function flushOfflineSales(): Promise<{
   sent: number;
   remaining: number;
+  disabled?: boolean;
 }> {
+  if (!offlinePosAllowed()) {
+    writeQueue([]);
+    return { sent: 0, remaining: 0, disabled: true };
+  }
   const q = readQueue();
   if (q.length === 0) return { sent: 0, remaining: 0 };
   const remaining: QueuedSale[] = [];

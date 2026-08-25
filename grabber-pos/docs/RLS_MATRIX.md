@@ -1,103 +1,59 @@
-# RLS Matrix
+# RLS MATRIX
 
-## Scope
-This matrix tracks the verified row-level security posture of the current Supabase schema and highlights where security depends on RPCs or still needs direct verification.
+**Date:** 2026-08-25  
+**Live policies:** 38  
+**All 37 tables:** RLS enabled  
 
-## Core Tenant Tables
+Policy cmds from live `pg_policies`. `current_org_id()` is the tenant predicate used by DEFINER helpers and policies (migration 0002/0003/0019+).
 
-| Table | RLS | Policy status | Write path |
-| --- | --- | --- | --- |
-| `organizations` | Enabled | `org_self` verified | Read-only to tenant via policy |
-| `branches` | Enabled | `branch_read`, `branch_write` verified | Direct writes for owner/manager |
-| `profiles` | Enabled | `profile_read`, `profile_write` verified | Direct writes for owner only |
-| `branch_members` | Enabled | `branch_members_read` verified | Limited direct access |
-| `suppliers` | Enabled | `suppliers_rw` verified | Direct org-scoped |
-| `categories` | Enabled | `categories_rw` verified | Direct org-scoped |
-| `products` | Enabled | `products_read`, `products_write` verified | Direct owner/manager writes |
-| `product_barcodes` | Enabled | `barcodes_rw` verified | Direct org-scoped |
+| Table | Tenant scoped | RLS | SELECT | INSERT | UPDATE | DELETE | Service role | Notes |
+|-------|---------------|-----|--------|--------|--------|--------|--------------|-------|
+| organizations | Y | Y | org_self | — | — | — | HQ provision | No tenant write |
+| profiles | Y | Y | Y | ALL write | ALL | ALL | password reset | |
+| branches | Y | Y | Y | ALL | ALL | ALL | provision | |
+| branch_members | Y | Y | Y | — | — | — | possible | SELECT-only |
+| categories | Y | Y | ALL | ALL | ALL | ALL | rare | |
+| suppliers | Y | Y | ALL | ALL | ALL | ALL | | |
+| products | Y | Y | read+write | write | write | write | | |
+| product_barcodes | Y | Y | ALL | ALL | ALL | ALL | | |
+| product_variants | Y | Y | ALL | ALL | ALL | ALL | | |
+| variant_branch_stock | Y | Y | ALL | ALL | ALL | ALL | | |
+| branch_stock | Y | Y | Y | — | — | — | via RPC | Mutate via adjust/set |
+| stock_movements | Y | Y | Y | — | — | — | via RPC | Append via RPC |
+| purchases | Y | Y | ALL | ALL | ALL | ALL | | |
+| purchase_lines | Y | Y | ALL | ALL | ALL | ALL | | |
+| registers | Y | Y | Y | — | — | — | provision | |
+| shifts | Y | Y | ALL | ALL | ALL | ALL | | |
+| shift_summaries | Y | Y | ALL | ALL | ALL | ALL | | |
+| sales | Y | Y | Y | — | — | — | storefront SR | create via RPC |
+| sale_lines | Y | Y | Y | — | — | — | via RPC | |
+| payments | Y | Y | Y | — | — | — | via RPC | Tender only |
+| audit_events | Y | Y | Y | — | — | — | via RPC | Append-only intent |
+| receipt_counters | Y | Y | — | — | — | — | via RPC | |
+| app_collections | Y | Y | ALL | ALL | ALL | ALL | gateway/WA | Dual-path bag |
+| app_documents | Y | Y | ALL | ALL | ALL | ALL | HQ/WA | |
+| stock_documents | Y | Y | ALL | ALL | ALL | ALL | | |
+| storefronts | Y | Y | ALL | ALL | ALL | ALL | provision | |
+| store_collections | Y | Y | ALL | ALL | ALL | ALL | | |
+| store_collection_products | Y | Y | ALL | ALL | ALL | ALL | | |
+| platform_settings | Platform | Y | — | — | — | — | HQ only | No tenant policy write |
+| stocktakes | Y | Y | ALL | ALL | ALL | ALL | | |
+| stocktake_lines | Y | Y | ALL | ALL | ALL | ALL | | |
+| stock_transfers | Y | Y | ALL | ALL | ALL | ALL | | |
+| stock_transfer_lines | Y | Y | ALL | ALL | ALL | ALL | | |
+| sale_returns | Y | Y | ALL | ALL | ALL | ALL | | |
+| sale_return_lines | Y | Y | ALL | ALL | ALL | ALL | | |
+| refunds | Y | Y | ALL | ALL | ALL | ALL | | |
+| refund_lines | Y | Y | ALL | ALL | ALL | ALL | | |
 
-## Inventory And Commerce
+**View:** `reseller_licences` — revoked from anon/authenticated; service-role read (0006).
 
-| Table | RLS | Policy status | Authoritative write path |
-| --- | --- | --- | --- |
-| `branch_stock` | Enabled | Read-only policy verified | `create_sale`, `adjust_stock`, `receive_purchase`, `set_branch_stock` |
-| `stock_movements` | Enabled | Read-only policy verified | `create_sale`, `adjust_stock`, `receive_purchase`, `set_branch_stock` |
-| `purchases` | Enabled | `purchases_rw` verified | App/runtime and `receive_purchase()` |
-| `purchase_lines` | Enabled | `purchase_lines_rw` verified | App/runtime and `receive_purchase()` |
-| `registers` | Enabled | Read policy verified | Mixed; app runtime still doc-backed |
-| `shifts` | Enabled | `shifts_rw` verified | Mixed; app runtime still doc-backed |
-| `sales` | Enabled | Read-only policy verified | `create_sale()` only |
-| `sale_lines` | Enabled | Read-only policy verified | `create_sale()` only |
-| `payments` | Enabled | Read-only policy verified | `create_sale()` only |
-| `audit_events` | Enabled | Read-only policy verified | SQL audit writes from RPC path |
+### Policy gaps to address in 0027+
 
-## Generic Runtime Tables
+- Explicit deny UPDATE/DELETE on `audit_events` for all non-definer (today SELECT-only — good; document forever).
+- Payment domain tables will need SELECT for tenant + INSERT only via DEFINER/service.
+- Do not grant client INSERT on `branch_stock` / `stock_movements`.
 
-| Table | RLS | Policy status | Notes |
-| --- | --- | --- | --- |
-| `app_collections` | Enabled | `app_collections_rw` verified | Backing store for many module records; still overused for critical domains |
-| `app_documents` | Enabled | `app_documents_rw` verified | Acceptable for intentional config/document domains |
-| `stock_documents` | Enabled | `stock_documents_rw` verified | Header/doc table only; stock effect must still go through ledger RPCs |
-| `restaurant_orders` | Enabled | `restaurant_orders_rw` verified | Vertical-specific |
+### Client trust rule
 
-## Functions And Execute Grants
-
-| Function | Access model | Status |
-| --- | --- | --- |
-| `current_org_id()` | SECURITY DEFINER helper | Verified |
-| `current_user_role()` | SECURITY DEFINER helper | Verified |
-| `create_sale(jsonb)` | Authenticated only, revoked from `anon/public` | Verified in `0023_launch_rls_hardening.sql` |
-| `adjust_stock(uuid, uuid, numeric, text)` | Authenticated only, revoked from `anon/public` | Verified |
-| `receive_purchase(uuid)` | Authenticated only, revoked from `anon/public` | Verified |
-| `set_branch_stock(uuid, uuid, numeric, text)` | Authenticated only | Verified |
-| `next_receipt_no(uuid)` | Authenticated only | Verified; function body must align with atomic counter migration |
-| `catalog(...)` | Authenticated only | Verified |
-| `product_by_barcode(...)` | Authenticated only | Verified |
-| `inventory_stats(uuid)` | Authenticated only | Verified |
-| `get_sale(uuid)` | Authenticated only | Verified |
-| `storefront_by_host(text, text)` | SECURITY DEFINER, not directly exposed to tenants | Verified |
-
-## Service-Role Risk Areas
-
-These flows bypass RLS by design and therefore require explicit server-side tenant validation:
-
-- `src/lib/server/storefront-orders-store.ts`
-- `src/lib/server/storefront-repo.ts`
-- `src/lib/server/gateway-payments-store.ts`
-- `src/lib/server/complete-pending-sale.ts`
-- `src/lib/server/hq-repo.ts`
-- `src/lib/server/hq-monitor.ts`
-- `src/lib/server/hq-tenant-ops.ts`
-
-## New Tables (0024–0026)
-
-| Table | RLS | Notes |
-| --- | --- | --- |
-| `stocktakes` / `stocktake_lines` | Enabled | Posted via `set_branch_stock` |
-| `stock_transfers` / `stock_transfer_lines` | Enabled | Approve via `adjust_stock` out/in |
-| `sale_returns` / `sale_return_lines` | Enabled | Linked to `sales` / `sale_lines` |
-| `refunds` / `refund_lines` | Enabled | Linked to returns |
-| `shift_summaries` | Enabled | Complements SQL `shifts` |
-
-## Functions Added
-
-| Function | Access |
-| --- | --- |
-| `void_sale(uuid, text)` | Authenticated; restores stock + audits |
-
-## Still Requires Live DB Replay
-
-| Area | Reason |
-| --- | --- |
-| Apply `0024`–`0026` on empty + current project | Static SQL + unit tests done; live `supabase db push` is an ops step |
-| Cross-tenant denial under real JWTs | Covered by RLS policy presence tests; runtime JWT suite needs staging |
-
-## Release Rule
-
-Critical domains are only production-safe when all of the following are true:
-
-1. Table exists in Postgres.
-2. RLS is enabled and verified.
-3. Tenant writes do not rely on local JSON or blob fallback.
-4. Mutations happen through explicit route auth and trusted server-side tenant resolution.
-5. Tests prove cross-tenant denial and migration replayability.
+Never trust `org_id` / `role` / `actor` from request body. Session + `current_org_id()` / GMS checks only.

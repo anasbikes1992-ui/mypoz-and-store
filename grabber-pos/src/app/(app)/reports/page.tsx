@@ -15,6 +15,17 @@ type ReportSummary = {
   byDay: { label: string; total: number }[];
   byChannel: { source: string; count: number; revenue: number }[];
   topProducts: { name: string; qty: number }[];
+  grossSales?: number;
+  discounts?: number;
+  refunds?: number;
+  netSales?: number;
+  tax?: number;
+  cogs?: number;
+  grossProfit?: number;
+  marginPct?: number;
+  byCashier?: { name: string; count: number; total: number }[];
+  from?: string;
+  to?: string;
 };
 
 type LeaderboardRow = {
@@ -28,10 +39,18 @@ export default function ReportsPage() {
   const [deadStock, setDeadStock] = useState<Product[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [salesCount, setSalesCount] = useState(0);
+  const [authoritative, setAuthoritative] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  useEffect(() => {
-    fetch("/api/reports/summary")
+  function load() {
+    setLoading(true);
+    const qs = new URLSearchParams();
+    if (dateFrom) qs.set("date_from", dateFrom);
+    if (dateTo) qs.set("date_to", dateTo);
+    const q = qs.toString();
+    fetch(`/api/reports/summary${q ? `?${q}` : ""}`)
       .then((r) => r.json())
       .then((j) => {
         if (!j.success) return;
@@ -39,17 +58,55 @@ export default function ReportsPage() {
         setDeadStock(j.data.deadStock ?? []);
         setLeaderboard(j.data.leaderboard ?? []);
         setSalesCount(Number(j.data.salesCount ?? 0));
+        setAuthoritative(Boolean(j.data.authoritative));
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       <ModuleHeader
         title="Reports"
-        subtitle={`${salesCount} transactions analysed`}
+        subtitle={
+          authoritative
+            ? `Server totals · ${salesCount} transactions`
+            : `${salesCount} transactions analysed`
+        }
       />
+
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="text-xs text-text-dim">
+          From
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="mt-1 block rounded-lg border border-line bg-surface-1 px-2 py-1.5 text-sm text-text-body"
+          />
+        </label>
+        <label className="text-xs text-text-dim">
+          To
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="mt-1 block rounded-lg border border-line bg-surface-1 px-2 py-1.5 text-sm text-text-body"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => load()}
+          className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-ink"
+        >
+          Apply
+        </button>
+      </div>
 
       {loading ? (
         <p className="mt-10 text-center text-sm text-text-dim">Loading…</p>
@@ -59,36 +116,65 @@ export default function ReportsPage() {
         </p>
       ) : (
         <div className="mt-8 space-y-8">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi label="Net sales" value={formatMoney(report.netSales ?? report.revenue)} />
+            <Kpi label="Gross sales" value={formatMoney(report.grossSales ?? report.revenue)} />
+            <Kpi label="Discounts" value={formatMoney(report.discounts ?? 0)} />
+            <Kpi label="Refunds" value={formatMoney(report.refunds ?? 0)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi label="COGS" value={formatMoney(report.cogs ?? 0)} />
+            <Kpi label="Gross profit" value={formatMoney(report.grossProfit ?? 0)} />
+            <Kpi
+              label="Margin %"
+              value={`${Number(report.marginPct ?? 0).toFixed(1)}%`}
+            />
+            <Kpi label="Tax" value={formatMoney(report.tax ?? 0)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Kpi label="Sales count" value={String(report.count)} />
+            <Kpi label="Avg basket" value={formatMoney(report.avg)} />
+            <Kpi label="Items sold" value={String(report.itemsSold)} />
+            <Kpi label="Revenue (net)" value={formatMoney(report.revenue)} />
+          </div>
+
           {salesCount > 0 && (
             <>
-              <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <Kpi label="Revenue" value={formatMoney(report.revenue)} />
-                <Kpi label="Sales" value={String(report.count)} />
-                <Kpi label="Avg. sale" value={formatMoney(report.avg)} />
-                <Kpi label="Items sold" value={String(report.itemsSold)} />
-              </div>
-
-              <Panel title="Revenue — last 7 days">
-                <BarList
-                  rows={report.byDay.map((d) => ({
-                    label: d.label,
-                    value: d.total,
-                    display: formatMoney(d.total),
-                  }))}
-                />
-              </Panel>
+              {report.byDay?.length > 0 && (
+                <Panel title="Revenue — last 7 days">
+                  <BarList
+                    rows={report.byDay.map((d) => ({
+                      label: d.label,
+                      value: d.total,
+                      display: formatMoney(d.total),
+                    }))}
+                  />
+                </Panel>
+              )}
 
               <div className="grid gap-6 lg:grid-cols-2">
                 <Panel title="By payment method">
                   <BarList
-                    rows={report.byMethod.map((m) => ({
+                    rows={(report.byMethod ?? []).map((m) => ({
                       label: m.method,
                       value: m.total,
                       display: `${formatMoney(m.total)} · ${m.count}`,
                     }))}
                   />
                 </Panel>
-                <Panel title="By channel (same sales ledger)">
+                <Panel title="By cashier">
+                  <BarList
+                    rows={(report.byCashier ?? leaderboard).map((e) => ({
+                      label: e.name,
+                      value: e.total,
+                      display: `${formatMoney(e.total)} · ${e.count}`,
+                    }))}
+                  />
+                </Panel>
+              </div>
+
+              {(report.byChannel?.length ?? 0) > 0 && (
+                <Panel title="By channel">
                   <BarList
                     rows={report.byChannel.map((m) => ({
                       label: m.source,
@@ -97,28 +183,21 @@ export default function ReportsPage() {
                     }))}
                   />
                 </Panel>
-              </div>
-              <Panel title="Top products">
-                <BarList
-                  rows={report.topProducts.map((p) => ({
-                    label: p.name,
-                    value: p.qty,
-                    display: `${p.qty} sold`,
-                  }))}
-                />
-              </Panel>
+              )}
+
+              {(report.topProducts?.length ?? 0) > 0 && (
+                <Panel title="Top products">
+                  <BarList
+                    rows={report.topProducts.map((p) => ({
+                      label: p.name,
+                      value: p.qty,
+                      display: `${p.qty} sold`,
+                    }))}
+                  />
+                </Panel>
+              )}
             </>
           )}
-
-          <Panel title="Employee leaderboard">
-            <BarList
-              rows={leaderboard.map((e) => ({
-                label: e.name,
-                value: e.total,
-                display: `${formatMoney(e.total)} · ${e.count} sales`,
-              }))}
-            />
-          </Panel>
 
           <Panel title="Dead stock / aging">
             <p className="mb-3 text-xs text-text-dim">
