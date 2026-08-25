@@ -1,0 +1,227 @@
+# MyPoz Final Master Production Blueprint
+
+**Status:** Living architecture authority — 2026-08-25  
+**Freeze branch:** `production-hardening`  
+**Immutable migrations:** `0001`–`0029` (forward-only after this)  
+**Infrastructure posture:** **Vercel + Supabase/Postgres + WebXPay (+ managed email/WhatsApp/storage/monitoring).**  
+**Do not add:** aaPanel, Webuzo, self-managed VPS panels, second database, Kubernetes, or microservice sprawl at this stage.
+
+This document is the **single source of truth** for:
+
+> HQ → SaaS → Tenants → Branches → POS → Storefront → WhatsApp → Inventory → Purchasing → Payments → Returns → Refunds → Reporting → Security → Backups → Monitoring → Integrations → Client onboarding → Legacy removal → Production certification.
+
+---
+
+## 1. Non-negotiables
+
+1. **Postgres is the system of record** for money, inventory, authz, orders, payments, audit, and tenant data.
+2. **`production + Supabase` ⇒ zero silent JSON/localStorage fallback** for those domains.
+3. **One payment ledger:** `payment_intents` + `payment_events` (+ refunds when certified).
+4. **One audit ledger:** `audit_events` via `write_audit_event`.
+5. **One inventory truth:** `branch_stock` + `stock_movements` (typed reasons).
+6. **Card/online never decrements stock before verified payment.**
+7. **A payment/event can never double-apply stock or double-create a sale.**
+8. **Tenant A never sees or mutates Tenant B.** HQ platform roles are separately auditable.
+9. **No catalog restore from corrupted Aug-24 JSON.** No mass legacy delete until Gate 4 + Gate 5 pass.
+10. **Do not destructively rewrite migrations `0001`–`0029`.**
+
+---
+
+## 2. Frozen architecture (five layers)
+
+```text
+┌─────────────────────────────────────────────┐
+│                MYPOZ HQ                     │
+│ Platform / SaaS / Billing / Support / Ops  │
+└──────────────────────┬──────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────┐
+│             MULTI-TENANT CORE               │
+│ Org / Branch / Users / RBAC / Audit        │
+└──────────────────────┬──────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────┐
+│             COMMERCE ENGINE                 │
+│ POS / Store / Orders / Inventory / CRM     │
+│ Purchasing / Returns / Refunds / Reports   │
+└──────────────────────┬──────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────┐
+│            INTEGRATION LAYER                │
+│ Payments / WhatsApp / Email / SMS / Files  │
+│ Webhooks / Notifications / APIs            │
+└──────────────────────┬──────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────┐
+│          INFRASTRUCTURE / DATA              │
+│ Vercel / Supabase / PostgreSQL / Storage   │
+│ Backups / Monitoring / DR / Security       │
+└─────────────────────────────────────────────┘
+```
+
+### Runtime topology (keep)
+
+```text
+Internet → Vercel (Next.js + API) → Supabase Postgres (+ Auth, Storage)
+                                  → WebXPay (first certified LKR provider)
+                                  → Meta WhatsApp / Resend email
+```
+
+### Explicitly deferred
+
+aaPanel / Webuzo / bare VPS OS management · Redis only when Upstash already approved for rate limits · additional payment providers until WebXPay is certified · catalog import · mass legacy deletion.
+
+---
+
+## 3. Domain model (target shape)
+
+| Domain | Canonical objects |
+|--------|-------------------|
+| Identity | organizations, memberships/profiles, branches, registers, roles |
+| Catalog | products, variants, categories, pricing, discounts |
+| Inventory | branch_stock, stock_movements / ledger reasons, transfers, GRN, stocktakes |
+| Commerce | sales, sale_lines, orders, customers, fulfillment |
+| Payments | payment_intents, payment_events, refunds (merchant checkout ≠ SaaS billing) |
+| Audit | audit_events |
+| Platform | plans, subscriptions, invoices, usage, platform_settings |
+| Comms | notifications, WhatsApp threads/messages |
+| Storage | object storage for media/docs; Postgres holds metadata only |
+
+**Ledger rule for inventory:**
+
+```text
+opening + receives + returns + transfers_in − sales − transfers_out ± adjustments = on-hand
+```
+
+---
+
+## 4. Two payment ledgers (never mix)
+
+```text
+CLIENT'S CUSTOMER → POS/Storefront → WebXPay → CLIENT BUSINESS
+MYPOZ CLIENT      → SaaS subscription billing → MYPOZ HQ
+```
+
+WebXPay is the **first certified** merchant provider behind a `PaymentProvider` adapter (`WEBXPAY` | `PAYHERE` | `ONEPAY` | `STRIPE`). Do not certify five gateways at once.
+
+---
+
+## 5. Execution phases (locked order)
+
+| Phase | Name | Exit criteria |
+|-------|------|----------------|
+| 0 | Architecture freeze | Inventories + this blueprint |
+| 1 | Database certification | UI→API→RPC→table→RLS→migration→test for production paths |
+| 2 | HQ + multi-tenancy | Org/branch/user/RBAC/subscription boundaries |
+| **3 / Gate 4** | **Commerce integrity** | POS, payments, webhook idempotency, inventory, returns, concurrency — **100% PASS** |
+| 4 | Storefront + WhatsApp | Order→pay→fulfill→stock |
+| 5 | SaaS platform billing | Plans/limits separate from merchant payments |
+| 6 / Gate 5 | Backup / DR / observability | Restore tested; RPO/RTO documented; alerts |
+| 7 | Legacy elimination | KEEP/REPLACE/DEPRECATE/DELETE with proof |
+| 8 | Load + security | k6 + Gate 3 re-smoke |
+| 9 | Client pilot | **One** real tenant |
+| 10 | Final production certification | CLIENT READY board |
+
+### After Gate 4 only
+
+```text
+Gate 4 → Backup/Restore → Catalog migration → Legacy cleanup → Observability → Security smoke → Client pilot → Final cert
+```
+
+---
+
+## 6. Gate board (current)
+
+| Gate | Status |
+|------|--------|
+| 2A Migration replay | ✅ PASS |
+| 2B Completeness | ✅ PASS WITH remediation (Phase 2 closed P0s) |
+| 3 Security | ✅ PASS 79/79 (re-smoked post Phase 2 deploy) |
+| Phase 2 Durability | ✅ PASS WITH P1/P2 |
+| **Gate 4 Commerce** | 🔄 In progress — see `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` |
+| Gate 5 DR | ⏳ After Gate 4 |
+| Catalog | 🔒 Blocked |
+| Legacy mass delete | 🔒 Blocked |
+| Client onboarding | 🔒 Blocked |
+
+---
+
+## 7. Provider strategy
+
+| Concern | Choice |
+|---------|--------|
+| App hosting | Vercel (Local / Preview / Production env separation) |
+| Database / Auth | Supabase Postgres + RLS |
+| Merchant payments | WebXPay staging → live after E2E; adapter for others later |
+| Rate limit (distributed) | Upstash Redis REST when configured; memory fallback only for single-isolate |
+| Email | Resend |
+| WhatsApp | Meta Cloud API |
+| Observability (next) | Sentry + Vercel/Supabase logs + payment funnel metrics |
+| Load tests (next) | k6 against staging |
+| Object files | Supabase Storage (backed up separately from DB) |
+
+**Secrets:** never in Git, docs, frontend bundles, or chat. Rotate Gate 3 test credentials after certification windows.
+
+---
+
+## 8. HQ control plane (target)
+
+Platform roles (separate from tenant roles):
+
+`PLATFORM_OWNER` · `PLATFORM_ADMIN` · `PLATFORM_SUPPORT` · `PLATFORM_FINANCE` · `PLATFORM_SECURITY`
+
+Hierarchy:
+
+```text
+Platform → Organization → Branch → Register → User
+```
+
+HQ must not casually bypass tenant RLS; any break-glass path is explicit and audited.
+
+---
+
+## 9. Onboarding template (post Gate 4/5)
+
+```text
+CREATE ORG → OWNER → BRANCH → REGISTER → USERS → IMPORT PRODUCTS (validated)
+→ OPEN REGISTER → TEST SALE → VERIFY PAYMENT → GO LIVE
+```
+
+---
+
+## 10. Final CLIENT READY board (Gate 10)
+
+```text
+Architecture · Migration replay · DB completeness · RLS · AuthN/Z · Audit
+Payments · Webhook idempotency · POS · Inventory · Returns/Refunds
+Concurrency · Reporting · Backup/Restore · Monitoring · Tenant onboarding
+Catalog migration · Legacy removal · TypeScript · Tests · Production deploy
+```
+
+All must be **PASS** before paying clients at scale.
+
+---
+
+## 11. Related certification docs
+
+| Doc | Role |
+|-----|------|
+| `MYPOZ_CERTIFICATION_ROADMAP.md` | Gate board |
+| `PHASE2_DURABILITY_CERTIFICATION.md` | Durability closeout |
+| `GATE3_SECURITY_CERTIFICATION_FINAL.md` | Security |
+| `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` | Commerce (this stage) |
+| `WEBXPAY_STAGING_SETUP.md` | Payment staging ops |
+| `P1_CLOSURE_PROGRESS.md` | P1 tracking |
+| `LEGACY_REMOVAL_PLAN.md` | Delete rules |
+
+---
+
+## 12. Agent operating rules
+
+When executing work against this blueprint:
+
+1. Prefer certification and eliminating duplication over new features.
+2. Every commerce claim needs `input → API → authz → RPC/SQL → DB state → audit` evidence.
+3. HTTP 200 alone is never PASS.
+4. On P0 failure: **STOP**, write remediation, do not thrash unrelated modules.
+5. Update this blueprint only when architecture decisions change — not for routine test logs.
