@@ -5,9 +5,10 @@ import {
   webxpayEnvironment,
   webxpayGatewayUrl,
 } from "@/lib/payments/gateways/webxpay";
+import { rateLimitBackend } from "@/lib/server/rate-limit";
 
 /**
- * Non-secret payment readiness probe for staging checks.
+ * Non-secret payment / ops readiness probe for staging checks.
  * Does not expose keys.
  */
 export async function GET() {
@@ -17,6 +18,11 @@ export async function GET() {
     data: {
       anyConfigured: anyGatewayConfigured(),
       lkrProvider: lkr,
+      rateLimit: rateLimitBackend(),
+      email: {
+        configured: Boolean(process.env.RESEND_API_KEY?.trim()),
+        fromSet: Boolean(process.env.RESEND_FROM_EMAIL?.trim()),
+      },
       webxpay: {
         configured: webxpayConfigured(),
         environment: webxpayEnvironment(),
