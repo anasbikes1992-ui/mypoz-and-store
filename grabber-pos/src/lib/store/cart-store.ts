@@ -194,7 +194,7 @@ export const useCartStore = create<CartState>((set) => ({
   addProduct: (product) =>
     set((state) => {
       const available = Math.max(0, Number(product.quantity) || 0);
-      if (available <= 0 && !product.custom) {
+      if (available <= 0) {
         return state; // refuse zero-stock catalog lines (server also enforces)
       }
       const maxQty = available > 0 ? available : 9999;
