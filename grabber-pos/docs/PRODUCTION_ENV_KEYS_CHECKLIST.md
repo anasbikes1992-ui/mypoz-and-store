@@ -27,10 +27,10 @@ Legend: ✅ present on Vercel Production (CLI `env ls`) · ⏳ add when ready ·
 
 | Variable | Prod | Notes |
 |----------|:----:|-------|
-| `UPSTASH_REDIS_REST_URL` | ⏳ | Distributed rate limit |
-| `UPSTASH_REDIS_REST_TOKEN` | ⏳ | Pair with URL |
+| `UPSTASH_REDIS_REST_URL` | ✅ Prod+Preview | Distributed rate limit |
+| `UPSTASH_REDIS_REST_TOKEN` | ✅ Prod+Preview | Pair with URL |
 | `SUPABASE_DB_PASSWORD` | ✅ local | Gate 5 logical export — **not** for Vercel runtime (export ran 2026-08-26) |
-| `NEXT_PUBLIC_APP_URL` | ⏳ | Canonical https://mypoz-and-store-ui.vercel.app |
+| `NEXT_PUBLIC_APP_URL` | ✅ | Canonical https://mypoz-and-store-ui.vercel.app |
 | `GMS_ADMIN_EMAILS` | ✅ | HQ allowlist |
 
 ---
@@ -44,7 +44,7 @@ Legend: ✅ present on Vercel Production (CLI `env ls`) · ⏳ add when ready ·
 | `WHATSAPP_APP_SECRET` | ✅ | |
 | `WHATSAPP_VERIFY_TOKEN` | ✅ | |
 | `OPENAI_API_KEY` | ✅ | Features that need it |
-| `RESEND_API_KEY` | ⏳ | Managed email when enabling transactional mail |
+| `RESEND_API_KEY` | ✅ | Added 2026-08-26 — optional `RESEND_FROM_EMAIL` for verified domain |
 | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | ⏸ | Observability next |
 
 ---
