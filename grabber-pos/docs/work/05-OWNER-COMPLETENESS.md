@@ -28,8 +28,8 @@ Password for all (dev reset 2026-08-26): use the shared reset password from ops 
 | Reports | ✓ | | ✓ | | |
 | WhatsApp | ✓ | | ✓ | partial | Harden in work/06 |
 | Jarvis | ✓ | partial | ✓ | no | After KPI canon |
-| Settings | ✓ | ✓ | ✓ | gap→fixing | **Change password** added (needs deploy) |
-| Change password | ✓ (new) | | ✓ | deploy | Was missing; Settings → Account |
+| Settings | ✓ | ✓ | ✓ | gap→fixing | **Change password** live after 2026-08-27 deploy |
+| Change password | ✓ | ✓ | ✓ | ✓ | Settings → Account |
 
 ## Invoice “Sale not found”
 
@@ -38,7 +38,7 @@ A mistyped URL (`87d…` / `…077…`) returns Sale not found. Use **Invoice PD
 
 ## Next focus (locked order)
 
-1. Deploy `business-os-cod-first` (forgot-password public, CMS on provision, change password, unknown-slug 404)
-2. Operator: A-OP-01 + Gate 5 (`docs/work/02`)
+1. ~~Deploy production patches~~ ✅ 2026-08-27 (`ops:smoke:prod`)
+2. Operator: A-OP-01 + Gate 5 (`docs/work/02`) — parallel
 3. Finish this gap table on **Anaz** + **pilot-02** (not Tenant B unless testing isolation)
 4. Then `06-WHATSAPP-V1` → `07-KPI-CANON` → Jarvis… → WebXPay last

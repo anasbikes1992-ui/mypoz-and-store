@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdapter, pickProvider, type ProviderKey } from "@/lib/payments/gateways";
 import { createGatewayPayment } from "@/lib/server/gateway-payments-store";
+import { getStorefrontInfo } from "@/lib/server/storefront-repo";
 
 const Schema = z.object({
   reference: z.string().min(2).max(120),
@@ -27,6 +28,13 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const host = req.headers.get("host");
+  if (!(await getStorefrontInfo({ host, slug }))) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Storefront unavailable" },
+      { status: 404 },
+    );
+  }
 
   let body: unknown;
   try {

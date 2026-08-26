@@ -11,6 +11,7 @@ import {
   findCustomerByEmail,
   type PublicStoreCustomer,
 } from "@/lib/server/storefront-customers-store";
+import { getStorefrontInfo } from "@/lib/server/storefront-repo";
 
 const registerSchema = z.object({
   action: z.literal("register"),
@@ -80,12 +81,26 @@ function setDemoSession(
   );
 }
 
+async function requireStorefront(req: NextRequest, slug: string) {
+  const host = req.headers.get("host");
+  const info = await getStorefrontInfo({ host, slug });
+  if (!info) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Storefront unavailable" },
+      { status: 404 },
+    );
+  }
+  return null;
+}
+
 /** Current customer session (demo cookie or Supabase user). */
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const missing = await requireStorefront(req, slug);
+  if (missing) return missing;
   const raw = req.cookies.get(demoCustomerCookieName(slug))?.value;
   if (raw) {
     try {
@@ -135,6 +150,8 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const missing = await requireStorefront(req, slug);
+  if (missing) return missing;
   let body: unknown;
   try {
     body = await req.json();
@@ -296,10 +313,12 @@ export async function POST(
 }
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const missing = await requireStorefront(req, slug);
+  if (missing) return missing;
   const res = ok({ customer: null });
   res.cookies.set(demoCustomerCookieName(slug), "", {
     ...cookieOpts(0),

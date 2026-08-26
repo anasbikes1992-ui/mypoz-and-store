@@ -1,4 +1,4 @@
-# 09 — Jarvis tools & five agents
+# 09 — Jarvis tools & agents
 
-**Status:** AFTER Jarvis BI  
-Analyst · Sales · Marketing · Customer · Inventory — tools only, no raw DB.
+**Status:** DEFERRED — after Jarvis BI (`08`)  
+**Rule:** Tools + five agents under TenantContext. Approvals before side-effects.

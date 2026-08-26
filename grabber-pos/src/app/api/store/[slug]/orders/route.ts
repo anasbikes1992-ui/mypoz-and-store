@@ -4,12 +4,21 @@ import {
   demoCustomerCookieName,
   type PublicStoreCustomer,
 } from "@/lib/server/storefront-customers-store";
+import { getStorefrontInfo } from "@/lib/server/storefront-repo";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const host = req.headers.get("host");
+  if (!(await getStorefrontInfo({ host, slug }))) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Storefront unavailable" },
+      { status: 404 },
+    );
+  }
+
   let customer: PublicStoreCustomer | null = null;
   const raw = req.cookies.get(demoCustomerCookieName(slug))?.value;
   if (raw) {
@@ -20,10 +29,8 @@ export async function GET(
     }
   }
 
-  const email = req.nextUrl.searchParams.get("email");
-  const mobile = req.nextUrl.searchParams.get("mobile");
-
-  if (!customer && !email && !mobile) {
+  // Require signed-in customer cookie — do not allow open email/mobile query IDOR.
+  if (!customer?.id && !customer?.email) {
     return NextResponse.json(
       { success: false, data: null, error: "Sign in to view order history" },
       { status: 401 },
@@ -33,8 +40,8 @@ export async function GET(
   const orders = await listStorefrontOrdersByCustomer({
     slug,
     customerId: customer?.id,
-    customerEmail: customer?.email || email,
-    customerMobile: customer?.mobile || mobile,
+    customerEmail: customer?.email,
+    customerMobile: customer?.mobile,
   });
 
   return NextResponse.json({ success: true, data: orders, error: null });

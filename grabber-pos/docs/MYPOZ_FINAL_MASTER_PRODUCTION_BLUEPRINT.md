@@ -221,6 +221,7 @@ All must be **PASS** before paying clients at scale.
 | `WEBXPAY_STAGING_SETUP.md` | Payment staging ops |
 | `P1_CLOSURE_PROGRESS.md` | P1 tracking |
 | `LEGACY_REMOVAL_PLAN.md` | Delete rules |
+| `docs/archive/` | Superseded audits/plans (not SoT) |
 
 ---
 

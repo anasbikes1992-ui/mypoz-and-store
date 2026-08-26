@@ -21,7 +21,7 @@ This roadmap does **not** reopen:
 - infrastructure topology
 - payment ledger design
 
-## Current truth (verified 2026-08-26)
+## Current truth (verified 2026-08-27)
 
 | Claim | Status |
 |-------|--------|
@@ -34,19 +34,25 @@ This roadmap does **not** reopen:
 | Durable POS sell of zero-stock | ✅ blocked in `create_sale_internal` RPC |
 | POS UI can still *add* zero-stock lines | ✅ client clamp |
 | Global `main-store` → `anaz-store` alias | intentional; reserved-slug + existing-storefront wins |
-| HQ tenants vs licences “different sources” | ❌ FALSE — both use `listHqTenants` (live 4 rows) |
-| Online orders dual-write | ✅ row in `app_collections`; confirm as Anaz owner UI |
+| HQ tenants vs licences “different sources” | ❌ FALSE — both use `listHqTenants` |
+| Online orders dual-write | ✅ |
 | Customer display stale tickets | ✅ TTL + scope + clear on empty cart |
-| HQ provision idempotent / audited | ✅ |
+| HQ provision idempotent + CMS seed-if-missing | ✅ live |
+| Unknown storefront → 404 | ✅ live (`production-pre-card-smoke`) |
+| Forgot-password public API | ✅ live |
 | WebXPay / cards | **LAST** |
 
 ## Immediate next (do in order)
 
-1. **Deploy** `business-os-cod-first` to `mypoz-and-store-ui`  
-   (forgot-password public · HQ CMS seed · change password in Settings · unknown-slug 404 · idempotent provision)
+1. ~~**Deploy** production patches~~ ✅ 2026-08-27
 2. **Operator:** A-OP-01 + Gate 5 off-site/PITR/restore (`docs/work/02`) — reply `A-OP-01: PASS`
-3. **Owner gap audit:** `docs/work/05` on **Anaz** + **`pilot-02-owner@mypoz.test`** (not `pilot2-owner` Tenant B fixture)
-4. Then WhatsApp v1 → KPI canon → Jarvis → agents → real client → WebXPay last
+3. **Freeze Pilot #2** — no foundation churn
+4. **Owner gap audit:** `docs/work/05` on **Anaz** + **`pilot-02-owner@mypoz.test`**
+5. Then WhatsApp v1 → KPI canon → Jarvis → agents → real client → WebXPay last
+
+## Deploy note
+
+Prefer **git push to `production-hardening` + promote**. Vercel Hobby CLI `--prod` hits the 12-function cap.
 
 ## Execution order (locked)
 

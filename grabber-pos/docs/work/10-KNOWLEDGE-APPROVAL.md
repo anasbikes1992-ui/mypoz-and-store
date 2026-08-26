@@ -1,4 +1,4 @@
-# 10 — Knowledge & Approval Center
+# 10 — Knowledge & approvals
 
-**Status:** AFTER agents read-path is reliable  
-Knowledge for policies/FAQs; Approval for high-risk WhatsApp/campaign actions.
+**Status:** DEFERRED — after agents (`09`)  
+**Rule:** Tenant knowledge + Approval Center. Agents propose; humans approve.

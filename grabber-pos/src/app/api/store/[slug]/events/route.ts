@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { trackCommerceEvent } from "@/lib/server/commerce-analytics-store";
+import { getStorefrontInfo } from "@/lib/server/storefront-repo";
 
 const eventSchema = z.object({
   type: z.enum([
@@ -20,6 +21,13 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const host = req.headers.get("host");
+  if (!(await getStorefrontInfo({ host, slug }))) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Storefront unavailable" },
+      { status: 404 },
+    );
+  }
   let body: unknown;
   try {
     body = await req.json();

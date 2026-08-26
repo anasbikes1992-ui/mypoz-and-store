@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { placeStorefrontOrder } from "@/lib/server/storefront-repo";
+import { placeStorefrontOrder, getStorefrontInfo } from "@/lib/server/storefront-repo";
 import { sendEmail } from "@/lib/email/client";
 import { orderConfirmationEmail } from "@/lib/email/templates/order-confirmation";
 import { readSettings } from "@/lib/server/settings-store";
@@ -83,6 +83,10 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
+  const host = req.headers.get("host");
+  if (!(await getStorefrontInfo({ host, slug }))) {
+    return fail("Storefront unavailable", 404);
+  }
 
   if (rateLimited(clientIp(req))) {
     return fail("Too many orders from this connection. Please try again shortly.", 429);

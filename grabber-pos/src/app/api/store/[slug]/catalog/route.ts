@@ -3,7 +3,7 @@ import {
   getStorefrontCatalogExport,
   getStorefrontInfo,
 } from "@/lib/server/storefront-repo";
-import { readWebsite } from "@/lib/server/website-store";
+import { readWebsiteForStorefront } from "@/lib/server/website-store";
 import { storeBaseUrl } from "@/lib/server/storefront-url";
 import { whatsAppLink } from "@/lib/storefront";
 
@@ -26,7 +26,7 @@ export async function GET(
     );
   }
 
-  const website = await readWebsite();
+  const website = await readWebsiteForStorefront({ host, slug });
   const catalog = await getStorefrontCatalogExport({ host, slug });
   const base = await storeBaseUrl(slug);
 

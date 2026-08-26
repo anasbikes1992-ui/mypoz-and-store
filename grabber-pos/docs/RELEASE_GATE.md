@@ -145,10 +145,13 @@ WhatsApp **templates** stay deferred until Meta **Approved**.
 
 ```
 npm run ops:gate → AUTOMATED_PASS
+npm run ops:smoke:prod → pre-card public smoke (404 / stores / forgot-password)
 Shop knowledge Business+ shipped; Anaz on business plan.
 0023 launch RLS hardening applied.
+Pilot #2 patches live 2026-08-27 (unknown→404, CMS seed-if-missing, forgot-password public).
 A-OP-01: confirm Site URL + redirects → reply A-OP-01: PASS
 A-OP-02: PASS (DB). WA templates deferred.
+Deploy via git + promote (Hobby CLI --prod hits 12-fn cap).
 Single status page: docs/LAUNCH_STATUS.md
 ```
 

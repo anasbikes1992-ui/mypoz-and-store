@@ -724,11 +724,20 @@ async function provisionDurableTenant(input: {
       },
     },
   ];
+  // Seed only when missing — never overwrite owner-customized CMS on re-provision.
   for (const doc of cmsDocs) {
-    const { error: cmsErr } = await db.from("app_documents").upsert(
-      { org_id: orgId, key: doc.key, data: doc.data },
-      { onConflict: "org_id,key" },
-    );
+    const { data: existing } = await db
+      .from("app_documents")
+      .select("key")
+      .eq("org_id", orgId)
+      .eq("key", doc.key)
+      .maybeSingle();
+    if (existing?.key) continue;
+    const { error: cmsErr } = await db.from("app_documents").insert({
+      org_id: orgId,
+      key: doc.key,
+      data: doc.data,
+    });
     if (cmsErr) throw new Error(cmsErr.message);
   }
 

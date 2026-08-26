@@ -30,7 +30,8 @@ Jarvis / shop KB: [JARVIS-VERTICALS.md](JARVIS-VERTICALS.md) · `/knowledge` (Bu
 4. **WhatsApp secrets + attach + smoke** (go-live gate — see below)
 
 5. **Catalogue**  
-   Anaz catalogue is live at **1518** products (confirm on `/products`). Re-import only if counts drop.
+   Anaz trusted rebuild PASS (2026-08-26): **1518** products on `/store/anaz-store`.  
+   Re-run `node --env-file=.env.local scripts/rebuild-anaz-store.mjs --force` only if counts drop. Never restore Aug-24 JSON.
 
 6. **Shop knowledge (Business+)**  
    Anaz is on **business** plan — open `/knowledge` → **Collect from organisation** → ask Jarvis a shop-specific FAQ.  

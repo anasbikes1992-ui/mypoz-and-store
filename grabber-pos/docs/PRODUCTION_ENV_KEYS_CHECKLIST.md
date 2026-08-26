@@ -15,9 +15,12 @@ Legend: ✅ present on Vercel Production (CLI `env ls`) · ⏳ add when ready ·
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | ✅ | ⏳ | |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | ✅ | ⏳ | |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | ✅ | ⏳ | Server only |
-| `WEBXPAY_PUBLIC_KEY` | ✅ | ✅ `production-hardening` | ⏳ | Staging keys OK until live cutover |
-| `WEBXPAY_SECRET_KEY` | ✅ | ✅ `production-hardening` | ⏳ | Staging keys OK until live cutover |
-| `WEBXPAY_ENV` | ⏳ | ⏳ | ⏳ | Omit or `staging`; set `live` only after RSA E2E |
+| `WEBXPAY_PUBLIC_KEY` | ✅ refreshed 2026-08-26 | ✅ `production-hardening` | ⏳ | Staging Integration Information PEM |
+| `WEBXPAY_SECRET_KEY` | ✅ refreshed 2026-08-26 | ✅ `production-hardening` | ⏳ | Same dashboard secret UUID |
+| `WEBXPAY_ENV` | ✅ `staging` | ✅ `production-hardening` | ⏳ | Set `live` only after RSA E2E |
+| `PAYMENTS_LKR_PROVIDER` | ✅ `WEBXPAY` | ✅ `production-hardening` | ⏳ | LKR provider picker |
+
+**Removed from Vercel:** `Secret_Key` (wrong name — app only reads `WEBXPAY_SECRET_KEY`).
 
 **Manual WebXPay dashboard:** Return URL = `{APP_URL}/api/payments/webhook/WEBXPAY`
 

@@ -1,5 +1,4 @@
-# 12 — WebXPay final (LAST)
+# 12 — WebXPay / cards (LAST)
 
-**Status:** DEFERRED  
-Staging capturePay **442** is merchant/MID. Architecture (intent → event → sale → stock) stays.  
-Close RSA E2E only after Business OS pilot path is green. Then `WEBXPAY_ENV=live`.
+**Status:** DEFERRED — after real client (`11`)  
+**Rule:** Cards last. Do not reopen ledger design. Staging RSA E2E before live tokens.
