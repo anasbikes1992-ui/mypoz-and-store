@@ -52,11 +52,17 @@ export async function readWebsiteForStorefront(opts: {
           });
         }
       }
+      // Explicit slug with no public CMS: fail closed (do not use session tenant).
+      if (opts.slug) {
+        return websiteSchema.parse({ ...DEFAULT_WEBSITE, enabled: false });
+      }
     } catch {
-      // fall through
+      if (opts.slug) {
+        return websiteSchema.parse({ ...DEFAULT_WEBSITE, enabled: false });
+      }
     }
   }
-  // Never require a staff session for public storefront CMS. Missing docs → defaults.
+  // Host-only / local demo: never require a staff session for public CMS.
   try {
     return await readWebsite();
   } catch {

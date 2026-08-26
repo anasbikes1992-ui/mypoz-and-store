@@ -158,6 +158,37 @@ export function isOnlineVisible(p: Product): boolean {
 }
 
 export async function getStorefrontInfo(key: StorefrontKey): Promise<StorefrontInfo | null> {
+  // Explicit slug on durable backend: RPC only — never touch session doc stores.
+  // Anonymous /store/{unknown} must 404, not 500 via Unauthorized on resolveDb.
+  if (isSupabaseEnabled && key.slug) {
+    try {
+      const { data, error } = await anonClient().rpc("storefront_info", {
+        p_host: key.host,
+        p_slug: key.slug,
+      });
+      if (error || !data) return null;
+      const website = await readWebsiteForStorefront({
+        host: key.host,
+        slug: key.slug,
+      });
+      if (!website.enabled) return null;
+      const remote = data as StorefrontInfo;
+      return {
+        ...remote,
+        heroHeadline: website.heroHeadline || remote.heroHeadline,
+        heroSubline: website.heroSubline || remote.heroSubline,
+        heroImageUrl:
+          website.banners[0]?.imageUrl ||
+          website.ogImageUrl ||
+          remote.heroImageUrl,
+        about: website.about || remote.about,
+        whatsappNumber: website.whatsappNumber || remote.whatsappNumber || "",
+      };
+    } catch {
+      return null;
+    }
+  }
+
   const settings = await readSettings();
   const website = await readWebsiteForStorefront({
     host: key.host,
@@ -189,12 +220,7 @@ export async function getStorefrontInfo(key: StorefrontKey): Promise<StorefrontI
       p_host: key.host,
       p_slug: key.slug,
     });
-    // Fail closed for explicit slug lookups: unknown/unpublished must not
-    // fall back to the caller's session/demo tenant (tenant isolation).
-    if (error || !data) {
-      if (key.slug) return null;
-      return defaultInfo;
-    }
+    if (error || !data) return defaultInfo;
     const remote = data as StorefrontInfo;
     return {
       ...remote,
@@ -209,7 +235,6 @@ export async function getStorefrontInfo(key: StorefrontKey): Promise<StorefrontI
         website.whatsappNumber || remote.whatsappNumber || defaultInfo.whatsappNumber,
     };
   } catch {
-    if (key.slug) return null;
     return defaultInfo;
   }
 }

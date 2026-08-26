@@ -71,24 +71,39 @@ async function seedFromExisting(): Promise<StoreConfig> {
 
 async function readRaw(): Promise<CommerceDocument> {
   const publicBundle = await readPublicStorefrontBundle();
-  if (publicBundle && Object.keys(publicBundle.commerce).length > 0) {
+  if (publicBundle) {
     const seed = defaultStoreConfig({
       name: "MyPoz Store",
       slug: publicBundle.slug || "main-store",
     });
-    const raw = publicBundle.commerce as Partial<CommerceDocument>;
-    try {
-      return commerceDocumentSchema.parse({
-        draft: raw.draft ? storeConfigSchema.parse({ ...seed, ...raw.draft }) : seed,
-        published: raw.published
-          ? storeConfigSchema.parse({ ...seed, ...raw.published })
-          : null,
-        publishedAt: raw.publishedAt ?? null,
-        updatedAt: raw.updatedAt ?? new Date().toISOString(),
-      });
-    } catch {
-      return emptyDoc(seed);
+    if (Object.keys(publicBundle.commerce).length > 0) {
+      const raw = publicBundle.commerce as Partial<CommerceDocument>;
+      try {
+        return commerceDocumentSchema.parse({
+          draft: raw.draft ? storeConfigSchema.parse({ ...seed, ...raw.draft }) : seed,
+          published: raw.published
+            ? storeConfigSchema.parse({ ...seed, ...raw.published })
+            : null,
+          publishedAt: raw.publishedAt ?? null,
+          updatedAt: raw.updatedAt ?? new Date().toISOString(),
+        });
+      } catch {
+        return emptyDoc(seed);
+      }
     }
+    // Public slug resolved but commerce doc missing — defaults, never session.
+    return emptyDoc(seed);
+  }
+
+  // Anonymous storefront request with no bundle (unknown slug): defaults only.
+  try {
+    const { headers } = await import("next/headers");
+    const h = await headers();
+    if (h.get("x-mypoz-slug") || h.get("x-mypoz-host")) {
+      return emptyDoc(defaultStoreConfig({ name: "MyPoz Store", slug: "main-store" }));
+    }
+  } catch {
+    /* not in a request context */
   }
 
   const seed = await seedFromExisting();

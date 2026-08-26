@@ -1,9 +1,8 @@
 import { headers } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getStorefrontInfo } from "@/lib/server/storefront-repo";
-import { readWebsite } from "@/lib/server/website-store";
+import { readWebsiteForStorefront } from "@/lib/server/website-store";
 import { readPublishedStore } from "@/lib/server/commerce-store";
-import { readSettings } from "@/lib/server/settings-store";
 import { storeTokenStyle, themeClass } from "@/lib/commerce/themes";
 import { storeCopy } from "@/lib/commerce/i18n";
 import { StorefrontAnalytics } from "@/components/storefront/Analytics";
@@ -25,18 +24,10 @@ export default async function StoreLayout({
   const slug = resolvedParams?.slug || "";
   const host = (await headers()).get("host");
 
-  const [settings, storeEarly] = await Promise.all([
-    readSettings(),
-    readPublishedStore(),
-  ]);
-  // Tenant isolation: a real storefront for this slug wins over launch aliases.
+  // Resolve tenant first — never touch session doc stores before this.
   const direct = await getStorefrontInfo({ host, slug });
+  // Launch map only (main-store → anaz-store). Do not apply session aliases.
   const aliasTarget = resolveStoreSlugAlias(slug, {
-    canonicalSlug: storeEarly.slug || settings.storeSlug,
-    extraAliases: [
-      ...(storeEarly.slugAliases ?? []),
-      settings.storeSlugAliases,
-    ],
     hasDirectStorefront: Boolean(direct),
   });
   if (aliasTarget && aliasTarget !== slug) {
@@ -58,12 +49,11 @@ export default async function StoreLayout({
     permanentRedirect(rewriteStorePath(pathFromHeader, aliasTarget));
   }
 
-  const info = direct ?? (await getStorefrontInfo({ host, slug }));
-  if (!info) notFound();
+  if (!direct) notFound();
 
   const [website, store] = await Promise.all([
-    readWebsite(),
-    Promise.resolve(storeEarly),
+    readWebsiteForStorefront({ host, slug }),
+    readPublishedStore(),
   ]);
   const t = storeCopy(store.locale);
   const theme = themeClass(store.themeId);
@@ -73,23 +63,23 @@ export default async function StoreLayout({
     <div className={`${theme} min-h-screen font-sans`} style={tokenStyle}>
       <CartProvider
         slug={slug}
-        businessName={info.businessName}
+        businessName={direct.businessName}
         whatsappNumber={
-          store.social.whatsapp || website.whatsappNumber || info.whatsappNumber
+          store.social.whatsapp || website.whatsappNumber || direct.whatsappNumber
         }
         currency={store.currency || "LKR"}
         website={website}
       >
         <StorefrontAnalytics
-          ga4Id={info.ga4Id}
-          googleAdsId={info.googleAdsId}
-          metaPixelId={info.metaPixelId}
+          ga4Id={direct.ga4Id}
+          googleAdsId={direct.googleAdsId}
+          metaPixelId={direct.metaPixelId}
         />
 
         <a href="#main" className="skip-link">
           {t.skipToContent}
         </a>
-        <StoreChrome slug={slug} store={store} businessName={info.businessName}>
+        <StoreChrome slug={slug} store={store} businessName={direct.businessName}>
           {children}
         </StoreChrome>
       </CartProvider>
