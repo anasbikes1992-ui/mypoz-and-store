@@ -1,24 +1,34 @@
 # WebXPay staging setup (MyPoz)
 
-## Endpoints
+## Integration mode
 
-| Env | Payment POST URL |
-|-----|------------------|
-| Staging (default) | `https://stagingxpay.info/index.php?route=checkout/billing` |
-| Live | `https://webxpay.com/index.php?route=checkout/billing` |
+MyPoz POS/card uses **Redirect Integration only** (not Tokenize).
+
+| Kind | Staging | Live |
+|------|---------|------|
+| **Redirect POST (we use this)** | `https://stagingxpay.info/index.php?route=checkout/billing` | `https://webxpay.com/index.php?route=checkout/billing` |
+| Tokenize API (not used by POS redirect) | `https://tokenize.stagingxpay.info/` | `https://commtoken.webxpay.com/` |
 
 Docs: https://developers.webxpay.com/Guides/Redirect-Integration/redirect.html
+
+Staging non-token MID (bank / merchant setup reference): `TESTWEBXPAYNOLKR`  
+([Bank MIDs](https://developers.webxpay.com/Other/Bank-MID/mid.html))
 
 ## App env (names only)
 
 ```bash
 PAYMENTS_LKR_PROVIDER=WEBXPAY
 WEBXPAY_ENV=staging
-WEBXPAY_PUBLIC_KEY=<PEM from WebXPay dashboard>
-WEBXPAY_SECRET_KEY=<secret from WebXPay dashboard>
-# optional:
+WEBXPAY_PUBLIC_KEY=<PEM from WebXPay Integration Information>
+WEBXPAY_SECRET_KEY=<secret from same dashboard>
+# optional — skip gateway picker (e.g. Commercial Bank MPGS LKR = 40):
+# WEBXPAY_PAYMENT_GATEWAY_ID=40
+# optional override:
 # WEBXPAY_GATEWAY_URL=https://stagingxpay.info/index.php?route=checkout/billing
 ```
+
+**Keys must belong to the merchant account enabled for the URL you post to.**  
+Encrypting with keys that do not match staging while posting to `stagingxpay.info` commonly yields **`442 Invalid encryption`**.
 
 ## Dashboard return URL
 
@@ -26,14 +36,14 @@ WEBXPAY_SECRET_KEY=<secret from WebXPay dashboard>
 https://mypoz-and-store-ui.vercel.app/api/payments/webhook/WEBXPAY
 ```
 
-(or your preview / custom domain equivalent)
+Click **SUBMIT** after any change. Do **not** put Tokenize API username/password into Vercel for redirect.
 
 ## Flow
 
 ```text
-POS Card → create_sale (pending) → /api/pos/pay → WebXPay form POST
-      → customer pays on stagingxpay
-      → webhook /api/payments/webhook/WEBXPAY (signature verified)
+POS Card → create_sale (pending) → /api/pos/pay → form POST → stagingxpay.info
+      → customer pays
+      → webhook /api/payments/webhook/WEBXPAY (RSA signature verified)
       → payment_events claim → create_sale_internal → stock decrement
 ```
 
@@ -42,9 +52,10 @@ Cash remains immediate `create_sale` (no gateway).
 ## Verify after keys are set
 
 1. `GET /api/payments/status` → `webxpay.configured: true`, `environment: staging`, host `stagingxpay.info`
-2. POS → Card → confirm redirect to staging billing page
-3. Complete a staging test payment → sale completes, stock moves once
+2. Also expect `rateLimit: "upstash"` and `email.configured: true` once Redis/Resend envs are live on that deploy
+3. POS → Card → staging billing (not 442)
+4. Demo card (no 3DS): `5111 1111 1111 1118` · future expiry · any CVV → sale completes, stock −1 once
 
-## Known blocker (2026-08-25)
+## Known blocker
 
-Staging may return **`442 Invalid encryption`** even when MyPoz builds a valid encrypted `payment` field and Node can POST the billing page. Treat as **merchant public/secret key pair or WebXPay dashboard staging settings**, not app architecture. Demo cards (tokenize guide): Master Without 3DS `5111 1111 1111 1118`, any future expiry + 3-digit CVV. Helpers: `scripts/webxpay-rsa-build-checkout.mjs`, `scripts/webxpay-rsa-node-chain.mjs`.
+**`442 Invalid encryption`** = staging rejected the RSA `payment` blob (wrong/mismatched public+secret for staging). Redirect URL in code is already correct. Helpers: `scripts/webxpay-rsa-build-checkout.mjs`, `scripts/webxpay-rsa-node-chain.mjs`.

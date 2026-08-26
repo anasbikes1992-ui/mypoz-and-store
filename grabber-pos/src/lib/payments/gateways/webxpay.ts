@@ -3,19 +3,19 @@ import type { CheckoutInput, CheckoutResult, PaymentAdapter, PayStatus, WebhookR
 import { toMajor } from "./types";
 
 /**
- * WEBXPAY Redirect Integration (v3)
+ * WEBXPAY Redirect Integration (v3) — not Tokenize.
  * Docs: https://developers.webxpay.com/Guides/Redirect-Integration/redirect.html
  *
- * Staging POST: https://stagingxpay.info/index.php?route=checkout/billing
- * Live POST:    https://webxpay.com/index.php?route=checkout/billing
+ * Staging redirect: https://stagingxpay.info/index.php?route=checkout/billing
+ * Live redirect:    https://webxpay.com/index.php?route=checkout/billing
+ * Tokenize staging (unused here): https://tokenize.stagingxpay.info/
  *
- * Set WEBXPAY_PUBLIC_KEY + WEBXPAY_SECRET_KEY from merchant dashboard
- * (Settings → Integration Information → Generate keys).
- * Set Return URL in WebXPay dashboard to:
- *   {APP_URL}/api/payments/webhook/WEBXPAY
+ * Keys from merchant Settings → Integration Information must match the
+ * environment you post to (staging keys → staging URL). Mismatch → 442.
  *
- * WEBXPAY_ENV=staging|live (default staging until live credentials are approved).
- * Optional override: WEBXPAY_GATEWAY_URL
+ * Return URL: {APP_URL}/api/payments/webhook/WEBXPAY
+ * WEBXPAY_ENV=staging|live (default staging).
+ * Optional: WEBXPAY_GATEWAY_URL, WEBXPAY_PAYMENT_GATEWAY_ID (e.g. 40 = MPGS LKR)
  */
 
 function e(k: string) {
@@ -91,25 +91,31 @@ export const webxpayAdapter: PaymentAdapter = {
     );
     const [firstName, ...rest] = input.customer.name.trim().split(/\s+/);
     const phone = (input.customer.phone ?? "0770000000").replace(/[^\d+]/g, "");
+    const email =
+      (input.customer.email || "").trim() || "checkout@mypoz.local";
+    const gatewayId = (e("WEBXPAY_PAYMENT_GATEWAY_ID") || "").trim();
+    const formFields: Record<string, string> = {
+      first_name: (firstName || "Customer").slice(0, 30),
+      last_name: (rest.join(" ") || "-").slice(0, 30),
+      email: email.slice(0, 120),
+      contact_number: phone.length >= 9 ? phone.slice(0, 20) : "0770000000",
+      address_line_one: "Sri Lanka",
+      // Guide lists cms as mandatory (PHP, WooCommerce, …)
+      cms: "PHP",
+      process_currency: input.currency,
+      secret_key: secretKey,
+      // Guide §2.5/2.7: custom_fields = base64(param1|param2|…)
+      // Guide §2.2 table typo "custom_feilds" — send both for staging compatibility
+      custom_fields: Buffer.from(input.reference).toString("base64"),
+      custom_feilds: Buffer.from(input.reference).toString("base64"),
+      payment: encrypted.toString("base64"),
+    };
+    // Optional: skip payment-method picker (guide §2.5.1)
+    if (gatewayId) formFields.payment_gateway_id = gatewayId;
     return {
       mode: "form",
       formAction: gatewayUrl,
-      formFields: {
-        first_name: (firstName || "Customer").slice(0, 30),
-        last_name: (rest.join(" ") || "-").slice(0, 30),
-        email: input.customer.email,
-        contact_number: phone.length >= 9 ? phone.slice(0, 20) : "0770000000",
-        address_line_one: "Sri Lanka",
-        // Guide lists cms as mandatory (PHP, WooCommerce, …)
-        cms: "PHP",
-        process_currency: input.currency,
-        secret_key: secretKey,
-        // Guide §2.5/2.7: custom_fields = base64(param1|param2|…)
-        // Guide §2.2 table typo "custom_feilds" — send both for staging compatibility
-        custom_fields: Buffer.from(input.reference).toString("base64"),
-        custom_feilds: Buffer.from(input.reference).toString("base64"),
-        payment: encrypted.toString("base64"),
-      },
+      formFields,
     };
   },
 
