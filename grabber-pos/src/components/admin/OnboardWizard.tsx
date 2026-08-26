@@ -59,7 +59,18 @@ export function OnboardWizard({
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  const canAdvance = step !== 0 || draft.name.trim().length > 0;
+  const canAdvance =
+    step === 0
+      ? draft.name.trim().length >= 2 && draft.contact.trim().length >= 3
+      : step === 1
+        ? Boolean(draft.plan)
+        : draft.name.trim().length >= 2;
+
+  const stepHint =
+    step === 0 && !canAdvance
+      ? "Enter a business name (2+ chars) and contact before continuing."
+      : null;
+
   const fleet = mode === "hq";
 
   async function provision() {
@@ -368,6 +379,9 @@ export function OnboardWizard({
       </AnimatePresence>
 
       {error && <p className="mt-4 text-sm text-danger">{error}</p>}
+      {stepHint && !error && (
+        <p className="mt-4 text-sm text-text-dim">{stepHint}</p>
+      )}
 
       <div className="mt-6 flex items-center justify-between">
         <button
@@ -380,7 +394,10 @@ export function OnboardWizard({
 
         {step < STEPS.length - 1 ? (
           <button
-            onClick={() => setStep((s) => s + 1)}
+            onClick={() => {
+              if (!canAdvance) return;
+              setStep((s) => s + 1);
+            }}
             disabled={!canAdvance}
             className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-ink transition hover:opacity-90 disabled:opacity-40"
           >
@@ -389,7 +406,7 @@ export function OnboardWizard({
         ) : (
           <button
             onClick={provision}
-            disabled={busy || !draft.name.trim()}
+            disabled={busy || !draft.name.trim() || !draft.contact.trim()}
             className="rounded-xl bg-accent px-5 py-2 text-sm font-semibold text-accent-ink transition hover:opacity-90 disabled:opacity-40"
           >
             {busy ? "Provisioning…" : "Create client"}

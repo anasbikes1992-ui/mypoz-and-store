@@ -3,10 +3,6 @@ import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { verifySessionToken } from "@/lib/server/session";
 import { inspectRequest } from "@/lib/server/waf";
 import { apiRateLimitAsync, clientIpFromHeaders } from "@/lib/server/rate-limit";
-import {
-  resolveStoreSlugAlias,
-  rewriteStorePath,
-} from "@/lib/store-slug-aliases";
 
 const DEMO_COOKIE = "pos_session";
 const SID_COOKIE = "mypoz_sid";
@@ -20,6 +16,7 @@ const PUBLIC_PATHS = [
   "/data-deletion",
   "/display",
   "/api/auth/login",
+  "/api/auth/forgot-password",
   "/api/health",
   "/store",
   "/api/store",
@@ -88,16 +85,9 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 308 alias → canonical storefront slug (path-preserving).
-  const storeMatch = pathname.match(/^\/store\/([^/]+)(.*)$/);
-  if (storeMatch) {
-    const canonical = resolveStoreSlugAlias(storeMatch[1]!);
-    if (canonical) {
-      const url = req.nextUrl.clone();
-      url.pathname = rewriteStorePath(pathname, canonical);
-      return NextResponse.redirect(url, 308);
-    }
-  }
+  // Storefront slug aliases (e.g. main-store → anaz-store) are resolved in
+  // `app/store/[slug]/layout.tsx` AFTER checking a direct storefront exists,
+  // so a real tenant slug is never stolen by the Anaz launch map.
 
   const waf = inspectRequest(req);
   if (!waf.ok) return blocked(waf.status, waf.reason);

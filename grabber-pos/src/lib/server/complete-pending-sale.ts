@@ -149,7 +149,7 @@ async function completePosPaymentIntent(
     const { data: existing } = await db
       .from("sales")
       .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, status, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
+        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, delivery_fee, cod_fee, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, status, sale_lines(product_id, name, unit_price, quantity, discount, line_total)",
       )
       .eq("id", intent.sale_id)
       .maybeSingle();
@@ -231,6 +231,8 @@ function mapSaleRowCompat(row: any): Sale {
     discountTotal: Number(row.discount_total ?? 0),
     finalDiscount: Number(row.final_discount ?? 0),
     serviceCharge: Number(row.service_charge ?? 0),
+    deliveryFee: Number(row.delivery_fee ?? 0),
+    codFee: Number(row.cod_fee ?? 0),
     total: Number(row.total ?? 0),
     paymentMethod: (row.payment_method ?? "card") as Sale["paymentMethod"],
     isWholesale: row.payment_method === "wholesale",

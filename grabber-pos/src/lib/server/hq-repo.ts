@@ -25,6 +25,7 @@ import { readTenant, writeTenant } from "@/lib/server/tenant-store";
 import { getHqFleetPulse } from "@/lib/server/hq-monitor";
 import { dataFile, readJsonFile, writeJsonFile } from "@/lib/server/persistence/local-json";
 import { slugifyOrgName } from "@/lib/org-slug";
+import { isReservedStorefrontSlug } from "@/lib/store-slug-aliases";
 
 export { slugifyOrgName } from "@/lib/org-slug";
 
@@ -164,6 +165,36 @@ async function tryResellerLicences(): Promise<HqTenant[] | null> {
   }
 }
 
+/** When reseller_licences is empty/broken, still show live organizations. */
+async function tryOrganizationsFallback(): Promise<HqTenant[] | null> {
+  if (!isSupabaseEnabled || !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  try {
+    const db = createServiceSupabase();
+    const { data, error } = await db
+      .from("organizations")
+      .select("id, name, slug, created_at")
+      .order("name");
+    if (error || !data?.length) return null;
+    return data.map((o) => ({
+      id: o.id,
+      name: o.name || o.slug || "Unnamed org",
+      plan: "starter" as PlanTier,
+      expiry: null,
+      onboardedAt: o.created_at ?? null,
+      branches: 0,
+      users: 0,
+      salesCount: 0,
+      salesTotal: 0,
+      brand: { businessName: o.name || "", logoUrl: "", accentColor: "" },
+      status: licenceStatus(null),
+      source: "reseller_licences" as const,
+      extras: [],
+    }));
+  } catch {
+    return null;
+  }
+}
+
 async function demoFleet(): Promise<HqTenant[]> {
   const tenant = await readTenant();
   const clients = await listCollection("clients");
@@ -224,9 +255,17 @@ export async function listHqTenants(): Promise<{
   serviceRole: boolean;
 }> {
   const fromView = await tryResellerLicences();
-  if (fromView) {
+  if (fromView && fromView.length > 0) {
     return {
       tenants: fromView.sort((a, b) => a.name.localeCompare(b.name)),
+      source: "reseller_licences",
+      serviceRole: true,
+    };
+  }
+  const fromOrgs = await tryOrganizationsFallback();
+  if (fromOrgs && fromOrgs.length > 0) {
+    return {
+      tenants: fromOrgs.sort((a, b) => a.name.localeCompare(b.name)),
       source: "reseller_licences",
       serviceRole: true,
     };
@@ -439,6 +478,7 @@ async function allocateOrgSlug(
   const root = base || `org-${randomUUID().slice(0, 8)}`;
   for (let i = 0; i < 30; i += 1) {
     const candidate = i === 0 ? root : `${root.slice(0, 40)}-${i}`;
+    if (isReservedStorefrontSlug(candidate)) continue;
     const { data } = await db
       .from("organizations")
       .select("id")
@@ -453,6 +493,9 @@ async function allocateOrgSlug(
  * Full durable tenant shell: org + MAIN branch + register + tenant licence +
  * published storefront. Owner Auth user is still provisioned via
  * scripts/provision-tenant-owner.mjs (password never travels through HQ UI).
+ *
+ * Idempotent: re-running with the same business name reuses the org and
+ * fills any missing branch / register / tenant doc / storefront.
  */
 async function provisionDurableTenant(input: {
   name: string;
@@ -460,35 +503,107 @@ async function provisionDurableTenant(input: {
   expiry: string;
   accentColor?: string;
   logoUrl?: string;
-}): Promise<{ orgId: string; slug: string }> {
+}): Promise<{ orgId: string; slug: string; recovered: boolean }> {
   if (!isSupabaseEnabled || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY required to provision organizations");
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceSupabase() as any;
-  const slug = await allocateOrgSlug(db, slugifyOrgName(input.name));
+  const name = input.name.trim();
+  const baseSlug = slugifyOrgName(name);
 
-  const { data: org, error: orgErr } = await db
-    .from("organizations")
-    .insert({ name: input.name.trim(), slug })
-    .select("id")
-    .single();
-  if (orgErr) throw new Error(orgErr.message);
+  let orgId: string | null = null;
+  let slug = baseSlug;
+  let recovered = false;
 
-  const orgId = org.id as string;
+  // Match existing by preferred slug first, then by exact name (case-insensitive).
+  {
+    const { data: bySlug } = await db
+      .from("organizations")
+      .select("id, slug")
+      .eq("slug", baseSlug)
+      .maybeSingle();
+    if (bySlug?.id) {
+      orgId = bySlug.id as string;
+      slug = bySlug.slug as string;
+      recovered = true;
+    } else {
+      const { data: byName } = await db
+        .from("organizations")
+        .select("id, slug")
+        .ilike("name", name)
+        .limit(1)
+        .maybeSingle();
+      if (byName?.id) {
+        orgId = byName.id as string;
+        slug = (byName.slug as string) || baseSlug;
+        recovered = true;
+      }
+    }
+  }
 
-  const { data: branch, error: branchErr } = await db
-    .from("branches")
-    .insert({ org_id: orgId, name: "Main Branch", code: "MAIN" })
-    .select("id")
-    .single();
-  if (branchErr) throw new Error(branchErr.message);
+  if (!orgId) {
+    slug = await allocateOrgSlug(db, baseSlug);
+    const { data: org, error: orgErr } = await db
+      .from("organizations")
+      .insert({ name, slug })
+      .select("id, slug")
+      .single();
+    if (orgErr) {
+      // Race / unique slug: another request won — reuse that org.
+      const { data: raced } = await db
+        .from("organizations")
+        .select("id, slug")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (raced?.id) {
+        orgId = raced.id as string;
+        slug = raced.slug as string;
+        recovered = true;
+      } else {
+        throw new Error(orgErr.message);
+      }
+    } else {
+      orgId = org.id as string;
+      slug = org.slug as string;
+    }
+  }
 
-  const { error: regErr } = await db.from("registers").insert({
-    branch_id: branch.id,
-    name: "Register 1",
-  });
-  if (regErr) throw new Error(regErr.message);
+  let branchId: string | null = null;
+  {
+    const { data: existingBranch } = await db
+      .from("branches")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("code", "MAIN")
+      .maybeSingle();
+    if (existingBranch?.id) {
+      branchId = existingBranch.id as string;
+    } else {
+      const { data: branch, error: branchErr } = await db
+        .from("branches")
+        .insert({ org_id: orgId, name: "Main Branch", code: "MAIN" })
+        .select("id")
+        .single();
+      if (branchErr) throw new Error(branchErr.message);
+      branchId = branch.id as string;
+    }
+  }
+
+  {
+    const { data: regs } = await db
+      .from("registers")
+      .select("id")
+      .eq("branch_id", branchId)
+      .limit(1);
+    if (!regs?.length) {
+      const { error: regErr } = await db.from("registers").insert({
+        branch_id: branchId,
+        name: "Register 1",
+      });
+      if (regErr) throw new Error(regErr.message);
+    }
+  }
 
   const { error: tenantErr } = await db.from("app_documents").upsert(
     {
@@ -496,7 +611,7 @@ async function provisionDurableTenant(input: {
       key: "tenant",
       data: {
         brand: {
-          businessName: input.name.trim(),
+          businessName: name,
           logoUrl: (input.logoUrl ?? "").trim(),
           accentColor: (input.accentColor ?? "").trim(),
         },
@@ -512,16 +627,127 @@ async function provisionDurableTenant(input: {
   );
   if (tenantErr) throw new Error(tenantErr.message);
 
-  const { error: sfErr } = await db.from("storefronts").insert({
-    org_id: orgId,
-    slug,
-    enabled: true,
-    status: "published",
-    published_at: new Date().toISOString(),
-  });
-  if (sfErr) throw new Error(sfErr.message);
+  // storefronts PK is org_id (one row per org); slug is globally unique.
+  {
+    const { data: sf } = await db
+      .from("storefronts")
+      .select("org_id, slug")
+      .eq("org_id", orgId)
+      .maybeSingle();
+    if (!sf?.org_id) {
+      const { error: sfErr } = await db.from("storefronts").insert({
+        org_id: orgId,
+        slug,
+        enabled: true,
+        status: "published",
+        published_at: new Date().toISOString(),
+      });
+      if (sfErr) {
+        // Unique race on slug — re-check by org.
+        const { data: again } = await db
+          .from("storefronts")
+          .select("org_id")
+          .eq("org_id", orgId)
+          .maybeSingle();
+        if (!again?.org_id) throw new Error(sfErr.message);
+      }
+    } else if (sf.slug !== slug) {
+      // Keep existing published slug as canonical for this org.
+      slug = sf.slug as string;
+    } else {
+      const { error: pubErr } = await db
+        .from("storefronts")
+        .update({
+          enabled: true,
+          status: "published",
+          published_at: new Date().toISOString(),
+        })
+        .eq("org_id", orgId);
+      if (pubErr) throw new Error(pubErr.message);
+    }
+  }
 
-  return { orgId, slug };
+  // Public storefront needs website + commerce + settings docs. Without these,
+  // anonymous /store/{slug} falls through to session doc stores and 500s.
+  const storeCfg = {
+    name,
+    slug,
+    status: "published",
+    themeId: "local",
+    currency: "LKR",
+    locale: "en",
+    timezone: "Asia/Colombo",
+    delivery: {
+      pickup: true,
+      localDelivery: true,
+      islandwide: true,
+      freeThreshold: 10000,
+      zones: [{ id: "colombo", name: "Colombo", fee: 100 }],
+    },
+    cod: {
+      enabled: true,
+      minOrder: 0,
+      maxOrder: 100000,
+      fee: 0,
+      requireConfirmation: false,
+    },
+  };
+  const nowIso = new Date().toISOString();
+  const cmsDocs: { key: string; data: Record<string, unknown> }[] = [
+    {
+      key: "website",
+      data: {
+        enabled: true,
+        heroHeadline: `${name} Store`,
+        heroSubline: "Powered by MyPoz",
+        paymentModes: ["cash", "card", "bank_transfer"],
+        fulfilmentModes: ["pickup", "courier"],
+        theme: "classic",
+      },
+    },
+    {
+      key: "commerce",
+      data: {
+        draft: storeCfg,
+        published: storeCfg,
+        publishedAt: nowIso,
+        updatedAt: nowIso,
+      },
+    },
+    {
+      key: "settings",
+      data: {
+        businessName: name,
+        storeEnabled: "Yes",
+        storeSlug: slug,
+        currency: "LKR",
+      },
+    },
+  ];
+  for (const doc of cmsDocs) {
+    const { error: cmsErr } = await db.from("app_documents").upsert(
+      { org_id: orgId, key: doc.key, data: doc.data },
+      { onConflict: "org_id,key" },
+    );
+    if (cmsErr) throw new Error(cmsErr.message);
+  }
+
+  try {
+    const { writeAuditEvent } = await import("@/lib/server/audit-service");
+    await writeAuditEvent({
+      orgId,
+      useServiceRole: true,
+      action: recovered ? "hq.provision.recovered" : "hq.provision.created",
+      entity: "organization",
+      entityId: orgId,
+      details: `slug=${slug}`,
+      actorLabel: "hq-provision",
+    });
+  } catch {
+    // Audit is best-effort — never block provision.
+  }
+
+  return { orgId, slug, recovered };
 }
 
 export async function onboardHqTenant(input: OnboardInput): Promise<{

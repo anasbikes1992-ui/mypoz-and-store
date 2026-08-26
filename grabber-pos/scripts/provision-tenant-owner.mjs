@@ -115,10 +115,11 @@ if (!ident.length) {
 }
 
 let orgId;
+const forceSlug = Boolean(process.env.UPSERT_ORG_SLUG);
 const existingProfile = await sql`
   select org_id from profiles where id = ${userId}::uuid limit 1
 `;
-if (existingProfile[0]?.org_id) {
+if (existingProfile[0]?.org_id && !forceSlug) {
   orgId = existingProfile[0].org_id;
   await sql`
     update profiles
@@ -155,10 +156,20 @@ if (existingProfile[0]?.org_id) {
     console.log("created_org");
   }
 
-  await sql`
-    insert into profiles (id, org_id, full_name, role)
-    values (${userId}::uuid, ${orgId}::uuid, ${fullName}, 'owner')
-  `;
+  if (existingProfile[0]?.org_id) {
+    await sql`
+      update profiles
+         set org_id = ${orgId}::uuid, role = 'owner', full_name = ${fullName}
+       where id = ${userId}::uuid
+    `;
+    console.log("reattached_profile");
+  } else {
+    await sql`
+      insert into profiles (id, org_id, full_name, role)
+      values (${userId}::uuid, ${orgId}::uuid, ${fullName}, 'owner')
+    `;
+    console.log("created_profile");
+  }
   const branch = await sql`
     select id from branches where org_id = ${orgId}::uuid limit 1
   `;
@@ -169,12 +180,11 @@ if (existingProfile[0]?.org_id) {
       on conflict (branch_id, user_id) do nothing
     `;
   }
-  console.log("created_profile");
 }
 
 // Ensure HQ can see this org on reseller_licences via app_documents.tenant
 const tenantDoc = await sql`
-  select id from app_documents
+  select org_id from app_documents
    where org_id = ${orgId}::uuid and key = 'tenant'
    limit 1
 `;
@@ -195,6 +205,8 @@ if (!tenantDoc.length) {
     values (${orgId}::uuid, 'tenant', ${sql.json(licence)})
   `;
   console.log("created_tenant_licence");
+} else {
+  console.log("tenant_licence_exists");
 }
 
 const storefront = await sql`

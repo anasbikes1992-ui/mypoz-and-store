@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { quoteDelivery } from "@/lib/commerce/delivery";
 import { createSaleSchema } from "@/lib/validation";
+import { reconcileSaleTotals } from "@/lib/sale-totals";
 import type { StoreConfig } from "@/lib/commerce/schema";
 
 const store: Pick<StoreConfig, "delivery" | "cod"> = {
@@ -53,5 +54,34 @@ describe("money path — storefront COD", () => {
     if (parsed.success) {
       expect(parsed.data.source).toBe("ONLINE_STORE");
     }
+  });
+});
+
+describe("sale total reconciliation", () => {
+  it("matches Anaz COD smoke shape (lines + delivery = total)", () => {
+    const r = reconcileSaleTotals({
+      subtotal: 500,
+      discountTotal: 0,
+      finalDiscount: 0,
+      serviceCharge: 0,
+      deliveryFee: 600,
+      codFee: 0,
+      total: 1100,
+      linesSum: 500,
+    });
+    expect(r.ok).toBe(true);
+    expect(r.expected).toBe(1100);
+  });
+
+  it("rejects double-counted service+delivery", () => {
+    const r = reconcileSaleTotals({
+      subtotal: 500,
+      discountTotal: 0,
+      serviceCharge: 600,
+      deliveryFee: 600,
+      total: 1100,
+      linesSum: 500,
+    });
+    expect(r.ok).toBe(false);
   });
 });

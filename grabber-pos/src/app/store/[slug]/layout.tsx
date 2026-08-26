@@ -29,12 +29,15 @@ export default async function StoreLayout({
     readSettings(),
     readPublishedStore(),
   ]);
+  // Tenant isolation: a real storefront for this slug wins over launch aliases.
+  const direct = await getStorefrontInfo({ host, slug });
   const aliasTarget = resolveStoreSlugAlias(slug, {
     canonicalSlug: storeEarly.slug || settings.storeSlug,
     extraAliases: [
       ...(storeEarly.slugAliases ?? []),
       settings.storeSlugAliases,
     ],
+    hasDirectStorefront: Boolean(direct),
   });
   if (aliasTarget && aliasTarget !== slug) {
     const hdrs = await headers();
@@ -55,7 +58,7 @@ export default async function StoreLayout({
     permanentRedirect(rewriteStorePath(pathFromHeader, aliasTarget));
   }
 
-  const info = await getStorefrontInfo({ host, slug });
+  const info = direct ?? (await getStorefrontInfo({ host, slug }));
   if (!info) notFound();
 
   const [website, store] = await Promise.all([

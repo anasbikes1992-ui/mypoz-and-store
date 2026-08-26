@@ -193,12 +193,17 @@ export const useCartStore = create<CartState>((set) => ({
 
   addProduct: (product) =>
     set((state) => {
+      const available = Math.max(0, Number(product.quantity) || 0);
+      if (available <= 0 && !product.custom) {
+        return state; // refuse zero-stock catalog lines (server also enforces)
+      }
+      const maxQty = available > 0 ? available : 9999;
       const existing = state.lines.find((l) => l.productId === product.id);
       if (existing) {
         return {
           lines: state.lines.map((l) =>
             l.productId === product.id
-              ? { ...l, quantity: Math.min(l.quantity + 1, l.available || 9999) }
+              ? { ...l, quantity: Math.min(l.quantity + 1, l.available || maxQty) }
               : l,
           ),
         };
@@ -226,14 +231,15 @@ export const useCartStore = create<CartState>((set) => ({
         quantity: Math.max(
           1,
           tier !== "retail" && (product.minWholesaleQty ?? 0) > 1
-            ? Math.min(product.minWholesaleQty ?? 1, product.quantity || 9999)
+            ? Math.min(product.minWholesaleQty ?? 1, maxQty)
             : 1,
         ),
         discount: clampDiscount(product.singleDiscount, product.maxDiscount),
         maxDiscount: product.maxDiscount,
-        available: product.quantity,
+        available,
         variantId: product.variantId ?? null,
       };
+      if (line.quantity > maxQty) line.quantity = maxQty;
       return { lines: [...state.lines, line] };
     }),
 
@@ -265,9 +271,14 @@ export const useCartStore = create<CartState>((set) => ({
       lines:
         quantity <= 0
           ? state.lines.filter((l) => l.productId !== productId)
-          : state.lines.map((l) =>
-              l.productId === productId ? { ...l, quantity } : l,
-            ),
+          : state.lines.map((l) => {
+              if (l.productId !== productId) return l;
+              const cap =
+                l.custom || !l.available || l.available <= 0
+                  ? quantity
+                  : Math.min(quantity, l.available);
+              return { ...l, quantity: cap };
+            }),
     })),
 
   setDiscount: (productId, discount) =>

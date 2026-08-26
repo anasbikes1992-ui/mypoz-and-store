@@ -21,6 +21,10 @@ import {
   resolveActiveTier,
 } from "@/lib/pricing-tiers";
 import type { PaymentMethod, Sale } from "@/lib/types";
+import {
+  CUSTOMER_DISPLAY_KEY,
+  buildCustomerDisplayPayload,
+} from "@/lib/sale-totals";
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
   { id: "cash", label: "Cash (F1)" },
@@ -29,8 +33,6 @@ const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
 ];
 
 const MANAGER_DISCOUNT_PCT = 20;
-const DISPLAY_KEY = "grabber-pos-display";
-
 interface CurrencyRate {
   id: string;
   code: string;
@@ -135,6 +137,7 @@ export function BillPanel() {
   const [expandedLine, setExpandedLine] = useState<string | null>(null);
   const [licenceExpired, setLicenceExpired] = useState(false);
   const [registerOpen, setRegisterOpen] = useState<boolean | null>(null);
+  const [shiftId, setShiftId] = useState<string | null>(null);
 
   const customerNameRef = useRef<HTMLInputElement>(null);
   const employeeRef = useRef<HTMLInputElement>(null);
@@ -170,30 +173,49 @@ export function BillPanel() {
     fetch("/api/register")
       .then((r) => r.json())
       .then((j) => {
-        if (j.success) setRegisterOpen(Boolean(j.data?.open));
+        if (j.success) {
+          setRegisterOpen(Boolean(j.data?.open));
+          setShiftId(j.data?.open?.id ? String(j.data.open.id) : null);
+        }
       })
       .catch(() => undefined);
   }, []);
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        DISPLAY_KEY,
-        JSON.stringify({
-          total: totals.total,
-          businessName,
-          lines: store.lines.map((l) => ({
-            name: l.name,
-            qty: l.quantity,
-            amount:
-              (px(l) - l.discount) * l.quantity,
-          })),
-        }),
-      );
+      if (store.lines.length === 0) {
+        localStorage.removeItem(CUSTOMER_DISPLAY_KEY);
+        return;
+      }
+      const payload = buildCustomerDisplayPayload({
+        total: totals.total,
+        businessName,
+        tenant: businessName,
+        session: shiftId ?? undefined,
+        register:
+          registerOpen === true
+            ? "open"
+            : registerOpen === false
+              ? "closed"
+              : undefined,
+        lines: store.lines.map((l) => ({
+          name: l.name,
+          qty: l.quantity,
+          amount: (px(l) - l.discount) * l.quantity,
+        })),
+      });
+      localStorage.setItem(CUSTOMER_DISPLAY_KEY, JSON.stringify(payload));
     } catch {
       // ignore
     }
-  }, [store.lines, store.isWholesale, totals.total, businessName]);
+  }, [
+    store.lines,
+    store.isWholesale,
+    totals.total,
+    businessName,
+    shiftId,
+    registerOpen,
+  ]);
 
   const refreshHeld = useCallback(() => {
     fetch("/api/held-bills")

@@ -120,6 +120,8 @@ Open: [https://supabase.com/dashboard/project/veavfkjgtkbnggukzjds/auth/url-conf
    - `http://localhost:3000/**`
 3. **Save changes** → reply in chat: `A-OP-01: PASS`
 
+**Related eng fix (2026-08-26):** proxy blocked `POST /api/auth/forgot-password` for signed-out users (`Unauthorized`). Added to `PUBLIC_PATHS` in `src/proxy.ts` — **deploy `business-os-cod-first`** before reset emails work on production. After deploy, A-OP-01 redirects are still required so the recovery link can land on `/update-password`.
+
 ### A-OP-02 — WhatsApp `hi` — PASS (DB)
 
 DB evidence already shows inbound `hi` + outbound menu. Optional: re-send `hi` from **+94771350035** to **+94 77 959 2288** after each major deploy.

@@ -1,36 +1,46 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  CUSTOMER_DISPLAY_KEY,
+  isCustomerDisplayFresh,
+  type CustomerDisplayPayload,
+} from "@/lib/sale-totals";
 
-const KEY = "grabber-pos-display";
-
-interface DisplayPayload {
-  total: number;
-  lines: { name: string; qty: number; amount: number }[];
-  businessName: string;
-}
+const EMPTY: CustomerDisplayPayload = {
+  total: 0,
+  lines: [],
+  businessName: "GRABBER POS",
+  scope: { tenant: "" },
+  updatedAt: "",
+  expiresAt: "",
+};
 
 export default function CustomerDisplayPage() {
-  const [data, setData] = useState<DisplayPayload>({
-    total: 0,
-    lines: [],
-    businessName: "GRABBER POS",
-  });
+  const [data, setData] = useState<CustomerDisplayPayload>(EMPTY);
 
   useEffect(() => {
     function read() {
       try {
-        const raw = localStorage.getItem(KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as DisplayPayload;
+        const raw = localStorage.getItem(CUSTOMER_DISPLAY_KEY);
+        if (!raw) {
+          setData(EMPTY);
+          return;
+        }
+        const parsed = JSON.parse(raw) as CustomerDisplayPayload;
+        if (!isCustomerDisplayFresh(parsed)) {
+          localStorage.removeItem(CUSTOMER_DISPLAY_KEY);
+          setData(EMPTY);
+          return;
+        }
         setData(parsed);
       } catch {
-        // ignore
+        setData(EMPTY);
       }
     }
     read();
     function onStorage(e: StorageEvent) {
-      if (e.key === KEY) read();
+      if (e.key === CUSTOMER_DISPLAY_KEY) read();
     }
     window.addEventListener("storage", onStorage);
     const poll = window.setInterval(read, 800);
@@ -49,6 +59,12 @@ export default function CustomerDisplayPage() {
         <h1 className="mt-1 text-3xl font-semibold tracking-tight">
           {data.businessName || "Store"}
         </h1>
+        {data.scope?.session ? (
+          <p className="mt-1 text-xs text-zinc-600">
+            Session {data.scope.session.slice(0, 8)}
+            {data.scope.register ? ` · register ${data.scope.register}` : ""}
+          </p>
+        ) : null}
       </header>
 
       <main className="flex flex-1 flex-col px-8 py-8">

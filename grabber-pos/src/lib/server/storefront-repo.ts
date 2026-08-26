@@ -189,7 +189,10 @@ export async function getStorefrontInfo(key: StorefrontKey): Promise<StorefrontI
       p_host: key.host,
       p_slug: key.slug,
     });
+    // Fail closed for explicit slug lookups: unknown/unpublished must not
+    // fall back to the caller's session/demo tenant (tenant isolation).
     if (error || !data) {
+      if (key.slug) return null;
       return defaultInfo;
     }
     const remote = data as StorefrontInfo;
@@ -206,6 +209,7 @@ export async function getStorefrontInfo(key: StorefrontKey): Promise<StorefrontI
         website.whatsappNumber || remote.whatsappNumber || defaultInfo.whatsappNumber,
     };
   } catch {
+    if (key.slug) return null;
     return defaultInfo;
   }
 }
@@ -743,7 +747,7 @@ export async function placeStorefrontOrder(
         deliveryAddress: input.address,
         deliveryFee: quote.deliveryFee,
         codFee: quote.codFee,
-        serviceCharge: quote.deliveryFee + quote.codFee,
+        serviceCharge: 0,
         finalDiscount,
       });
       const s = sale as unknown as Record<string, unknown>;

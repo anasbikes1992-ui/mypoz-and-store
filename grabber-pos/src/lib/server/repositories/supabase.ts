@@ -67,7 +67,7 @@ export class SupabaseRepository implements PosRepository {
     const { data, error } = await this.db
       .from("sales")
       .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, status, sale_lines(id, product_id, name, unit_price, quantity, discount, line_total)",
+        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, delivery_fee, cod_fee, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, status, sale_lines(id, product_id, name, unit_price, quantity, discount, line_total)",
       )
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -258,6 +258,8 @@ interface SaleRpcRow {
   discount_total: number;
   final_discount?: number;
   service_charge?: number;
+  delivery_fee?: number;
+  cod_fee?: number;
   total: number;
   payment_method: string;
   customer_name?: string | null;
@@ -293,6 +295,8 @@ function mapSaleRow(row: SaleRpcRow): Sale {
     discountTotal: Number(row.discount_total),
     finalDiscount: Number(row.final_discount ?? 0),
     serviceCharge: Number(row.service_charge ?? 0),
+    deliveryFee: Number(row.delivery_fee ?? 0),
+    codFee: Number(row.cod_fee ?? 0),
     total: Number(row.total),
     paymentMethod: row.payment_method as Sale["paymentMethod"],
     isWholesale: row.payment_method === "wholesale",

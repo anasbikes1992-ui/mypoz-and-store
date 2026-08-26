@@ -125,12 +125,16 @@ export class LocalRepository implements PosRepository {
     const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
     const discountTotal = lines.reduce((s, l) => s + l.discount * l.quantity, 0);
     const serviceCharge = Math.max(0, Number(input.serviceCharge) || 0);
+    const deliveryFee = Math.max(0, Number(input.deliveryFee) || 0);
+    const codFee = Math.max(0, Number(input.codFee) || 0);
     const finalDiscount = Math.max(0, Number(input.finalDiscount) || 0);
     const afterLines = subtotal - discountTotal;
     if (finalDiscount > afterLines) {
       throw new Error("Final discount exceeds the bill total");
     }
-    const total = afterLines - finalDiscount + serviceCharge;
+    // Mirrors create_sale_internal — never fold delivery/COD into serviceCharge.
+    const total =
+      afterLines - finalDiscount + serviceCharge + deliveryFee + codFee;
 
     let cashReceived: number | null = null;
     let change: number | null = null;

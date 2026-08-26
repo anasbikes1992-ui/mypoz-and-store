@@ -56,7 +56,12 @@ export async function readWebsiteForStorefront(opts: {
       // fall through
     }
   }
-  return readWebsite();
+  // Never require a staff session for public storefront CMS. Missing docs → defaults.
+  try {
+    return await readWebsite();
+  } catch {
+    return websiteSchema.parse({ ...DEFAULT_WEBSITE, enabled: true });
+  }
 }
 
 /** Merge CMS doc with settings storefront fields so Settings stays a fallback. */

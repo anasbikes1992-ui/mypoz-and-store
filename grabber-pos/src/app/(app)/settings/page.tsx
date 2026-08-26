@@ -7,6 +7,7 @@ import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { PrinterTestPanel } from "@/components/settings/PrinterTestPanel";
 import { AiKeyPanel } from "@/components/settings/AiKeyPanel";
 import { WhatsAppStatusPanel } from "@/components/settings/WhatsAppStatusPanel";
+import { ChangePasswordPanel } from "@/components/settings/ChangePasswordPanel";
 import { Button } from "@/components/ui/Button";
 import { SkeletonRows } from "@/components/ui/EmptyState";
 
@@ -71,93 +72,105 @@ export default function SettingsPage() {
   }
 
   return (
-    <form onSubmit={save} className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
-      <ModuleHeader
-        title="Settings"
-        subtitle="Business, receipt, tax & printers"
-        actions={
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        }
-      />
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+      <form onSubmit={save}>
+        <ModuleHeader
+          title="Settings"
+          subtitle="Business, receipt, tax, printers & account"
+          actions={
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
+          }
+        />
 
-      {msg && (
-        <p
-          className={`mt-6 rounded-xl border px-4 py-2 text-sm ${
-            msg.ok
-              ? "border-accent/40 bg-accent/10 text-accent"
-              : "border-danger/40 bg-danger/10 text-danger"
-          }`}
-        >
-          {msg.text}
-        </p>
-      )}
-
-      <div className="mt-6 space-y-4">
-        {SETTINGS_SECTIONS.map((section, i) => (
-          <motion.section
-            key={section.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.04, duration: 0.3 }}
-            className="rounded-2xl border border-line bg-surface-1 p-5"
+        {msg && (
+          <p
+            className={`mt-6 rounded-xl border px-4 py-2 text-sm ${
+              msg.ok
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-danger/40 bg-danger/10 text-danger"
+            }`}
           >
-            <h2 className="mb-4 text-sm font-semibold text-text-strong">
-              {section.label}
-            </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {section.fields.map((f) => (
-                <label
-                  key={f.key}
-                  className={`text-sm ${f.full || f.type === "textarea" ? "sm:col-span-2" : ""}`}
-                >
-                  <span className="mb-1 block text-text-dim">{f.label}</span>
-                  {f.type === "select" ? (
-                    <select
-                      value={form[f.key] ?? ""}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      className={fieldClass}
-                    >
-                      {f.options?.map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </select>
-                  ) : f.type === "textarea" ? (
-                    <textarea
-                      value={form[f.key] ?? ""}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      rows={2}
-                      className={fieldClass}
-                    />
-                  ) : (
-                    <input
-                      type={f.type === "number" ? "number" : f.type === "email" ? "email" : "text"}
-                      value={form[f.key] ?? ""}
-                      onChange={(e) => set(f.key, e.target.value)}
-                      className={fieldClass}
-                    />
-                  )}
-                </label>
-              ))}
-            </div>
-          </motion.section>
-        ))}
-        <WhatsAppStatusPanel />
-        <PrinterTestPanel />
-        <AiKeyPanel />
-        <section className="rounded-2xl border border-line bg-surface-1 p-5">
-          <h2 className="mb-2 text-sm font-semibold text-text-strong">
-            Fiscal / e-invoice
-          </h2>
-          <p className="text-sm text-text-dim">
-            Fiscal provider: stub — sales are logged to the audit trail. Swap
-            the stub for a live provider when ready.
+            {msg.text}
           </p>
-        </section>
+        )}
+
+        <div className="mt-6 space-y-4">
+          {SETTINGS_SECTIONS.map((section, i) => (
+            <motion.section
+              key={section.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.04, duration: 0.3 }}
+              className="rounded-2xl border border-line bg-surface-1 p-5"
+            >
+              <h2 className="mb-4 text-sm font-semibold text-text-strong">
+                {section.label}
+              </h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {section.fields.map((f) => (
+                  <label
+                    key={f.key}
+                    className={`text-sm ${f.full || f.type === "textarea" ? "sm:col-span-2" : ""}`}
+                  >
+                    <span className="mb-1 block text-text-dim">{f.label}</span>
+                    {f.type === "select" ? (
+                      <select
+                        value={form[f.key] ?? ""}
+                        onChange={(e) => set(f.key, e.target.value)}
+                        className={fieldClass}
+                      >
+                        {f.options?.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    ) : f.type === "textarea" ? (
+                      <textarea
+                        value={form[f.key] ?? ""}
+                        onChange={(e) => set(f.key, e.target.value)}
+                        rows={2}
+                        className={fieldClass}
+                      />
+                    ) : (
+                      <input
+                        type={
+                          f.type === "number"
+                            ? "number"
+                            : f.type === "email"
+                              ? "email"
+                              : "text"
+                        }
+                        value={form[f.key] ?? ""}
+                        onChange={(e) => set(f.key, e.target.value)}
+                        className={fieldClass}
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </motion.section>
+          ))}
+          <WhatsAppStatusPanel />
+          <PrinterTestPanel />
+          <AiKeyPanel />
+          <section className="rounded-2xl border border-line bg-surface-1 p-5">
+            <h2 className="mb-2 text-sm font-semibold text-text-strong">
+              Fiscal / e-invoice
+            </h2>
+            <p className="text-sm text-text-dim">
+              Fiscal provider: stub — sales are logged to the audit trail. Swap
+              the stub for a live provider when ready.
+            </p>
+          </section>
+        </div>
+      </form>
+
+      <div className="mt-4">
+        <ChangePasswordPanel />
       </div>
-    </form>
+    </div>
   );
 }

@@ -29,7 +29,19 @@ export function saleToTicketText(sale: Sale): string {
   lines.push("-".repeat(WIDTH));
   lines.push(row("Subtotal", formatMoney(sale.subtotal)));
   if (sale.discountTotal > 0) {
-    lines.push(row("Discount", `-${formatMoney(sale.discountTotal)}`));
+    lines.push(row("Line disc.", `-${formatMoney(sale.discountTotal)}`));
+  }
+  if ((sale.finalDiscount ?? 0) > 0) {
+    lines.push(row("Bill disc.", `-${formatMoney(sale.finalDiscount)}`));
+  }
+  if ((sale.serviceCharge ?? 0) > 0) {
+    lines.push(row("Service", formatMoney(sale.serviceCharge)));
+  }
+  if ((sale.deliveryFee ?? 0) > 0) {
+    lines.push(row("Delivery", formatMoney(sale.deliveryFee!)));
+  }
+  if ((sale.codFee ?? 0) > 0) {
+    lines.push(row("COD fee", formatMoney(sale.codFee!)));
   }
   lines.push(row("TOTAL", formatMoney(sale.total)));
   if (sale.paymentMethod === "cash" && sale.cashReceived != null) {

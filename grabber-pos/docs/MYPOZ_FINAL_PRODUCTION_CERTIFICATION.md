@@ -1,6 +1,6 @@
 # MyPoz — Final Production Certification Board
 
-**Date:** 2026-08-25  
+**Date:** 2026-08-26  
 **Branch:** `production-hardening`  
 **Production app:** https://mypoz-and-store-ui.vercel.app  
 **Authority:** `docs/MYPOZ_FINAL_MASTER_PRODUCTION_BLUEPRINT.md`
@@ -11,7 +11,8 @@
 
 ### **CERTIFICATION COMPLETE FOR HARDENING SCOPE — CLIENT READY = NOT YET**
 
-Hardening + architecture freeze + Gates 2A/2B/3/4(auto)/5(scaffold+inventory) are closed with honest open P1s.  
+Hardening + architecture freeze + Gates 2A/2B/3/4(auto)/5(inventory+logical export) are closed with honest open P1s.  
+**Anaz COD soft-launch** may proceed after trusted catalog rebuild; **card RSA** and **restore drill** still block full CLIENT READY.  
 **Do not onboard paying clients at scale** until the open board below is green.
 
 ---
@@ -26,10 +27,10 @@ Hardening + architecture freeze + Gates 2A/2B/3/4(auto)/5(scaffold+inventory) ar
 | 3 Security | ✅ PASS 79/79 | `GATE3_SECURITY_CERTIFICATION_FINAL.md` |
 | Phase 2 Durability | ✅ PASS WITH P1/P2 | `PHASE2_DURABILITY_CERTIFICATION.md` |
 | **4 Commerce** | ✅ **PASS WITH P1** | `GATE4_COMMERCE_INTEGRITY_CERTIFICATION.md` — live RSA webhook only |
-| **5 Backup / DR** | ✅ **PASS WITH P1** | `GATE5_BACKUP_DR_CERTIFICATION.md` — logical export + restore drill pending keys/ops |
-| Catalog migration | 🔒 BLOCKED | Trusted source only; never Aug-24 JSON |
-| Legacy mass delete | 🔒 BLOCKED | After Gate 4 P1 + Gate 5 P1 |
-| Client pilot | 🔒 BLOCKED | After above |
+| **5 Backup / DR** | ✅ **PASS WITH P1** | Logical export ✅ 2026-08-26; PITR + restore drill still operator |
+| Catalog migration | ✅ **Anaz trusted import** | 1518 SKUs · `scripts/rebuild-anaz-store.mjs` 2026-08-26 |
+| Legacy mass delete | 🔒 BLOCKED | After Gate 4 RSA + Gate 5 drill |
+| Client pilot | 🔒 BLOCKED | After Anaz COD smoke (+ RSA for card) |
 | **10 CLIENT READY** | ❌ OPEN | Board below |
 
 ---
@@ -52,23 +53,24 @@ Hardening + architecture freeze + Gates 2A/2B/3/4(auto)/5(scaffold+inventory) ar
 | Concurrency / claim race | ✅ |
 | Reporting RPC + UI | ✅ |
 | Backup inventory + runbook | ✅ |
-| Logical export + restore drill | ⏳ keys / operator |
+| Logical export | ✅ 2026-08-26 |
+| Restore drill / PITR / off-site copy | ⏳ operator |
 | Monitoring (Sentry etc.) | ⏸ next |
 | Tenant onboarding template | 📄 documented; not executed |
-| Catalog migration | 🔒 |
+| Catalog migration (Anaz trusted) | ✅ 1518 · COD smoke PASS |
 | Legacy removal | 🔒 |
 | Production deploy | ✅ |
 
 ---
 
-## Open P1 (your keys / manual)
+## Open P1 (honest)
 
-1. **WebXPay:** staging keys/dashboard fix → one demo card pay → signed callback → stock (Return URL set; `442` deferred).  
-2. **`SUPABASE_DB_PASSWORD`:** run `scripts/gate5-logical-export.mjs`; store off-site.  
-3. **Upstash** `UPSTASH_REDIS_REST_URL` + `TOKEN` on Vercel (rate limit).  
-4. **Preview** WebXPay keys parity (optional but recommended).  
-5. **Supabase dashboard:** confirm automated backups / PITR; one disposable restore drill.  
-6. **Live keys later:** only after staging RSA PASS — then `WEBXPAY_ENV=live`.
+1. **WebXPay 442** (deferred): merchant/MID → demo card → signed callback → stock.  
+2. **Gate 5 operator:** off-site copy of logical export; PITR/backup dashboard note; disposable restore drill.  
+3. **A-OP-01:** Supabase Auth Site URL + redirects confirm.  
+4. **Live WebXPay keys later:** only after staging RSA PASS — then `WEBXPAY_ENV=live`.
+
+Done already: Upstash, Resend, Preview WebXPay parity, logical export, staging keys refresh, **Anaz rebuild + COD smoke**.
 
 Checklist: `docs/PRODUCTION_ENV_KEYS_CHECKLIST.md`
 
@@ -83,16 +85,18 @@ Checklist: `docs/PRODUCTION_ENV_KEYS_CHECKLIST.md`
 
 ---
 
-## Next sequence after keys
+## Next sequence
 
 ```text
-RSA webhook PASS → Gate 4 fully closed
-→ Gate 5 logical export + restore drill PASS
-→ trusted catalog import
-→ legacy cleanup
-→ one pilot tenant
-→ Gate 10 CLIENT READY
+P0 transactional + ops closeout (docs/work/01–02)
+→ HQ truth / onboard polish (03)
+→ HQ Pilot #2 (04)  ← first platform milestone
+→ Owner gaps → WhatsApp v1 → KPI canon → Jarvis BI → agents → knowledge → approvals
+→ Real client pilot
+→ WebXPay / cards LAST
 ```
+
+Parallel: Anaz COD soft-launch. Authority: `MYPOZ_BUSINESS_OS_NEXT_EXECUTION_ROADMAP.md`.
 
 ---
 
