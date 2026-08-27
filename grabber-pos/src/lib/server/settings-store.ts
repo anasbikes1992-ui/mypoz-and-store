@@ -35,11 +35,16 @@ export async function readSettings(): Promise<Settings> {
   }
 
   const raw = await store.read(DEFAULT_SETTINGS);
-  try {
-    return settingsSchema.parse({ ...DEFAULT_SETTINGS, ...raw });
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
+  const merged = { ...DEFAULT_SETTINGS, ...raw };
+  const parsed = settingsSchema.safeParse(merged);
+  if (parsed.success) return parsed.data;
+  // Don't wipe the tenant to brand defaults on one bad field (e.g. WA contact).
+  const recovered = settingsSchema.safeParse({
+    ...merged,
+    socialWhatsapp: "",
+  });
+  if (recovered.success) return recovered.data;
+  return DEFAULT_SETTINGS;
 }
 
 export async function writeSettings(input: unknown): Promise<Settings> {

@@ -50,20 +50,20 @@ export function docStore<T>(config: DocStoreConfig): DocStore<T> {
         return value;
       }
 
-      // RLS policies on app_documents supply org_id from the session automatically.
-      // We cannot put org_id in the payload without a second round-trip to read
-      // current_org_id(), so we use a select-then-update/insert pattern instead
-      // of relying on the composite unique constraint directly.
-      const { data: existing } = await db
+      // app_documents PK is (org_id, key) — there is no `id` column. Selecting
+      // a missing column made `existing` always null → INSERT → duplicate key.
+      // RLS scopes rows to the session org; match on `key` only.
+      const { data: existing, error: lookupError } = await db
         .from("app_documents")
-        .select("id")
+        .select("key")
         .eq("key", config.key)
-        .maybeSingle<{ id: string }>();
+        .maybeSingle<{ key: string }>();
+      if (lookupError) throw new Error(lookupError.message);
 
-      if (existing?.id) {
+      if (existing?.key) {
         const { error } = await db
           .from("app_documents")
-          .update({ data: value as Json })
+          .update({ data: value as Json, updated_at: new Date().toISOString() })
           .eq("key", config.key);
         if (error) throw new Error(error.message);
       } else {
