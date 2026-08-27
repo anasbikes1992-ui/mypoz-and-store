@@ -2,20 +2,28 @@ import { getRepository } from "@/lib/server/repositories";
 import { formatMoney, formatMoneyCompact, formatDateTime } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
+import { TodayChannelStrip } from "@/components/dashboard/TodayChannelStrip";
+import { todayChannelSnapshot } from "@/lib/commerce/channel-report";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const repo = await getRepository();
-  const [inv, sales, recent] = await Promise.all([
+  const [inv, sales, recent, channelSales] = await Promise.all([
     repo.inventoryStats(),
     repo.salesStats(),
     repo.listSales(8),
+    repo.listSales(400),
   ]);
+  const todayChannels = todayChannelSnapshot(channelSales);
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
       <ModuleHeader title="Dashboard" subtitle="Live overview of sales and stock" />
+
+      <div className="mt-6">
+        <TodayChannelStrip snapshot={todayChannels} />
+      </div>
 
       <div className="mt-8 grid grid-cols-2 gap-4 xl:grid-cols-4">
         <StatCard
@@ -107,7 +115,10 @@ export default async function DashboardPage() {
                 className="flex items-center justify-between px-5 py-4 text-sm"
               >
                 <div>
-                  <p className="font-mono text-xs text-accent">{s.id}</p>
+                  <p className="font-mono text-xs text-accent">
+                    {s.receiptNo || s.id}
+                    {s.source ? ` · ${s.source}` : ""}
+                  </p>
                   <p className="text-xs text-text-dim">
                     {formatDateTime(s.createdAt)} · {s.lines.length} items ·{" "}
                     {s.paymentMethod}
