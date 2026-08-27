@@ -26,29 +26,37 @@ This roadmap does **not** reopen:
 | Claim | Status |
 |-------|--------|
 | Anaz catalog 1518 + published storefront | ✅ |
-| Anaz COD smoke (`GPS-MAIN-20260826-0001`) | ✅ — totals reconcile (500 + 600 delivery = 1100) |
-| Gate 4 auto commerce | ✅ PASS WITH P1 (RSA deferred — WebXPay 442) |
-| Gate 5 logical export | ✅; off-site / PITR / restore drill still operator |
+| Anaz COD smoke (`GPS-MAIN-20260826-0001`) | ✅ |
+| Gate 4 auto commerce | ✅ PASS WITH P1 (RSA deferred) |
+| Gate 5 logical export | ✅; off-site / PITR still operator |
+| HQ Pilot #2 | ✅ **FROZEN PASS** |
+| Unknown storefront → 404 / forgot API public | ✅ live |
+| Branded reset email (Resend domain) | ⏸ **LAST** (domain in progress; never From gmail) |
+| WebXPay / cards | ⏸ **LAST** |
 | CLIENT READY | ❌ OPEN |
-| Auth residuals (`requireTenantSession` on listed APIs) | ✅ already closed |
-| Durable POS sell of zero-stock | ✅ blocked in `create_sale_internal` RPC |
-| POS UI can still *add* zero-stock lines | ✅ client clamp |
-| Global `main-store` → `anaz-store` alias | intentional; reserved-slug + existing-storefront wins |
-| HQ tenants vs licences “different sources” | ❌ FALSE — both use `listHqTenants` |
-| Online orders dual-write | ✅ |
-| Customer display stale tickets | ✅ TTL + scope + clear on empty cart |
-| HQ provision idempotent + CMS seed-if-missing | ✅ live |
-| Unknown storefront → 404 | ✅ live (`production-pre-card-smoke`) |
-| Forgot-password public API | ✅ live |
-| WebXPay / cards | **LAST** |
+
+## Status board
+
+### 🟢 DONE
+Architecture freeze · RLS/tenant · Commerce COD · P0 transactional · UI smoke · HQ Pilot #2 · isolation · pre-card prod smoke
+
+### 🟡 NOW
+**Owner Portal Completeness** (`docs/work/05`) — gap audit on Anaz + Pilot 02  
+Parallel: A-OP-01 confirm · Gate 5 off-site/PITR (ops)
+
+### 🔵 NEXT
+WhatsApp v1 → KPI canon → Jarvis BI → tools/agents → knowledge/approvals → real client
+
+### 🔴 LAST (bundled)
+**Resend verified domain + password email** · **WebXPay / cards** (`docs/work/12`)
 
 ## Immediate next (do in order)
 
-1. ~~**Deploy** production patches~~ ✅ 2026-08-27
-2. **Operator:** A-OP-01 + Gate 5 off-site/PITR/restore (`docs/work/02`) — reply `A-OP-01: PASS`
-3. **Freeze Pilot #2** — no foundation churn
-4. **Owner gap audit:** `docs/work/05` on **Anaz** + **`pilot-02-owner@mypoz.test`**
-5. Then WhatsApp v1 → KPI canon → Jarvis → agents → real client → WebXPay last
+1. ~~Deploy / Pilot #2 freeze~~ ✅  
+2. **Owner gap audit** `docs/work/05` (Anaz + `pilot-02-owner@mypoz.test`)  
+3. WhatsApp → KPI → Jarvis… → real client  
+4. **LAST:** email domain + WebXPay (`02` / `12`)  
+5. Parallel ops: reply `A-OP-01: PASS` when ready; Gate 5 off-site
 
 ## Deploy note
 
