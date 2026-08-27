@@ -47,7 +47,8 @@ Legend: ✅ present on Vercel Production (CLI `env ls`) · ⏳ add when ready ·
 | `WHATSAPP_APP_SECRET` | ✅ | |
 | `WHATSAPP_VERIFY_TOKEN` | ✅ | |
 | `OPENAI_API_KEY` | ✅ | Features that need it |
-| `RESEND_API_KEY` | ✅ | Added 2026-08-26 — optional `RESEND_FROM_EMAIL` for verified domain |
+| `RESEND_API_KEY` | ✅ | Added 2026-08-26 |
+| `RESEND_FROM_EMAIL` | ❌ | **Required for forgot-password** — missing on Production as of 2026-08-27 (`fromSet: false`). Set verified sender then redeploy |
 | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | ⏸ | Observability next |
 
 ---

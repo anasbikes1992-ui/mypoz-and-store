@@ -13,10 +13,11 @@ Forgot-password no longer uses Supabase’s default mail (rate-limited, generic)
 | Variable | Example |
 |----------|---------|
 | `RESEND_API_KEY` | `re_…` |
-| `RESEND_FROM_EMAIL` | `Anaz Store <noreply@mypoz.lk>` |
+| `RESEND_FROM_EMAIL` | **Required for forgot-password** — `MyPoz <noreply@verified-domain>` (must match a domain verified in Resend) |
 | `RESEND_REPLY_TO` | `support@mypoz.lk` |
 
-Verify the sender domain in Resend before production sends.
+Verify the sender domain in Resend before production sends.  
+If `RESEND_FROM_EMAIL` is missing, `/api/payments/status` reports `email.fromSet: false` and forgot-password returns **500** for existing users.
 
 ## Template catalog (17)
 

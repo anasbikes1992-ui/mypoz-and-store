@@ -75,9 +75,17 @@ export async function POST(req: NextRequest) {
         { status: 429 },
       );
     }
+    // Ops misconfig (missing FROM / unverified domain) — keep UI generic, log actionable.
     console.error("[forgot-password]", msg);
+    const opsHint =
+      /RESEND_FROM_EMAIL|not configured|domain|verified|from/i.test(msg)
+        ? " Password email is not fully configured yet — ask HQ to reset your password, or try again after ops sets RESEND_FROM_EMAIL."
+        : "";
     return NextResponse.json(
-      { success: false, error: "Could not send reset email. Try again shortly." },
+      {
+        success: false,
+        error: `Could not send reset email. Try again shortly.${opsHint}`,
+      },
       { status: 500 },
     );
   }

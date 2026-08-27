@@ -92,6 +92,11 @@ export async function sendBrandedPasswordReset(rawEmail: string): Promise<{
       "Email is not configured (RESEND_API_KEY). Contact support for a password reset.",
     );
   }
+  if (!process.env.RESEND_FROM_EMAIL?.trim()) {
+    throw new Error(
+      "RESEND_FROM_EMAIL is not set on this deploy. Add a verified Resend sender in Vercel (e.g. MyPoz <noreply@your-domain>), then redeploy.",
+    );
+  }
 
   const admin = authAdmin();
   const redirectTo = `${appUrl()}/update-password`;
