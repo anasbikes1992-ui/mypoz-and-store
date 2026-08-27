@@ -258,8 +258,9 @@ export function BillPanel() {
         : null);
     if (!mobile) return;
     setWaStatus("Sending…");
+    const saleKey = encodeURIComponent(sale.receiptNo || sale.id);
     try {
-      const res = await fetch(`/api/sales/${sale.id}/whatsapp`, {
+      const res = await fetch(`/api/sales/${saleKey}/whatsapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mobile }),
@@ -801,7 +802,7 @@ export function BillPanel() {
 
         <div className="mt-6 grid w-full grid-cols-2 gap-2">
           <a
-            href={`/api/sales/${encodeURIComponent(done.id)}/invoice`}
+            href={`/api/sales/${encodeURIComponent(done.receiptNo || done.id)}/invoice`}
             target="_blank"
             rel="noreferrer"
             className="rounded-xl border border-line py-2.5 text-center text-sm text-text-body transition duration-150 hover:border-accent hover:text-accent"

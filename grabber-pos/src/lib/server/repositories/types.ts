@@ -78,6 +78,7 @@ export interface PosRepository {
   inventoryStats(): Promise<InventoryStats>;
 
   listSales(limit?: number): Promise<Sale[]>;
+  findSaleById(id: string): Promise<Sale | null>;
   createSale(input: CreateSaleInput): Promise<Sale>;
   voidSale(
     id: string,

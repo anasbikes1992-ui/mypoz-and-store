@@ -7,6 +7,7 @@ import {
 } from "@/lib/server/product-repo";
 import {
   listSales,
+  findSaleInLocalStore,
   createSale as persistSale,
   voidSale as persistVoidSale,
   salesStats,
@@ -42,6 +43,10 @@ export class LocalRepository implements PosRepository {
 
   async listSales(limit = 100): Promise<Sale[]> {
     return listSales(limit);
+  }
+
+  async findSaleById(id: string): Promise<Sale | null> {
+    return findSaleInLocalStore(id);
   }
 
   async salesStats(): Promise<SalesStats> {

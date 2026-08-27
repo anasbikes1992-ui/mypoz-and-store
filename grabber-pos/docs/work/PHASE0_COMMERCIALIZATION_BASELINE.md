@@ -15,7 +15,7 @@ Status legend: `WORKING | PARTIAL | MISSING | BROKEN | DUPLICATED | UNSAFE | UNP
 | Storefront + COD | `/store/anaz-store` | storefront RPCs | WORKING | — | Preserve | GPS / DEL smokes |
 | WhatsApp bot | Cloud API + org resolve | webhook + bot | WORKING | — | Preserve | hi menu works |
 | WA org scoping | `whatsapp_resolve_org` + unique attach | `0031` + durable | WORKING | — | Preserve | Anaz phone only |
-| Invoice PDF / WA send | `findSaleById` durable | sales-repo | WORKING | Deploy smoke | Confirm after promote | Was broken → fixed `abfa271` |
+| Invoice PDF / WA send | `getRepository().findSaleById` | sales invoice routes | WORKING | Deploy smoke | Re-test POS → PDF → WA | Tenant-scoped lookup; no local JSON fallback |
 | WA track receipt | hyphen-safe receipt lookup | findWhatsAppSale | WORKING | Deploy smoke | Re-test GPS-MAIN-… | Sale exists Anaz |
 | Owner TODAY strip (A7) | `/dashboard` TodayChannelStrip | channel-report | WORKING | — | Preserve | unit test todayChannelSnapshot |
 | Auth Site URL (A8) | Supabase URL config | Auth dashboard | WORKING | — | Preserve | Site URL = mypoz-and-store-ui |

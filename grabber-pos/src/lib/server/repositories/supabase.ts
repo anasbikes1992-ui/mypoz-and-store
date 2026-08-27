@@ -17,6 +17,9 @@ import { parseCommerceLineId } from "@/lib/commerce/line-ids";
  * authenticated user's organization; sale posting goes through the atomic
  * create_sale RPC.
  */
+const SALE_DETAIL_SELECT =
+  "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, delivery_fee, cod_fee, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, status, fulfillment_status, payment_status, sale_lines(id, product_id, name, unit_price, quantity, discount, line_total)";
+
 export class SupabaseRepository implements PosRepository {
   constructor(
     private readonly db: SupabaseClient,
@@ -66,13 +69,34 @@ export class SupabaseRepository implements PosRepository {
   async listSales(limit = 100): Promise<Sale[]> {
     const { data, error } = await this.db
       .from("sales")
-      .select(
-        "id, receipt_no, created_at, subtotal, discount_total, final_discount, service_charge, delivery_fee, cod_fee, total, payment_method, customer_name, customer_mobile, employee, cash_received, change_due, source, status, sale_lines(id, product_id, name, unit_price, quantity, discount, line_total)",
-      )
+      .select(SALE_DETAIL_SELECT)
       .order("created_at", { ascending: false })
       .limit(limit);
     if (error) throw new Error(error.message);
     return (data ?? []).map(mapSaleRow);
+  }
+
+  async findSaleById(id: string): Promise<Sale | null> {
+    const key = id.trim();
+    if (!key) return null;
+
+    if (/^[0-9a-f-]{36}$/i.test(key)) {
+      const { data, error } = await this.db
+        .from("sales")
+        .select(SALE_DETAIL_SELECT)
+        .eq("id", key)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (data) return mapSaleRow(data as SaleRpcRow);
+    }
+
+    const { data, error } = await this.db
+      .from("sales")
+      .select(SALE_DETAIL_SELECT)
+      .eq("receipt_no", key)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? mapSaleRow(data as SaleRpcRow) : null;
   }
 
   async salesStats(): Promise<SalesStats> {
