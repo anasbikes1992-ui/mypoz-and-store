@@ -2,7 +2,10 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { safeEqual } from "@/lib/payments/gateways/sig";
 import { verifyWhatsAppSignature } from "@/lib/whatsapp/signature";
 import { handleInboundText } from "@/lib/whatsapp/bot";
-import { readWhatsAppSettings } from "@/lib/server/whatsapp-inbox-store";
+import {
+  readWhatsAppSettings,
+  updateMessageDeliveryStatus,
+} from "@/lib/server/whatsapp-inbox-store";
 import { appendWebhookAudit } from "@/lib/server/whatsapp-webhook-log";
 import { extractInboundText } from "@/lib/whatsapp/inbound-text";
 import { requireSupabase } from "@/lib/supabase/config";
@@ -63,6 +66,12 @@ type WaPayload = {
             list_reply?: { id?: string; title?: string };
           };
         }[];
+        statuses?: {
+          id?: string;
+          status?: string;
+          timestamp?: string;
+          recipient_id?: string;
+        }[];
       };
     }[];
   }[];
@@ -73,6 +82,12 @@ type InboundJob = {
   name?: string;
   text: string;
   waMessageId?: string;
+  phoneNumberId?: string;
+};
+
+type StatusJob = {
+  waMessageId: string;
+  status: string;
   phoneNumberId?: string;
 };
 
@@ -100,21 +115,44 @@ function collectInboundJobs(body: WaPayload): InboundJob[] {
   return jobs;
 }
 
+function collectStatusJobs(body: WaPayload): StatusJob[] {
+  const jobs: StatusJob[] = [];
+  for (const entry of body.entry ?? []) {
+    for (const change of entry.changes ?? []) {
+      if (change.field && change.field !== "messages") continue;
+      const value = change.value;
+      const phoneNumberId = value?.metadata?.phone_number_id;
+      for (const st of value?.statuses ?? []) {
+        if (!st.id || !st.status) continue;
+        jobs.push({
+          waMessageId: st.id,
+          status: st.status,
+          phoneNumberId,
+        });
+      }
+    }
+  }
+  return jobs;
+}
+
 function summarizePayload(body: WaPayload): {
   wabaId?: string;
   phoneNumberId?: string;
   messageCount: number;
+  statusCount: number;
 } {
   let messageCount = 0;
+  let statusCount = 0;
   let phoneNumberId: string | undefined;
   const wabaId = body.entry?.[0]?.id;
   for (const entry of body.entry ?? []) {
     for (const change of entry.changes ?? []) {
       phoneNumberId ||= change.value?.metadata?.phone_number_id;
       messageCount += change.value?.messages?.length ?? 0;
+      statusCount += change.value?.statuses?.length ?? 0;
     }
   }
-  return { wabaId, phoneNumberId, messageCount };
+  return { wabaId, phoneNumberId, messageCount, statusCount };
 }
 
 export async function POST(req: NextRequest) {
@@ -151,9 +189,17 @@ export async function POST(req: NextRequest) {
 
   const summary = summarizePayload(body);
   const jobs = collectInboundJobs(body);
+  const statusJobs = collectStatusJobs(body);
 
   after(async () => {
     try {
+      for (const job of statusJobs) {
+        await updateMessageDeliveryStatus(
+          job.waMessageId,
+          job.status,
+          job.phoneNumberId,
+        );
+      }
       for (const job of jobs) {
         await handleInboundText(job);
       }
@@ -162,7 +208,10 @@ export async function POST(req: NextRequest) {
         phoneNumberId: summary.phoneNumberId,
         wabaId: summary.wabaId,
         messageCount: summary.messageCount,
-        reason: jobs.length ? "processed" : "no_text_messages",
+        reason:
+          jobs.length || statusJobs.length
+            ? "processed"
+            : "no_text_or_status",
       });
     } catch (err) {
       console.error("[whatsapp-webhook] handler failed:", err);
@@ -178,7 +227,11 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    data: { received: true, queued: jobs.length },
+    data: {
+      received: true,
+      queued: jobs.length,
+      statuses: statusJobs.length,
+    },
     error: null,
   });
 }

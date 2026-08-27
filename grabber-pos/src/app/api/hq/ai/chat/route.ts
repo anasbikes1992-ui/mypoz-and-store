@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { AI_AGENTS, HQ_AGENT_IDS, type AgentId } from "@/lib/ai/agents";
+import { tenantContextFromSession } from "@/lib/ai/tenant-context";
 import { requireGmsAdmin } from "@/lib/server/gms-auth";
 import { runAgentChat } from "@/lib/server/ai-chat";
 
 const bodySchema = z.object({
-  agentId: z.literal("hq-ops"),
+  agentId: z.enum(HQ_AGENT_IDS),
   messages: z
     .array(
       z.object({
@@ -34,10 +36,27 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
+  const agentId = parsed.data.agentId as AgentId;
+  if (AI_AGENTS[agentId].plane !== "hq") {
+    return NextResponse.json(
+      { success: false, data: null, error: "Use shop Jarvis for that agent" },
+      { status: 403 },
+    );
+  }
+  void tenantContextFromSession(
+    {
+      orgId: "hq",
+      userId: gate.identity.id,
+      role: "owner",
+    },
+    "hq",
+  );
+
   try {
     const reply = await runAgentChat({
-      agentId: "hq-ops",
+      agentId,
       messages: parsed.data.messages,
+      userId: gate.identity.id,
     });
     return NextResponse.json({ success: true, data: { reply }, error: null });
   } catch (e) {

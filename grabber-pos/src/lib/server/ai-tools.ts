@@ -13,6 +13,7 @@ import {
 import type { AgentId } from "@/lib/ai/agents";
 import { searchKb } from "@/lib/ai/kb";
 import { listVerticalGuides } from "@/lib/ai/vertical-guides";
+import { kpiCatalog } from "@/lib/kpi/canon";
 import {
   searchTenantKb,
   tenantKnowledgeAllowed,
@@ -23,6 +24,16 @@ import {
   slowMovers,
   topProducts,
 } from "@/lib/server/ai-insights";
+import { listConversations } from "@/lib/server/whatsapp-inbox-store";
+import { proposeApproval } from "@/lib/server/approval-store";
+import { readPublishedStore } from "@/lib/server/commerce-store";
+import { readSettings } from "@/lib/server/settings-store";
+import { readTenant } from "@/lib/server/tenant-store";
+
+export type ToolRunContext = {
+  agentId: string;
+  userId: string;
+};
 
 const daysProp = {
   type: "number",
@@ -142,6 +153,80 @@ export const OWNER_TOOLS = [
       parameters: { type: "object", properties: {} },
     },
   },
+  {
+    type: "function" as const,
+    function: {
+      name: "kpi_snapshot",
+      description:
+        "Canonical KPI ids/labels plus live values for this shop (sales windows, AOV, low stock, open WA threads). Use instead of inventing metric names.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "open_channel_orders",
+      description:
+        "Recent ONLINE_STORE / WHATSAPP orders that are not completed or cancelled (COD board queue).",
+      parameters: {
+        type: "object",
+        properties: {
+          limit: { type: "number", description: "Max rows 1–30 (default 15)" },
+          source: {
+            type: "string",
+            description: "Optional: ONLINE_STORE or WHATSAPP",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "storefront_snapshot",
+      description:
+        "Published storefront slug, payment/fulfilment modes, and whether the shop catalogue looks empty.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "propose_kb_article",
+      description:
+        "Propose a shop knowledge article for human approval at /approvals. Does NOT publish until approved.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          body: { type: "string" },
+          tags: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional short tags",
+          },
+        },
+        required: ["title", "body"],
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "propose_wa_message",
+      description:
+        "Propose an outbound WhatsApp text for human approval at /approvals. Does NOT send until approved.",
+      parameters: {
+        type: "object",
+        properties: {
+          to: { type: "string", description: "Customer mobile" },
+          body: { type: "string" },
+          note: { type: "string", description: "Why this draft" },
+        },
+        required: ["to", "body"],
+      },
+    },
+  },
   KB_SEARCH_TOOL,
   LIST_VERTICALS_TOOL,
 ];
@@ -222,8 +307,73 @@ export const HQ_TOOLS = [
   LIST_VERTICALS_TOOL,
 ];
 
+/** Inventory-focused subset. */
+export const OWNER_INVENTORY_TOOLS = [
+  OWNER_TOOLS.find((t) => t.function.name === "kpi_snapshot")!,
+  OWNER_TOOLS.find((t) => t.function.name === "inventory_stats")!,
+  OWNER_TOOLS.find((t) => t.function.name === "low_stock_sample")!,
+  OWNER_TOOLS.find((t) => t.function.name === "slow_movers")!,
+  OWNER_TOOLS.find((t) => t.function.name === "demand_hint")!,
+  OWNER_TOOLS.find((t) => t.function.name === "top_products")!,
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
+];
+
+/** WhatsApp coach — how-tos + draft outbound. */
+export const OWNER_WHATSAPP_TOOLS = [
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
+  OWNER_TOOLS.find((t) => t.function.name === "kpi_snapshot")!,
+  OWNER_TOOLS.find((t) => t.function.name === "period_sales")!,
+  OWNER_TOOLS.find((t) => t.function.name === "propose_wa_message")!,
+  OWNER_TOOLS.find((t) => t.function.name === "open_channel_orders")!,
+];
+
+export const OWNER_ORDERS_TOOLS = [
+  OWNER_TOOLS.find((t) => t.function.name === "open_channel_orders")!,
+  OWNER_TOOLS.find((t) => t.function.name === "period_sales")!,
+  OWNER_TOOLS.find((t) => t.function.name === "kpi_snapshot")!,
+  OWNER_TOOLS.find((t) => t.function.name === "propose_wa_message")!,
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
+];
+
+export const OWNER_STOREFRONT_TOOLS = [
+  OWNER_TOOLS.find((t) => t.function.name === "storefront_snapshot")!,
+  OWNER_TOOLS.find((t) => t.function.name === "period_sales")!,
+  OWNER_TOOLS.find((t) => t.function.name === "kpi_snapshot")!,
+  OWNER_TOOLS.find((t) => t.function.name === "propose_kb_article")!,
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
+];
+
+export const HQ_SUPPORT_TOOLS = [
+  HQ_TOOLS.find((t) => t.function.name === "open_tickets")!,
+  HQ_TOOLS.find((t) => t.function.name === "tenant_health")!,
+  HQ_TOOLS.find((t) => t.function.name === "tenant_monitor")!,
+  HQ_TOOLS.find((t) => t.function.name === "whatsapp_fleet_hint")!,
+  KB_SEARCH_TOOL,
+  LIST_VERTICALS_TOOL,
+];
+
 export function toolsFor(agent: AgentId) {
-  return agent === "hq-ops" ? HQ_TOOLS : OWNER_TOOLS;
+  switch (agent) {
+    case "hq-ops":
+      return HQ_TOOLS;
+    case "hq-support":
+      return HQ_SUPPORT_TOOLS;
+    case "owner-inventory":
+      return OWNER_INVENTORY_TOOLS;
+    case "owner-whatsapp":
+      return OWNER_WHATSAPP_TOOLS;
+    case "owner-orders":
+      return OWNER_ORDERS_TOOLS;
+    case "owner-storefront":
+      return OWNER_STOREFRONT_TOOLS;
+    case "owner-retail":
+    default:
+      return OWNER_TOOLS;
+  }
 }
 
 async function resolveOrgId(args: Record<string, unknown>): Promise<string | null> {
@@ -241,6 +391,7 @@ export async function runTool(
   name: string,
   plane: "hq" | "owner",
   rawArgs?: string,
+  ctx?: ToolRunContext,
 ): Promise<string> {
   let args: Record<string, unknown> = {};
   if (rawArgs) {
@@ -454,6 +605,143 @@ export async function runTool(
     return JSON.stringify({
       low,
       note: page.total === 0 ? "Catalogue is empty — import products first." : undefined,
+    });
+  }
+  if (name === "kpi_snapshot") {
+    const [today, week, month, top, inv, convos] = await Promise.all([
+      periodSales(1),
+      periodSales(7),
+      periodSales(28),
+      topProducts(7, 5),
+      repo.inventoryStats(),
+      listConversations().catch(() => []),
+    ]);
+    const orders7 = Number(week.count) || 0;
+    const rev7 = Number(week.revenue) || 0;
+    const openWa = convos.filter((c) => c.needsStaffReply).length;
+    const invRow = inv as { lowStock?: number; stockValue?: number };
+    return JSON.stringify({
+      canon: kpiCatalog(),
+      values: {
+        sales_today: { revenue: today.revenue, orders: today.count },
+        sales_7d: { revenue: rev7, orders: orders7 },
+        sales_28d: { revenue: month.revenue, orders: month.count },
+        aov_7d: orders7 > 0 ? Math.round(rev7 / orders7) : 0,
+        orders_7d: orders7,
+        top_products_7d: top.top,
+        low_stock: invRow.lowStock ?? 0,
+        stock_value: invRow.stockValue ?? 0,
+        whatsapp_open_threads: openWa,
+      },
+    });
+  }
+  if (name === "open_channel_orders") {
+    const max = Math.max(1, Math.min(Number(args.limit) || 15, 30));
+    const sales = await repo.listSales(120);
+    const srcFilter =
+      typeof args.source === "string" ? args.source.toUpperCase() : null;
+    const open = sales
+      .filter((s) => {
+        const src = (s.source ?? "POS").toUpperCase();
+        if (src !== "ONLINE_STORE" && src !== "WHATSAPP") return false;
+        if (srcFilter && src !== srcFilter) return false;
+        const f = String(s.fulfillmentStatus ?? s.status ?? "pending").toLowerCase();
+        return f !== "completed" && f !== "cancelled" && f !== "canceled";
+      })
+      .slice(0, max)
+      .map((s) => ({
+        id: s.id,
+        receiptNo: (s as { receiptNo?: string }).receiptNo,
+        source: s.source,
+        fulfillmentStatus: s.fulfillmentStatus ?? s.status,
+        total: s.total,
+        customerName: s.customerName,
+        customerMobile: s.customerMobile,
+        createdAt: s.createdAt,
+      }));
+    return JSON.stringify({
+      open,
+      count: open.length,
+      board: "/commerce/orders",
+      note:
+        open.length === 0
+          ? "No open online/WhatsApp orders in the recent window."
+          : undefined,
+    });
+  }
+  if (name === "storefront_snapshot") {
+    const [tenant, settings, published, inv] = await Promise.all([
+      readTenant(),
+      readSettings(),
+      readPublishedStore().catch(() => null),
+      repo.inventoryStats(),
+    ]);
+    const slug = published?.slug ?? null;
+    return JSON.stringify({
+      businessName: settings.businessName || tenant.brand.businessName,
+      plan: tenant.license.plan,
+      slug,
+      status: published?.status ?? "unknown",
+      storePath: slug ? `/store/${slug}` : null,
+      published: published?.status === "published",
+      productCount: (inv as { productCount?: number }).productCount ?? 0,
+      hrefs: {
+        commerce: "/commerce",
+        orders: "/commerce/orders",
+        website: "/website",
+        builder: "/commerce/builder",
+      },
+      note: slug
+        ? undefined
+        : "No storefront slug yet — finish /commerce/onboarding.",
+    });
+  }
+  if (name === "propose_kb_article") {
+    const title = typeof args.title === "string" ? args.title.trim() : "";
+    const body = typeof args.body === "string" ? args.body.trim() : "";
+    if (!title || !body) {
+      return JSON.stringify({ error: "title and body required" });
+    }
+    const tags = Array.isArray(args.tags)
+      ? args.tags.map(String).slice(0, 12)
+      : undefined;
+    const row = await proposeApproval({
+      kind: "kb_article_draft",
+      agentId: ctx?.agentId ?? "owner-retail",
+      plane: "owner",
+      title: `KB: ${title}`.slice(0, 160),
+      summary: body.slice(0, 160),
+      proposedBy: ctx?.userId ?? "jarvis",
+      payload: { kind: "kb_article_draft", title, body, tags },
+    });
+    return JSON.stringify({
+      proposed: true,
+      approvalId: row.id,
+      href: "/approvals",
+      note: "Pending human approval — not published yet.",
+    });
+  }
+  if (name === "propose_wa_message") {
+    const to = typeof args.to === "string" ? args.to.trim() : "";
+    const body = typeof args.body === "string" ? args.body.trim() : "";
+    if (!to || !body) {
+      return JSON.stringify({ error: "to and body required" });
+    }
+    const note = typeof args.note === "string" ? args.note : undefined;
+    const row = await proposeApproval({
+      kind: "wa_outbound_draft",
+      agentId: ctx?.agentId ?? "owner-whatsapp",
+      plane: "owner",
+      title: `WA to ${to}`.slice(0, 160),
+      summary: body.slice(0, 160),
+      proposedBy: ctx?.userId ?? "jarvis",
+      payload: { kind: "wa_outbound_draft", to, body, note },
+    });
+    return JSON.stringify({
+      proposed: true,
+      approvalId: row.id,
+      href: "/approvals",
+      note: "Pending human approval — not sent yet.",
     });
   }
   return JSON.stringify({ error: "Unknown owner tool" });

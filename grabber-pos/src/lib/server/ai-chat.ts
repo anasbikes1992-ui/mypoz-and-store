@@ -26,6 +26,7 @@ export async function resolveApiKey(plane: "hq" | "owner"): Promise<string | nul
 export async function runAgentChat(opts: {
   agentId: AgentId;
   messages: { role: "user" | "assistant"; content: string }[];
+  userId?: string;
 }): Promise<string> {
   const spec = AI_AGENTS[opts.agentId];
   if (!spec) throw new Error("Unknown agent");
@@ -90,6 +91,7 @@ export async function runAgentChat(opts: {
           call.function.name,
           spec.plane,
           call.function.arguments,
+          { agentId: opts.agentId, userId: opts.userId ?? "jarvis" },
         );
         messages.push({
           role: "tool",

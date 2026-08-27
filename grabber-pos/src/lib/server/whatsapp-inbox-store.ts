@@ -8,6 +8,10 @@ import {
   normalizeEnabledPaths,
   type AutomationPathEnabled,
 } from "@/lib/whatsapp/automation-graph";
+import {
+  normalizeEnabledEvents,
+  type WaEventEnabled,
+} from "@/lib/whatsapp/event-automations";
 import { isLocale, type Locale } from "@/lib/whatsapp/i18n";
 import {
   findCollectionByField,
@@ -50,7 +54,17 @@ export interface WhatsAppMessage {
   direction: "in" | "out";
   body: string;
   waMessageId?: string;
+  /** Meta delivery status: sent | delivered | read | failed */
+  deliveryStatus?: string;
+  deliveryStatusAt?: string;
   createdAt: string;
+}
+
+export interface WhatsAppOptOut {
+  id: string;
+  phone: string;
+  optedOut: boolean;
+  updatedAt: string;
 }
 
 export interface WhatsAppSettings {
@@ -64,11 +78,14 @@ export interface WhatsAppSettings {
   staffNotify: boolean;
   /** Which greeting-menu branches customers see. */
   enabledPaths: AutomationPathEnabled;
+  /** Which outbound commerce event automations are on. */
+  enabledEvents: WaEventEnabled;
   updatedAt: string;
 }
 
 const CONVERSATIONS = "whatsapp_conversations";
 const MESSAGES = "whatsapp_messages";
+const OPTOUTS = "whatsapp_optouts";
 
 const conversations = recordStore<WhatsAppConversation>({
   collection: CONVERSATIONS,
@@ -80,7 +97,7 @@ const messages = recordStore<WhatsAppMessage>({
   file: "whatsapp-messages.json",
 });
 
-const settingsDoc = docStore<Partial<WhatsAppSettings>>({
+const settingsDoc = docStore<Partial<WhatsAppSettings> & { optedOutPhones?: string[] }>({
   key: "whatsapp",
   file: "whatsapp-settings.json",
 });
@@ -238,6 +255,80 @@ export async function appendMessage(
   return messages.put(row);
 }
 
+/** Persist Meta delivery/read/failed status onto the outbound message row. */
+export async function updateMessageDeliveryStatus(
+  waMessageId: string,
+  status: string,
+  phoneNumberId?: string,
+): Promise<WhatsAppMessage | null> {
+  const existing = await findMessageByWaId(waMessageId, phoneNumberId);
+  if (!existing) return null;
+  const row: WhatsAppMessage = {
+    ...existing,
+    deliveryStatus: status,
+    deliveryStatusAt: new Date().toISOString(),
+  };
+  const tenant = await tenantFor(phoneNumberId);
+  if (tenant) return putCollection(tenant, MESSAGES, row);
+  return messages.put(row);
+}
+
+function phoneKey(raw: string): string {
+  return raw.replace(/\D/g, "");
+}
+
+export async function isOptedOut(
+  phone: string,
+  phoneNumberId?: string,
+  orgId?: string,
+): Promise<boolean> {
+  const key = phoneKey(phone);
+  if (!key) return false;
+  const tenant = orgId
+    ? await tenantForOrg(orgId)
+    : await tenantFor(phoneNumberId);
+  if (tenant) {
+    const row = await getCollection<WhatsAppOptOut>(tenant, OPTOUTS, key);
+    return Boolean(row?.optedOut);
+  }
+  const raw = await settingsDoc.read({});
+  const list = Array.isArray(raw.optedOutPhones)
+    ? (raw.optedOutPhones as string[])
+    : [];
+  return list.includes(key);
+}
+
+export async function setOptOut(
+  phone: string,
+  optedOut: boolean,
+  phoneNumberId?: string,
+  orgId?: string,
+): Promise<void> {
+  const key = phoneKey(phone);
+  if (!key) return;
+  const tenant = orgId
+    ? await tenantForOrg(orgId)
+    : await tenantFor(phoneNumberId);
+  const now = new Date().toISOString();
+  if (tenant) {
+    await putCollection(tenant, OPTOUTS, {
+      id: key,
+      phone: key,
+      optedOut,
+      updatedAt: now,
+    } satisfies WhatsAppOptOut);
+    return;
+  }
+  const raw = await settingsDoc.read({});
+  const prev = Array.isArray(raw.optedOutPhones)
+    ? (raw.optedOutPhones as string[])
+    : [];
+  const next = optedOut
+    ? [...new Set([...prev, key])]
+    : prev.filter((p) => p !== key);
+  await settingsDoc.write({ ...raw, optedOutPhones: next });
+}
+
 export async function readWhatsAppSettings(
   phoneNumberId?: string,
   orgId?: string,
@@ -260,6 +351,9 @@ export async function readWhatsAppSettings(
     staffNotify: Boolean(raw.staffNotify ?? true),
     enabledPaths: normalizeEnabledPaths(
       raw.enabledPaths as Partial<AutomationPathEnabled> | undefined,
+    ),
+    enabledEvents: normalizeEnabledEvents(
+      raw.enabledEvents as Partial<WaEventEnabled> | undefined,
     ),
     updatedAt: String(raw.updatedAt ?? ""),
   };
@@ -294,6 +388,9 @@ export async function writeWhatsAppSettings(
     enabledPaths: patch.enabledPaths
       ? normalizeEnabledPaths(patch.enabledPaths)
       : current.enabledPaths,
+    enabledEvents: patch.enabledEvents
+      ? normalizeEnabledEvents(patch.enabledEvents)
+      : current.enabledEvents,
     updatedAt: new Date().toISOString(),
   };
   const tenant = orgId
@@ -318,6 +415,7 @@ export function publicWhatsAppSettings(settings: WhatsAppSettings) {
     offersText: settings.offersText,
     staffNotify: settings.staffNotify,
     enabledPaths: settings.enabledPaths,
+    enabledEvents: settings.enabledEvents,
     updatedAt: settings.updatedAt,
   };
 }

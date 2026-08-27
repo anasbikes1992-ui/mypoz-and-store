@@ -12,13 +12,16 @@ import {
   appendMessage,
   findMessageByWaId,
   getConversation,
+  isOptedOut,
   readWhatsAppSettings,
+  setOptOut,
   upsertConversation,
 } from "@/lib/server/whatsapp-inbox-store";
 import {
   sendWhatsAppText,
   WhatsAppNotConfiguredError,
 } from "@/lib/server/whatsapp";
+import { dispatchWhatsAppEvent } from "@/lib/server/whatsapp-events";
 import { resolveMetaAccessToken } from "@/lib/whatsapp/phone-number-id";
 import { normalizeLkPhone } from "@/lib/whatsapp/phone";
 import { detectLocale, isLocale } from "@/lib/whatsapp/i18n";
@@ -28,6 +31,15 @@ import {
   type BotCatalogCategory,
 } from "@/lib/whatsapp/menu";
 import { formatMoney } from "@/lib/format";
+
+const OPT_OUT_WORDS = new Set([
+  "STOP",
+  "UNSUBSCRIBE",
+  "CANCEL",
+  "END",
+  "QUIT",
+]);
+const OPT_IN_WORDS = new Set(["START", "SUBSCRIBE", "UNSTOP"]);
 
 async function catalogCategories(
   phoneNumberId?: string,
@@ -110,6 +122,86 @@ export async function handleInboundText(opts: {
     );
   }
 
+  const keyword = opts.text.trim().toUpperCase();
+  const toDigits = phone.replace(/[^\d]/g, "");
+
+  async function sendAndPersist(body: string) {
+    await upsertConversation(
+      {
+        id,
+        waId: opts.waId,
+        phone,
+        name: opts.name || convo.name,
+        state: convo.state,
+        payload: convo.payload,
+        lastMessage: body,
+        lastSaleId: convo.lastSaleId,
+        needsStaffReply: convo.needsStaffReply,
+      },
+      phoneNumberId,
+    );
+    await appendMessage(
+      { conversationId: id, direction: "out", body },
+      phoneNumberId,
+    );
+    try {
+      await sendWhatsAppText({
+        to: toDigits,
+        body,
+        phoneNumberId: waSettings.phoneNumberId || phoneNumberId || undefined,
+        token: resolveMetaAccessToken(waSettings.accessToken),
+      });
+    } catch (err) {
+      if (!(err instanceof WhatsAppNotConfiguredError)) {
+        console.error(
+          "[whatsapp-bot] send failed:",
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+  }
+
+  if (OPT_OUT_WORDS.has(keyword)) {
+    await setOptOut(toDigits, true, phoneNumberId);
+    await dispatchWhatsAppEvent({
+      event: "OPT_OUT_ACK",
+      to: toDigits,
+      phoneNumberId,
+      force: true,
+      vars: { businessName: orgName },
+    });
+    await upsertConversation(
+      {
+        id,
+        waId: opts.waId,
+        phone,
+        name: opts.name || convo.name,
+        state: "GREETING",
+        payload: emptyBotPayload(),
+        lastMessage: "opted_out",
+        lastSaleId: convo.lastSaleId,
+        needsStaffReply: false,
+      },
+      phoneNumberId,
+    );
+    return;
+  }
+
+  if (OPT_IN_WORDS.has(keyword)) {
+    await setOptOut(toDigits, false, phoneNumberId);
+    await sendAndPersist(
+      `You're opted back in to updates from ${orgName}. Reply 0 for the menu, or STOP to opt out again.`,
+    );
+    return;
+  }
+
+  if (await isOptedOut(toDigits, phoneNumberId)) {
+    await sendAndPersist(
+      `You're opted out of automated messages from ${orgName}. Reply START to opt back in.`,
+    );
+    return;
+  }
+
   const categories = await catalogCategories(phoneNumberId);
   const turn = nextBotTurn({
     state: convo.state,
@@ -169,10 +261,9 @@ export async function handleInboundText(opts: {
     phoneNumberId,
   );
 
-  const to = phone.replace(/[^\d]/g, "");
   try {
     await sendWhatsAppText({
-      to,
+      to: toDigits,
       body: reply,
       phoneNumberId: waSettings.phoneNumberId || phoneNumberId || undefined,
       token: resolveMetaAccessToken(waSettings.accessToken),

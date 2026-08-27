@@ -12,8 +12,11 @@ export default function HqJarvisPage() {
       </p>
       <AgentChat
         endpoint="/api/hq/ai/chat"
-        agents={[{ id: "hq-ops", name: "HQ operations" }]}
-        emptyHint="Try: Which shops are quiet? How is Anaz Store doing this week? Any open tickets?"
+        agents={[
+          { id: "hq-ops", name: "HQ operations" },
+          { id: "hq-support", name: "HQ support" },
+        ]}
+        emptyHint="Try: Which shops are quiet? Open tickets? How is Anaz Store this week?"
       />
     </div>
   );

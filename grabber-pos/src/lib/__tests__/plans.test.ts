@@ -15,10 +15,12 @@ const ALL = [
 ];
 
 describe("planEnabledKeys", () => {
-  it("unlocks everything on enterprise", () => {
+  it("unlocks everything on enterprise except quarantined verticals", () => {
     const keys = planEnabledKeys("enterprise", ALL);
-    expect(keys.size).toBe(new Set(ALL).size);
     expect(keys.has("restaurant")).toBe(true);
+    expect(keys.has("rooms")).toBe(false);
+    expect(keys.has("repair")).toBe(false);
+    expect(keys.has("hire")).toBe(false);
   });
 
   it("excludes sale-mode verticals on business", () => {

@@ -173,6 +173,38 @@ export async function POST(
       })();
     }
 
+    // WhatsApp ORDER_CREATED — best-effort; respects opt-out + enabledEvents.
+    if (data.customerMobile) {
+      void (async () => {
+        try {
+          const { dispatchWhatsAppEvent } = await import(
+            "@/lib/server/whatsapp-events"
+          );
+          const [settings, tenant] = await Promise.all([
+            readSettings(),
+            readTenant(),
+          ]);
+          const businessName =
+            settings.businessName ||
+            tenant.brand.businessName ||
+            "MyPoz Store";
+          await dispatchWhatsAppEvent({
+            event: "ORDER_CREATED",
+            to: data.customerMobile,
+            vars: {
+              receipt: order.receiptNo || order.id,
+              customerName: data.customerName,
+              businessName,
+              total: `Rs ${(order.total ?? 0).toLocaleString("en-LK")}`,
+              fulfil: data.fulfilment,
+            },
+          });
+        } catch {
+          /* never block checkout */
+        }
+      })();
+    }
+
     return NextResponse.json({ success: true, data: order, error: null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Order could not be placed";

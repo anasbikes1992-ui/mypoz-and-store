@@ -8,6 +8,7 @@ import {
   type WhatsAppSettings,
 } from "@/lib/server/whatsapp-inbox-store";
 import { normalizeEnabledPaths } from "@/lib/whatsapp/automation-graph";
+import { normalizeEnabledEvents } from "@/lib/whatsapp/event-automations";
 
 const metaPhoneNumberId = z
   .string()
@@ -42,6 +43,20 @@ const patchSchema = z.object({
       location: z.boolean().optional(),
       track: z.boolean().optional(),
       staff: z.boolean().optional(),
+    })
+    .optional(),
+  enabledEvents: z
+    .object({
+      ORDER_CREATED: z.boolean().optional(),
+      ORDER_READY: z.boolean().optional(),
+      ORDER_COMPLETED: z.boolean().optional(),
+      ORDER_CANCELLED: z.boolean().optional(),
+      PAYMENT_RECEIVED: z.boolean().optional(),
+      SALE_COMPLETED: z.boolean().optional(),
+      REFUND_ISSUED: z.boolean().optional(),
+      LOW_STOCK: z.boolean().optional(),
+      STAFF_HANDOFF: z.boolean().optional(),
+      OPT_OUT_ACK: z.boolean().optional(),
     })
     .optional(),
 });
@@ -89,6 +104,9 @@ export async function PUT(req: NextRequest) {
   };
   if (data.enabledPaths) {
     patch.enabledPaths = normalizeEnabledPaths(data.enabledPaths);
+  }
+  if (data.enabledEvents) {
+    patch.enabledEvents = normalizeEnabledEvents(data.enabledEvents);
   }
   try {
     const settings = await writeWhatsAppSettings(patch, gate.session.orgId);

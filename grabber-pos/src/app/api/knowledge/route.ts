@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireTenantSession } from "@/lib/server/auth-session";
 import {
   createTenantKb,
   harvestTenantKbFromOrg,
@@ -15,6 +16,8 @@ const createSchema = z.object({
 });
 
 export async function GET() {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
   if (!(await tenantKnowledgeAllowed())) {
     return NextResponse.json(
       {
@@ -31,6 +34,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
   if (!(await tenantKnowledgeAllowed())) {
     return NextResponse.json(
       {

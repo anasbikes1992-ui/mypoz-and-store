@@ -62,6 +62,8 @@ describe("route integrity", () => {
       "src/app/api/email/preview/route.ts",
       "src/app/api/knowledge/route.ts",
       "src/app/api/knowledge/[id]/route.ts",
+      "src/app/api/approvals/route.ts",
+      "src/app/api/approvals/[id]/route.ts",
       "src/app/api/ai/chat/route.ts",
     ];
     expect(routes.filter((r) => !existsSync(path.join(ROOT, r)))).toEqual([]);

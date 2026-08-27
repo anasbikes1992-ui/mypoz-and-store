@@ -163,13 +163,20 @@ export async function notifyWhatsAppOrderStatus(opts: {
   to: string;
   receipt: string;
   status: string;
+  orgId?: string;
+  customerName?: string;
 }): Promise<void> {
   if (!opts.to.trim()) return;
   try {
-    const label = opts.status.replaceAll("_", " ");
-    await sendWhatsAppText({
+    const { dispatchFulfillmentWhatsApp } = await import(
+      "@/lib/server/whatsapp-events"
+    );
+    await dispatchFulfillmentWhatsApp({
       to: opts.to,
-      body: `Order ${opts.receipt} update: your order is now ${label}. Reply if you need help.`,
+      receipt: opts.receipt,
+      status: opts.status,
+      orgId: opts.orgId,
+      customerName: opts.customerName,
     });
   } catch {
     // Status ping is best-effort — never block fulfillment.

@@ -50,6 +50,18 @@ export const VERTICAL_KEYS = [
 ];
 
 /**
+ * Thin / experimental verticals quarantined from the launcher until coverage
+ * is ready. Routes may still exist; tiles are status "soon" in modules.ts.
+ * Also stripped from planEnabledKeys unless POS_SHOW_QUARANTINED_VERTICALS=true.
+ */
+export const QUARANTINED_VERTICAL_KEYS = [
+  "rooms",
+  "rent",
+  "hire",
+  "repair",
+] as const;
+
+/**
  * When HQ enables a primary vertical extra, companion modules unlock with it
  * so grocery tenants never see restaurant floor / KDS / drivers alone.
  */
@@ -98,6 +110,7 @@ export const STARTER_KEYS = [
   "clients",
   "backup",
   "assistant",
+  "approvals",
   // In-app help must reach every client, whatever they pay.
   "help",
   "billing",
@@ -111,14 +124,21 @@ export function planEnabledKeys(
   extras: string[] = [],
 ): Set<string> {
   const expanded = expandExtras(extras);
-  if (plan === "enterprise") return new Set(allKeys);
-  if (plan === "business") {
-    return new Set([
+  let keys: Set<string>;
+  if (plan === "enterprise") {
+    keys = new Set(allKeys);
+  } else if (plan === "business") {
+    keys = new Set([
       ...allKeys.filter((k) => !VERTICAL_KEYS.includes(k)),
       ...expanded,
     ]);
+  } else {
+    keys = new Set([...STARTER_KEYS, ...expanded]);
   }
-  return new Set([...STARTER_KEYS, ...expanded]);
+  if (process.env.POS_SHOW_QUARANTINED_VERTICALS !== "true") {
+    for (const k of QUARANTINED_VERTICAL_KEYS) keys.delete(k);
+  }
+  return keys;
 }
 
 export function isLicenseExpired(expiry: string): boolean {

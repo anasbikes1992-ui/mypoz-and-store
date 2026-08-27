@@ -33,33 +33,30 @@ This roadmap does **not** reopen:
 | Unknown storefront → 404 / forgot API public | ✅ live |
 | Branded reset email (Resend domain) | ⏸ **LAST** (domain in progress; never From gmail) |
 | WebXPay / cards | ⏸ **LAST** |
-| CLIENT READY | ❌ OPEN |
+| CLIENT READY | 🟡 COD soft-launch path — Anaz (`11`); cards LAST |
 
 ## Status board
 
 ### 🟢 DONE
-Architecture freeze · RLS/tenant · Commerce COD · P0 transactional · UI smoke · HQ Pilot #2 · isolation · pre-card prod smoke
+Architecture freeze · RLS/tenant · Commerce COD · P0 transactional · UI smoke · HQ Pilot #2 · isolation · pre-card prod smoke · **Owner Completeness** · **WhatsApp v1** · **KPI / Jarvis / Knowledge+Approvals** · **Phase A hardening** (`13`)
 
 ### 🟡 NOW
-**WhatsApp v1** (`docs/work/06`) — harden existing WA  
+**Anaz COD soft-launch** (`docs/work/11`) — live COD week; optional WA Live
 
 ### 🔵 NEXT
-KPI canon → Jarvis BI → tools/agents → knowledge/approvals → real client
-
-### 🟢 DONE (updated)
-… · HQ Pilot #2 frozen · **Owner Completeness PASS WITH NOTES** (Anaz + Pilot 02 Playwright)
+CLIENT READY (COD) → then LAST email + WebXPay
 
 ### 🔴 LAST (bundled)
-**Resend verified domain + password email** · **WebXPay / cards** (`docs/work/12`)
+**Resend verified domain + password email** · **WebXPay / cards** (`docs/work/12`)  
+**Not now:** PayHere · courier APIs · Redis stock lock
 
 ## Immediate next (do in order)
 
-1. ~~Deploy / Pilot #2 freeze~~ ✅  
-2. ~~Owner Completeness~~ ✅ (rows 1–13 on Anaz + Pilot 02)  
-3. **WhatsApp v1** `docs/work/06`  
-4. KPI → Jarvis… → real client  
-5. **LAST:** email domain + WebXPay (`02` / `12`)  
-6. Parallel ops: `A-OP-01: PASS` when ready; Gate 5 off-site
+1. ~~Deploy / Pilot #2 / Owner Completeness / WA / Jarvis / Approvals~~ ✅  
+2. ~~Phase A hardening~~ ✅ (`13` — env gates, RLS verify, quarantine thin verticals)  
+3. **Anaz COD soft-launch** — operate as Anaz; confirm live COD week  
+4. **LAST:** email domain + WebXPay (`12`) — not PayHere  
+5. Parallel ops: `npm run ops:rls` · `A-OP-01` · Gate 5 off-site
 
 ## Deploy note
 

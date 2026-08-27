@@ -8,9 +8,10 @@
 
 | Item | Packet |
 |------|--------|
+| Jarvis agents / KPI depth | **Done thin** — see `06`–`09` |
+| Approvals / knowledge write tools | `10` |
 | Resend verified domain + forgot-password mail | `02` / `12` |
 | WebXPay / cards | `12` |
-| Jarvis agents / KPI depth | `07`–`09` |
 
 ## Playwright evidence (production)
 

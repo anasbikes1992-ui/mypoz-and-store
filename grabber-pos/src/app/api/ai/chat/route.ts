@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { AI_AGENTS, type AgentId } from "@/lib/ai/agents";
+import { AI_AGENTS, OWNER_AGENT_IDS, type AgentId } from "@/lib/ai/agents";
+import { tenantContextFromSession } from "@/lib/ai/tenant-context";
+import { requireTenantSession } from "@/lib/server/auth-session";
 import { runAgentChat } from "@/lib/server/ai-chat";
 
 const bodySchema = z.object({
-  agentId: z.enum(["hq-ops", "owner-retail", "owner-whatsapp"]),
+  agentId: z.enum(OWNER_AGENT_IDS),
   messages: z
     .array(
       z.object({
@@ -16,6 +18,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate.response;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -39,10 +44,14 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     );
   }
+  // TenantContext reserved for approvals / write tools (docs/work/10).
+  const ctx = tenantContextFromSession(gate.session, "owner");
+
   try {
     const reply = await runAgentChat({
       agentId,
       messages: parsed.data.messages,
+      userId: ctx.userId,
     });
     return NextResponse.json({ success: true, data: { reply }, error: null });
   } catch (e) {

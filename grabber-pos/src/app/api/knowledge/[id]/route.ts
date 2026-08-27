@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { requireTenantSession } from "@/lib/server/auth-session";
 import {
   getTenantKb,
   removeTenantKb,
@@ -13,16 +14,27 @@ const patchSchema = z.object({
   tags: z.array(z.string().max(40)).max(12).optional(),
 });
 
+async function gateKnowledge() {
+  const gate = await requireTenantSession();
+  if (!gate.ok) return gate;
+  if (!(await tenantKnowledgeAllowed())) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        { success: false, data: null, error: "Knowledge base not on this plan" },
+        { status: 403 },
+      ),
+    };
+  }
+  return gate;
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await tenantKnowledgeAllowed())) {
-    return NextResponse.json(
-      { success: false, data: null, error: "Knowledge base not on this plan" },
-      { status: 403 },
-    );
-  }
+  const gate = await gateKnowledge();
+  if (!gate.ok) return gate.response;
   const { id } = await params;
   const article = await getTenantKb(id);
   return NextResponse.json({
@@ -36,12 +48,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await tenantKnowledgeAllowed())) {
-    return NextResponse.json(
-      { success: false, data: null, error: "Knowledge base not on this plan" },
-      { status: 403 },
-    );
-  }
+  const gate = await gateKnowledge();
+  if (!gate.ok) return gate.response;
   const { id } = await params;
   let body: unknown;
   try {
@@ -84,12 +92,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await tenantKnowledgeAllowed())) {
-    return NextResponse.json(
-      { success: false, data: null, error: "Knowledge base not on this plan" },
-      { status: 403 },
-    );
-  }
+  const gate = await gateKnowledge();
+  if (!gate.ok) return gate.response;
   const { id } = await params;
   await removeTenantKb(id);
   return NextResponse.json({ success: true, data: null, error: null });
