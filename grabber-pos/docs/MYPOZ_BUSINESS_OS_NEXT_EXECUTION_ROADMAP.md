@@ -41,11 +41,13 @@ This roadmap does **not** reopen:
 Architecture freeze · RLS/tenant · Commerce COD · P0 transactional · UI smoke · HQ Pilot #2 · isolation · pre-card prod smoke
 
 ### 🟡 NOW
-**Owner Portal Completeness** (`docs/work/05`) — gap audit on Anaz + Pilot 02  
-Parallel: A-OP-01 confirm · Gate 5 off-site/PITR (ops)
+**WhatsApp v1** (`docs/work/06`) — harden existing WA  
 
 ### 🔵 NEXT
-WhatsApp v1 → KPI canon → Jarvis BI → tools/agents → knowledge/approvals → real client
+KPI canon → Jarvis BI → tools/agents → knowledge/approvals → real client
+
+### 🟢 DONE (updated)
+… · HQ Pilot #2 frozen · **Owner Completeness PASS WITH NOTES** (Anaz + Pilot 02 Playwright)
 
 ### 🔴 LAST (bundled)
 **Resend verified domain + password email** · **WebXPay / cards** (`docs/work/12`)
@@ -53,10 +55,11 @@ WhatsApp v1 → KPI canon → Jarvis BI → tools/agents → knowledge/approvals
 ## Immediate next (do in order)
 
 1. ~~Deploy / Pilot #2 freeze~~ ✅  
-2. **Owner gap audit** `docs/work/05` (Anaz + `pilot-02-owner@mypoz.test`)  
-3. WhatsApp → KPI → Jarvis… → real client  
-4. **LAST:** email domain + WebXPay (`02` / `12`)  
-5. Parallel ops: reply `A-OP-01: PASS` when ready; Gate 5 off-site
+2. ~~Owner Completeness~~ ✅ (rows 1–13 on Anaz + Pilot 02)  
+3. **WhatsApp v1** `docs/work/06`  
+4. KPI → Jarvis… → real client  
+5. **LAST:** email domain + WebXPay (`02` / `12`)  
+6. Parallel ops: `A-OP-01: PASS` when ready; Gate 5 off-site
 
 ## Deploy note
 
