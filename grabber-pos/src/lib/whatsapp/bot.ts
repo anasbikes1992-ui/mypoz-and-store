@@ -1,12 +1,12 @@
 import "server-only";
 import { getRepository } from "@/lib/server/repositories";
-import { readSettings } from "@/lib/server/settings-store";
 import { holdBill } from "@/lib/server/held-bills-store";
 import {
   createWhatsAppSale,
   findWhatsAppSale,
   listWhatsAppCatalog,
   resolveWhatsAppTenant,
+  type WhatsAppTenant,
 } from "@/lib/server/whatsapp-durable";
 import {
   appendMessage,
@@ -40,6 +40,27 @@ const OPT_OUT_WORDS = new Set([
   "QUIT",
 ]);
 const OPT_IN_WORDS = new Set(["START", "SUBSCRIBE", "UNSTOP"]);
+
+/** Webhook has no user session — read business name via service-role tenant. */
+async function orgDisplayName(
+  tenant: WhatsAppTenant | null,
+  phoneNumberId?: string,
+): Promise<string> {
+  const resolved = tenant ?? (await resolveWhatsAppTenant(phoneNumberId));
+  if (!resolved) return "MyPoz Store";
+  try {
+    const { data } = await resolved.db
+      .from("app_documents")
+      .select("data")
+      .eq("org_id", resolved.orgId)
+      .eq("key", "settings")
+      .maybeSingle<{ data: { businessName?: string } }>();
+    const name = String(data?.data?.businessName ?? "").trim();
+    return name || "MyPoz Store";
+  } catch {
+    return "MyPoz Store";
+  }
+}
 
 async function catalogCategories(
   phoneNumberId?: string,
@@ -87,9 +108,16 @@ export async function handleInboundText(opts: {
     if (dup) return;
   }
 
-  const settings = await readSettings();
+  const tenant = await resolveWhatsAppTenant(phoneNumberId);
+  if (!tenant && phoneNumberId) {
+    console.error(
+      "[whatsapp-bot] no org mapped for phone_number_id",
+      phoneNumberId,
+    );
+  }
+
   const waSettings = await readWhatsAppSettings(phoneNumberId);
-  const orgName = settings.businessName || "MyPoz";
+  const orgName = await orgDisplayName(tenant, phoneNumberId);
   const locale = detectLocale(
     opts.text,
     waSettings.locale && isLocale(waSettings.locale) ? waSettings.locale : "en",
@@ -209,9 +237,7 @@ export async function handleInboundText(opts: {
     text: opts.text,
     orgName,
     categories,
-    locationText:
-      waSettings.locationText ||
-      [settings.address, settings.phone].filter(Boolean).join("\n"),
+    locationText: waSettings.locationText || "",
     offersText: waSettings.offersText,
     greeting: waSettings.greeting,
     enabledPaths: waSettings.enabledPaths,

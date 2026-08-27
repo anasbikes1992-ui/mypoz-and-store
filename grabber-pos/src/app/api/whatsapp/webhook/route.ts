@@ -40,6 +40,29 @@ export async function GET(req: NextRequest) {
     // Settings may be unavailable without a session; env token is enough.
   }
 
+  // Webhook verify has no cookies — accept any org override verify token.
+  try {
+    const { isSupabaseEnabled } = await import("@/lib/supabase/config");
+    const { createServiceSupabase } = await import("@/lib/supabase/server");
+    if (isSupabaseEnabled && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const db = createServiceSupabase();
+      const { data: docs } = await db
+        .from("app_documents")
+        .select("data")
+        .eq("key", "whatsapp");
+      for (const row of docs ?? []) {
+        const verify = String(
+          (row.data as { verifyToken?: string } | null)?.verifyToken ?? "",
+        ).trim();
+        if (verify && safeEqual(token, verify)) {
+          return new NextResponse(challenge, { status: 200 });
+        }
+      }
+    }
+  } catch {
+    // Fall through to 403.
+  }
+
   return NextResponse.json(
     { success: false, data: null, error: "Verify token mismatch" },
     { status: 403 },
