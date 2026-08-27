@@ -270,12 +270,19 @@ function CartDrawer({
   /** One UUID per checkout attempt; reused on retry until success/clear. */
   const clientUuidRef = useRef<string | null>(null);
 
+  const isPickup = fulfilment === "pickup";
+
   const waHref = whatsAppLink(
     whatsappNumber,
-    whatsAppOrderText(businessName, lines, total, currency),
+    whatsAppOrderText(businessName, lines, total, currency, {
+      name: name || undefined,
+      mobile: mobile || undefined,
+      address: isPickup
+        ? pickupNote || "Store pickup"
+        : address || undefined,
+      fulfilment: fulfilment || undefined,
+    }),
   );
-
-  const isPickup = fulfilment === "pickup";
 
   function ensureClientUuid(): string {
     if (!clientUuidRef.current) {
@@ -688,33 +695,52 @@ function CartDrawer({
 
             {step === "cart" ? (
               <div className="space-y-2">
+                {waHref ? (
+                  <a
+                    href={waHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() =>
+                      track("checkout_started", {
+                        currency,
+                        value: total,
+                        method: "whatsapp",
+                      })
+                    }
+                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_45%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_14%,transparent)] py-3.5 text-center text-sm font-bold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_22%,transparent)]"
+                  >
+                    Order via WhatsApp
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setStep("details")}
                   className="w-full rounded-xl bg-accent py-3.5 text-sm font-bold text-accent-ink transition hover:bg-accent-strong"
                 >
-                  Checkout
+                  {waHref ? "Proceed to COD checkout" : "Checkout"}
                 </button>
-                {waHref && (
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {waHref ? (
                   <a
                     href={waHref}
                     target="_blank"
                     rel="noreferrer"
-                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_40%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_10%,transparent)] py-3.5 text-center text-sm font-semibold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_18%,transparent)]"
+                    className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_45%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_14%,transparent)] py-3.5 text-center text-sm font-bold text-tint-teal transition hover:bg-[color-mix(in_oklch,var(--tint-teal)_22%,transparent)]"
                   >
-                    Order on WhatsApp instead
+                    Send details on WhatsApp instead
                   </a>
-                )}
+                ) : null}
+                <button
+                  form="checkout"
+                  type="submit"
+                  disabled={busy}
+                  className="w-full rounded-xl bg-tint-green py-3.5 text-sm font-bold text-accent-ink transition hover:brightness-110 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  {busy ? "Placing order…" : "Place COD order"}
+                </button>
               </div>
-            ) : (
-              <button
-                form="checkout"
-                type="submit"
-                disabled={busy}
-                className="w-full rounded-xl bg-tint-green py-3.5 text-sm font-bold text-accent-ink transition hover:brightness-110 disabled:pointer-events-none disabled:opacity-50"
-              >
-                {busy ? "Placing order…" : "Place order"}
-              </button>
             )}
           </div>
         )}

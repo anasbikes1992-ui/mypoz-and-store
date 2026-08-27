@@ -93,11 +93,36 @@ export function whatsAppOrderText(
   lines: { name: string; quantity: number; price: number }[],
   total: number,
   currency = "LKR",
+  customer?: {
+    name?: string;
+    mobile?: string;
+    address?: string;
+    fulfilment?: string;
+  },
 ): string {
   const items = lines
     .map((l) => `• ${l.name} × ${l.quantity} — ${currency} ${(l.price * l.quantity).toFixed(2)}`)
     .join("\n");
-  return `Hello ${businessName}, I'd like to order:\n\n${items}\n\nTotal: ${currency} ${total.toFixed(2)}`;
+  const parts = [
+    `Hello ${businessName}, I'd like to order:`,
+    "",
+    items,
+    "",
+    `Total: ${currency} ${total.toFixed(2)}`,
+  ];
+  const name = customer?.name?.trim();
+  const mobile = customer?.mobile?.trim();
+  const address = customer?.address?.trim();
+  const fulfilment = customer?.fulfilment?.trim();
+  if (name || mobile || address || fulfilment) {
+    parts.push("", "— Customer —");
+    if (name) parts.push(`Name: ${name}`);
+    if (mobile) parts.push(`Mobile: ${mobile}`);
+    if (fulfilment) parts.push(`Fulfilment: ${fulfilment}`);
+    if (address) parts.push(`Address: ${address}`);
+  }
+  parts.push("", "Sent from the online store cart (Order via WhatsApp).");
+  return parts.join("\n");
 }
 
 /** wa.me deep link. Returns null when the shop has no WhatsApp number set. */

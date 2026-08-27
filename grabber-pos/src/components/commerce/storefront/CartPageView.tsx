@@ -4,16 +4,27 @@ import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import { useCart } from "@/app/store/[slug]/cart";
 import { storeCopy } from "@/lib/commerce/i18n";
+import { whatsAppLink, whatsAppOrderText } from "@/lib/storefront";
 
 export function CartPageView({
   slug,
   locale,
+  businessName,
+  currency,
+  whatsappNumber,
 }: {
   slug: string;
   locale: "en" | "si" | "ta";
+  businessName: string;
+  currency: string;
+  whatsappNumber: string | null;
 }) {
   const { lines, total, setQuantity, count } = useCart();
   const copy = storeCopy(locale);
+  const waHref = whatsAppLink(
+    whatsappNumber,
+    whatsAppOrderText(businessName, lines, total, currency),
+  );
 
   if (!lines.length) {
     return (
@@ -65,13 +76,25 @@ export function CartPageView({
           </li>
         ))}
       </ul>
-      <div className="mt-6 flex items-center justify-between border-t border-line pt-4">
-        <span className="text-lg font-bold">{formatMoney(total)}</span>
+      <div className="mt-6 space-y-3 border-t border-line pt-4">
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-bold">{formatMoney(total)}</span>
+        </div>
+        {waHref ? (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_45%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_14%,transparent)] py-3.5 text-center text-sm font-bold text-tint-teal"
+          >
+            {copy.orderWhatsApp}
+          </a>
+        ) : null}
         <Link
           href={`/store/${slug}/checkout`}
-          className="rounded-xl bg-accent px-6 py-3 text-sm font-bold text-accent-ink"
+          className="block w-full rounded-xl bg-accent px-6 py-3.5 text-center text-sm font-bold text-accent-ink"
         >
-          {copy.checkout}
+          {waHref ? "Proceed to COD checkout" : copy.checkout}
         </Link>
       </div>
     </div>

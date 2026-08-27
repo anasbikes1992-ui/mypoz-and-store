@@ -14,9 +14,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "ops:gate": "node scripts/release-gate-ops.mjs",
-    "ops:smoke": "node scripts/whatsapp-smoke.mjs https://mypoz-and-store-ui.vercel.app",
-    "ops:smoke:prod": "node scripts/production-pre-card-smoke.mjs https://mypoz-and-store-ui.vercel.app",
-    "ops:rls": "node --env-file=.env.local scripts/ops-rls-isolation-check.mjs",
+    "ops:smoke": "node --use-system-ca scripts/whatsapp-smoke.mjs https://mypoz-and-store-ui.vercel.app",
+    "ops:smoke:prod": "node --use-system-ca scripts/production-pre-card-smoke.mjs https://mypoz-and-store-ui.vercel.app",
+    "ops:rls": "node --use-system-ca --env-file=.env.local scripts/ops-rls-isolation-check.mjs",
     "ops:go-live": "node --env-file=.env.local scripts/go-live-smoke.mjs",
     "prepare": "node -e \"process.exit(0)\""
   },

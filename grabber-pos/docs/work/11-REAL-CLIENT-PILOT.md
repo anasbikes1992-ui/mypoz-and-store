@@ -30,13 +30,16 @@
 | 5 | Knowledge + Approvals | ✅ |
 | 6 | Jarvis agents | ✅ `/assistant` |
 | 7 | Phase A hardening | ✅ `docs/work/13` |
+| 7b | Order via WhatsApp cart CTA | ✅ cart drawer + `/cart` + checkout (primary when WA number set) |
 | 8 | WhatsApp Meta Live | ⏸ optional for COD soft-launch |
 | 9 | Forced password reset for new staff | ⏸ when adding users (Change password works) |
 | 10 | Branded email + WebXPay | ⏸ LAST (`12`) |
+| 11 | Promote `f87e227` to Vercel Production | ✅ promoted (`dpl_HuaMJRB…`, SHA `f87e227`) — confirm READY in dashboard |
 
 ## COD soft-launch waiver
 
 Anaz is cleared for **COD-only** merchant traffic without cards, PayHere, or courier automation.  
+**Order via WhatsApp** is the preferred high-conversion path when the shop WhatsApp number is configured (Website settings / store social).  
 CLIENT READY (COD) may be marked when operator confirms a live Anaz COD week; cards remain LAST.
 
 ## Operator notes

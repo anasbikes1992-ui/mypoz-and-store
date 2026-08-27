@@ -13,6 +13,7 @@ import {
 } from "@/lib/website";
 import type { StoreConfig } from "@/lib/commerce/schema";
 import { storeCopy } from "@/lib/commerce/i18n";
+import { whatsAppLink, whatsAppOrderText } from "@/lib/storefront";
 
 const MAX_LOCATION_LEN = 300;
 const MAX_ADDRESS_LEN = 500;
@@ -85,6 +86,17 @@ export function CheckoutPage({
   const codFee =
     paymentMethod === "cash" && store.cod.enabled ? store.cod.fee : 0;
   const orderTotal = Math.max(0, subtotal + deliveryFee + codFee - discount);
+  const waHref = whatsAppLink(
+    website.whatsappNumber || store.social.whatsapp || null,
+    whatsAppOrderText(businessName, lines, orderTotal, currency, {
+      name: name || undefined,
+      mobile: mobile || undefined,
+      address: isPickup
+        ? pickupNote || "Store pickup"
+        : composedAddress || undefined,
+      fulfilment: FULFILMENT_LABELS[fulfilment] || fulfilment,
+    }),
+  );
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -522,12 +534,25 @@ export function CheckoutPage({
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
+        {waHref ? (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noreferrer"
+            className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_45%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_14%,transparent)] py-3.5 text-center text-sm font-bold text-tint-teal"
+          >
+            {copy.orderWhatsApp}
+          </a>
+        ) : null}
+
         <button
           type="submit"
           disabled={busy}
           className="w-full rounded-xl bg-tint-green py-3.5 text-sm font-bold text-accent-ink disabled:opacity-50"
         >
-          {busy ? "Placing order…" : `Place order — ${formatMoney(orderTotal)}`}
+          {busy
+            ? "Placing order…"
+            : `Place COD order — ${formatMoney(orderTotal)}`}
         </button>
       </form>
 
