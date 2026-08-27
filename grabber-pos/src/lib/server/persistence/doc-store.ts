@@ -21,6 +21,25 @@ export interface DocStoreConfig {
   file: string;
 }
 
+async function sessionOrgId(
+  db: NonNullable<Awaited<ReturnType<typeof resolveDb>>>,
+): Promise<string> {
+  const {
+    data: { user },
+    error: userErr,
+  } = await db.auth.getUser();
+  if (userErr || !user) throw new Error("Unauthorized");
+  const { data: profile, error: profileErr } = await db
+    .from("profiles")
+    .select("org_id")
+    .eq("id", user.id)
+    .maybeSingle<{ org_id: string }>();
+  if (profileErr) throw new Error(profileErr.message);
+  const orgId = profile?.org_id?.trim();
+  if (!orgId) throw new Error("No organization on profile");
+  return orgId;
+}
+
 export function docStore<T>(config: DocStoreConfig): DocStore<T> {
   const file = dataFile(config.file);
 
@@ -50,28 +69,18 @@ export function docStore<T>(config: DocStoreConfig): DocStore<T> {
         return value;
       }
 
-      // app_documents PK is (org_id, key) — there is no `id` column. Selecting
-      // a missing column made `existing` always null → INSERT → duplicate key.
-      // RLS scopes rows to the session org; match on `key` only.
-      const { data: existing, error: lookupError } = await db
-        .from("app_documents")
-        .select("key")
-        .eq("key", config.key)
-        .maybeSingle<{ key: string }>();
-      if (lookupError) throw new Error(lookupError.message);
-
-      if (existing?.key) {
-        const { error } = await db
-          .from("app_documents")
-          .update({ data: value as Json, updated_at: new Date().toISOString() })
-          .eq("key", config.key);
-        if (error) throw new Error(error.message);
-      } else {
-        const { error } = await db
-          .from("app_documents")
-          .insert({ key: config.key, data: value as Json });
-        if (error) throw new Error(error.message);
-      }
+      // Upsert on (org_id, key). Explicit org_id avoids select-miss → insert
+      // races under RLS that surfaced as app_documents_pkey duplicates.
+      const orgId = await sessionOrgId(db);
+      const { error } = await db.from("app_documents").upsert(
+        {
+          org_id: orgId,
+          key: config.key,
+          data: value as Json,
+        },
+        { onConflict: "org_id,key" },
+      );
+      if (error) throw new Error(error.message);
       return value;
     },
   };
