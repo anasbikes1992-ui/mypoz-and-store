@@ -10,6 +10,12 @@ import {
   normalizeEnabledPaths,
   type AutomationPathEnabled,
 } from "@/lib/whatsapp/automation-graph";
+import {
+  DEFAULT_ENABLED_EVENTS,
+  normalizeEnabledEvents,
+  type WaEventEnabled,
+  type WaEventKey,
+} from "@/lib/whatsapp/event-automations";
 import type { Locale } from "@/lib/whatsapp/i18n";
 import { sanitizeMetaPhoneNumberIdInput } from "@/lib/whatsapp/phone-number-id";
 
@@ -23,6 +29,7 @@ interface WaSettings {
   offersText: string;
   staffNotify: boolean;
   enabledPaths?: Partial<AutomationPathEnabled>;
+  enabledEvents?: Partial<WaEventEnabled>;
 }
 
 interface Conversation {
@@ -77,6 +84,8 @@ export default function WhatsAppPage() {
   const [staffNotify, setStaffNotify] = useState(true);
   const [enabledPaths, setEnabledPaths] =
     useState<AutomationPathEnabled>(DEFAULT_ENABLED_PATHS);
+  const [enabledEvents, setEnabledEvents] =
+    useState<WaEventEnabled>(DEFAULT_ENABLED_EVENTS);
   const [orgName, setOrgName] = useState("Your store");
   const [assignDraft, setAssignDraft] = useState("");
   const [replyDraft, setReplyDraft] = useState("");
@@ -106,6 +115,7 @@ export default function WhatsAppPage() {
           setOffersText(s.offersText ?? "");
           setStaffNotify(s.staffNotify !== false);
           setEnabledPaths(normalizeEnabledPaths(s.enabledPaths));
+          setEnabledEvents(normalizeEnabledEvents(s.enabledEvents));
         }
       })
       .catch(() => undefined);
@@ -186,6 +196,7 @@ export default function WhatsAppPage() {
         body.offersText = offersText;
         body.staffNotify = staffNotify;
         body.enabledPaths = enabledPaths;
+        body.enabledEvents = enabledEvents;
       }
       const res = await fetch("/api/whatsapp/settings", {
         method: "PUT",
@@ -200,6 +211,9 @@ export default function WhatsAppPage() {
       setAccessToken("");
       if (json.data?.enabledPaths) {
         setEnabledPaths(normalizeEnabledPaths(json.data.enabledPaths));
+      }
+      if (json.data?.enabledEvents) {
+        setEnabledEvents(normalizeEnabledEvents(json.data.enabledEvents));
       }
       setMsg(opts?.connectionOnly ? "Connection saved." : "Automations saved.");
     } catch (e) {
@@ -410,6 +424,68 @@ export default function WhatsAppPage() {
           onSave={() => void saveSettings()}
         />
       </div>
+
+      <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-text-strong">
+              Order status alerts
+            </h2>
+            <p className="mt-1 text-xs text-text-dim">
+              Free-form Cloud API texts sent when fulfillment changes on{" "}
+              <code className="text-text-body">/commerce/orders</code>. Not Meta
+              HSM templates (those stay deferred until Live + approved templates).
+            </p>
+          </div>
+          <Button
+            type="button"
+            disabled={busy}
+            onClick={() => void saveSettings()}
+          >
+            {busy ? "Saving…" : "Save alerts"}
+          </Button>
+        </div>
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {(
+            [
+              ["ORDER_CREATED", "Order placed (COD / WA / web)"],
+              ["ORDER_PROCESSING", "Processing / preparing"],
+              ["ORDER_READY", "Ready for pickup"],
+              ["ORDER_SHIPPED", "Out for delivery"],
+              ["ORDER_COMPLETED", "Delivered / collected"],
+              ["ORDER_CANCELLED", "Cancelled"],
+              ["PAYMENT_RECEIVED", "Payment received"],
+              ["STAFF_HANDOFF", "Staff handoff ack"],
+              ["OPT_OUT_ACK", "STOP / START opt-out"],
+              ["SALE_COMPLETED", "Every POS sale (noisy)"],
+              ["REFUND_ISSUED", "Refund issued"],
+              ["LOW_STOCK", "Low stock (staff)"],
+            ] as [WaEventKey, string][]
+          ).map(([key, label]) => (
+            <li key={key}>
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-line px-3 py-2 text-sm text-text-body hover:border-accent/40">
+                <input
+                  type="checkbox"
+                  className="size-4 accent-[var(--accent)]"
+                  checked={Boolean(enabledEvents[key])}
+                  onChange={(e) =>
+                    setEnabledEvents((prev) => ({
+                      ...prev,
+                      [key]: e.target.checked,
+                    }))
+                  }
+                />
+                <span>
+                  <span className="font-medium text-text-strong">{label}</span>
+                  <span className="mt-0.5 block text-[10px] uppercase tracking-wide text-text-dim">
+                    {key}
+                  </span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="mt-6 rounded-2xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">

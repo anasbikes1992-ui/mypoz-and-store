@@ -49,8 +49,18 @@ export async function dispatchWhatsAppEvent(opts: {
       return { sent: false, reason: "opted_out" };
     }
 
+    let businessName = String(opts.vars?.businessName ?? "").trim();
+    if (!businessName && opts.orgId) {
+      try {
+        const { readSettings } = await import("@/lib/server/settings-store");
+        businessName = (await readSettings()).businessName || "";
+      } catch {
+        businessName = "";
+      }
+    }
+
     const body = templateForEvent(opts.event, {
-      businessName: "",
+      businessName,
       ...opts.vars,
     });
 
@@ -93,14 +103,7 @@ export async function dispatchFulfillmentWhatsApp(opts: {
     businessName: opts.businessName || "",
   };
   if (!event) {
-    // Unknown board status — still notify with a ready-style ping when enabled.
-    await dispatchWhatsAppEvent({
-      event: "ORDER_READY",
-      to: opts.to,
-      phoneNumberId: opts.phoneNumberId,
-      orgId: opts.orgId,
-      vars: { ...vars, fulfil: opts.status },
-    });
+    // pending / unknown — no outbound (ORDER_CREATED already fired at place-order).
     return;
   }
   await dispatchWhatsAppEvent({

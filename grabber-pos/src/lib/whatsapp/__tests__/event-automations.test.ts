@@ -8,15 +8,20 @@ import {
 } from "@/lib/whatsapp/event-automations";
 
 describe("WhatsApp event automations", () => {
-  it("defines ten canonical events", () => {
-    expect(WA_EVENT_KEYS).toHaveLength(10);
-    expect(Object.keys(DEFAULT_ENABLED_EVENTS)).toHaveLength(10);
+  it("defines twelve canonical events", () => {
+    expect(WA_EVENT_KEYS).toHaveLength(12);
+    expect(Object.keys(DEFAULT_ENABLED_EVENTS)).toHaveLength(12);
   });
 
   it("maps fulfillment statuses", () => {
+    expect(eventFromFulfillmentStatus("processing")).toBe("ORDER_PROCESSING");
     expect(eventFromFulfillmentStatus("ready")).toBe("ORDER_READY");
+    expect(eventFromFulfillmentStatus("shipped")).toBe("ORDER_SHIPPED");
+    expect(eventFromFulfillmentStatus("delivered")).toBe("ORDER_COMPLETED");
+    expect(eventFromFulfillmentStatus("collected")).toBe("ORDER_COMPLETED");
     expect(eventFromFulfillmentStatus("completed")).toBe("ORDER_COMPLETED");
     expect(eventFromFulfillmentStatus("cancelled")).toBe("ORDER_CANCELLED");
+    expect(eventFromFulfillmentStatus("pending")).toBeNull();
     expect(eventFromFulfillmentStatus("bogus")).toBeNull();
   });
 

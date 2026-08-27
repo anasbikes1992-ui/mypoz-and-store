@@ -28,7 +28,12 @@ export default function SettingsPage() {
       .then((json) => {
         if (json.success) {
           const next: Form = {};
-          for (const [k, v] of Object.entries(json.data)) next[k] = String(v ?? "");
+          for (const [k, v] of Object.entries(json.data)) {
+            let s = String(v ?? "");
+            // Browser password managers often paste email into "contact" fields.
+            if (k === "socialWhatsapp" && s.includes("@")) s = "";
+            next[k] = s;
+          }
           setForm(next);
         }
       })
@@ -135,6 +140,7 @@ export default function SettingsPage() {
                         className={fieldClass}
                       />
                     ) : (
+                      <>
                       <input
                         type={
                           f.type === "number"
@@ -147,11 +153,18 @@ export default function SettingsPage() {
                         }
                         inputMode={f.type === "tel" ? "tel" : undefined}
                         autoComplete={
-                          f.type === "tel"
-                            ? "tel"
-                            : f.type === "email"
-                              ? "email"
-                              : "off"
+                          f.key === "socialWhatsapp"
+                            ? "off"
+                            : f.type === "tel"
+                              ? "tel"
+                              : f.type === "email"
+                                ? "email"
+                                : "off"
+                        }
+                        name={
+                          f.key === "socialWhatsapp"
+                            ? "wa-order-mobile"
+                            : f.key
                         }
                         placeholder={
                           f.key === "socialWhatsapp"
@@ -159,15 +172,24 @@ export default function SettingsPage() {
                             : undefined
                         }
                         value={form[f.key] ?? ""}
-                        onChange={(e) => set(f.key, e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (f.key === "socialWhatsapp" && v.includes("@")) {
+                            set(f.key, "");
+                            return;
+                          }
+                          set(f.key, v);
+                        }}
                         className={fieldClass}
                       />
                       {f.key === "socialWhatsapp" ? (
                         <span className="mt-1 block text-xs text-text-dim">
-                          Used by the storefront “Order via WhatsApp” button.
-                          Do not paste an email here.
+                          Mobile only (07… / +94 7…). Powers “Order via WhatsApp”.
+                          Emails are blocked — use the Email field above for
+                          anasbikes1992@gmail.com style addresses.
                         </span>
                       ) : null}
+                      </>
                     )}
                   </label>
                 ))}

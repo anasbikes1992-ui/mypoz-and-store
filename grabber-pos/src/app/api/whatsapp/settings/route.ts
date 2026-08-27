@@ -48,7 +48,9 @@ const patchSchema = z.object({
   enabledEvents: z
     .object({
       ORDER_CREATED: z.boolean().optional(),
+      ORDER_PROCESSING: z.boolean().optional(),
       ORDER_READY: z.boolean().optional(),
+      ORDER_SHIPPED: z.boolean().optional(),
       ORDER_COMPLETED: z.boolean().optional(),
       ORDER_CANCELLED: z.boolean().optional(),
       PAYMENT_RECEIVED: z.boolean().optional(),

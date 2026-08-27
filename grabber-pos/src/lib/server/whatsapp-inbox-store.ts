@@ -340,12 +340,16 @@ export async function readWhatsAppSettings(
     ? await readWhatsAppDocument(tenant)
     : await settingsDoc.read({});
   const localeRaw = String(raw.locale ?? "en");
+  const greetingExtra =
+    typeof (raw as { greetingExtra?: unknown }).greetingExtra === "string"
+      ? String((raw as { greetingExtra?: string }).greetingExtra)
+      : "";
   return {
     phoneNumberId: readStoredMetaPhoneNumberId(raw.phoneNumberId),
     verifyToken: String(raw.verifyToken ?? ""),
     accessToken: readStoredMetaAccessToken(raw.accessToken),
     locale: isLocale(localeRaw) ? localeRaw : "en",
-    greeting: String(raw.greeting ?? ""),
+    greeting: String(raw.greeting ?? greetingExtra ?? ""),
     locationText: String(raw.locationText ?? ""),
     offersText: String(raw.offersText ?? ""),
     staffNotify: Boolean(raw.staffNotify ?? true),

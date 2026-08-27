@@ -20,7 +20,7 @@ export default function AssistantPage() {
           { id: "owner-storefront", name: "Storefront coach" },
           { id: "owner-whatsapp", name: "WhatsApp coach" },
         ]}
-        emptyHint="Try: KPI snapshot, open COD orders, storefront status, or draft a FAQ for approval."
+        emptyHint="Try: KPI snapshot, open COD orders, WhatsApp bot how-to, storefront status, or draft a FAQ for approval."
       />
       <p className="mt-4 text-xs text-text-dim">
         <Link href="/approvals" className="text-accent hover:underline">
