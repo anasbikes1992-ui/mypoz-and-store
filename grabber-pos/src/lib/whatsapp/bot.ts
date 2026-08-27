@@ -47,18 +47,26 @@ async function orgDisplayName(
   phoneNumberId?: string,
 ): Promise<string> {
   const resolved = tenant ?? (await resolveWhatsAppTenant(phoneNumberId));
-  if (!resolved) return "MyPoz Store";
+  if (!resolved) return "Store";
   try {
-    const { data } = await resolved.db
-      .from("app_documents")
-      .select("data")
-      .eq("org_id", resolved.orgId)
-      .eq("key", "settings")
-      .maybeSingle<{ data: { businessName?: string } }>();
-    const name = String(data?.data?.businessName ?? "").trim();
-    return name || "MyPoz Store";
+    const [{ data: settings }, { data: org }] = await Promise.all([
+      resolved.db
+        .from("app_documents")
+        .select("data")
+        .eq("org_id", resolved.orgId)
+        .eq("key", "settings")
+        .maybeSingle<{ data: { businessName?: string } }>(),
+      resolved.db
+        .from("organizations")
+        .select("name")
+        .eq("id", resolved.orgId)
+        .maybeSingle<{ name: string }>(),
+    ]);
+    const fromSettings = String(settings?.data?.businessName ?? "").trim();
+    const fromOrg = String(org?.name ?? "").trim();
+    return fromSettings || fromOrg || "Store";
   } catch {
-    return "MyPoz Store";
+    return "Store";
   }
 }
 
@@ -101,19 +109,21 @@ export async function handleInboundText(opts: {
   waMessageId?: string;
   phoneNumberId?: string;
 }): Promise<void> {
-  const phoneNumberId =
-    opts.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || undefined;
+  // Tenant routing is org-scoped via Meta phone_number_id → app_documents.whatsapp.
+  // Do not fall back to env phone id (that is transport only; HQ may use a different line later).
+  const phoneNumberId = opts.phoneNumberId?.trim() || undefined;
   if (opts.waMessageId) {
     const dup = await findMessageByWaId(opts.waMessageId, phoneNumberId);
     if (dup) return;
   }
 
   const tenant = await resolveWhatsAppTenant(phoneNumberId);
-  if (!tenant && phoneNumberId) {
+  if (!tenant) {
     console.error(
       "[whatsapp-bot] no org mapped for phone_number_id",
-      phoneNumberId,
+      phoneNumberId ?? "(missing)",
     );
+    return;
   }
 
   const waSettings = await readWhatsAppSettings(phoneNumberId);

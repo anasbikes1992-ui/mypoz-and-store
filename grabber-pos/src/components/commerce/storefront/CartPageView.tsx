@@ -42,7 +42,7 @@ export function CartPageView({
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
+    <div className="mx-auto max-w-2xl px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] pt-8 sm:pb-8">
       <h1 className="text-2xl font-bold">
         {copy.cart} ({count})
       </h1>
@@ -60,7 +60,7 @@ export function CartPageView({
               <button
                 type="button"
                 onClick={() => setQuantity(l.productId, l.quantity - 1, l.variantId)}
-                className="h-8 w-8 rounded-lg border border-line"
+                className="h-10 w-10 rounded-lg border border-line text-lg"
               >
                 −
               </button>
@@ -68,7 +68,7 @@ export function CartPageView({
               <button
                 type="button"
                 onClick={() => setQuantity(l.productId, l.quantity + 1, l.variantId)}
-                className="h-8 w-8 rounded-lg border border-line"
+                className="h-10 w-10 rounded-lg border border-line text-lg"
               >
                 +
               </button>
@@ -76,26 +76,28 @@ export function CartPageView({
           </li>
         ))}
       </ul>
-      <div className="mt-6 space-y-3 border-t border-line pt-4">
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-bold">{formatMoney(total)}</span>
-        </div>
-        {waHref ? (
-          <a
-            href={waHref}
-            target="_blank"
-            rel="noreferrer"
-            className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_45%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_14%,transparent)] py-3.5 text-center text-sm font-bold text-tint-teal"
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface-1/95 px-4 pt-3 backdrop-blur sm:static sm:mt-6 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none pb-safe-sticky">
+        <div className="mx-auto max-w-2xl space-y-3 sm:border-t sm:border-line sm:pt-4">
+          <div className="flex items-center justify-between">
+            <span className="text-lg font-bold">{formatMoney(total)}</span>
+          </div>
+          {waHref ? (
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noreferrer"
+              className="block w-full rounded-xl border border-[color-mix(in_oklch,var(--tint-teal)_45%,var(--line))] bg-[color-mix(in_oklch,var(--tint-teal)_14%,transparent)] py-3.5 text-center text-sm font-bold text-tint-teal"
+            >
+              {copy.orderWhatsApp}
+            </a>
+          ) : null}
+          <Link
+            href={`/store/${slug}/checkout`}
+            className="block w-full rounded-xl bg-accent px-6 py-3.5 text-center text-sm font-bold text-accent-ink"
           >
-            {copy.orderWhatsApp}
-          </a>
-        ) : null}
-        <Link
-          href={`/store/${slug}/checkout`}
-          className="block w-full rounded-xl bg-accent px-6 py-3.5 text-center text-sm font-bold text-accent-ink"
-        >
-          {waHref ? "Proceed to COD checkout" : copy.checkout}
-        </Link>
+            {waHref ? "Proceed to COD checkout" : copy.checkout}
+          </Link>
+        </div>
       </div>
     </div>
   );

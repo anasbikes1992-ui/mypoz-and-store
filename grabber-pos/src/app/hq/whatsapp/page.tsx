@@ -149,8 +149,11 @@ export default function HqWhatsAppPage() {
     <div>
       <h1 className="text-2xl font-semibold text-text-strong">WhatsApp fleet</h1>
       <p className="mt-1 text-sm text-text-dim">
-        Official Cloud API only. Attach a phone number id to each registered
-        client. Merchants continue at{" "}
+        Each Meta phone number id is attached to{" "}
+        <strong className="font-medium text-text-body">one client org only</strong>
+        . Inbound messages route to that org&apos;s greeting, catalog, and inbox —
+        not HQ. HQ sales/templates use a separate WhatsApp line when you add one.
+        Merchants edit copy at{" "}
         <Link href="/whatsapp" className="text-accent hover:underline">
           /whatsapp
         </Link>
@@ -184,7 +187,7 @@ Reply YES and I’ll send the login.`}
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Platform token" value={yn(data?.envToken)} />
-        <Stat label="Default phone id" value={yn(data?.envPhoneNumberId)} />
+        <Stat label="Transport phone id" value={yn(data?.envPhoneNumberId)} />
         <Stat label="Verify token" value={yn(data?.envVerifyToken)} />
         <Stat label="App secret" value={yn(data?.envAppSecret)} />
       </div>

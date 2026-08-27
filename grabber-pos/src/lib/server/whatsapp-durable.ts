@@ -235,17 +235,39 @@ export async function findWhatsAppSale(
 ): Promise<Sale | null> {
   const q = query.trim();
   if (!q || !/^[A-Za-z0-9:_-]+$/.test(q)) return null;
-  const { data } = await tenant.db
-    .from("sales")
-    .select(
-      "id, receipt_no, created_at, subtotal, discount_total, total, payment_method, cash_received, change_due, status, customer_name, customer_mobile, employee",
-    )
+  const selectCols =
+    "id, receipt_no, created_at, subtotal, discount_total, total, payment_method, cash_received, change_due, status, fulfillment_status, payment_status, source, customer_name, customer_mobile, employee";
+
+  // Do not use .or(`receipt_no.eq.${q}`) — hyphens in GPS-MAIN-… break PostgREST filters.
+  let data: Record<string, unknown> | null = null;
+  const byReceipt = await (tenant.db.from("sales") as any)
+    .select(selectCols)
     .eq("org_id", tenant.orgId)
-    .or(`receipt_no.eq.${q},id.eq.${q}`)
+    .eq("receipt_no", q)
     .maybeSingle();
+  if (byReceipt.data) data = byReceipt.data as Record<string, unknown>;
+  if (!data) {
+    const byId = await (tenant.db.from("sales") as any)
+      .select(selectCols)
+      .eq("org_id", tenant.orgId)
+      .eq("id", q)
+      .maybeSingle();
+    if (byId.data) data = byId.data as Record<string, unknown>;
+  }
+  if (!data) {
+    const byReceiptCi = await (tenant.db.from("sales") as any)
+      .select(selectCols)
+      .eq("org_id", tenant.orgId)
+      .ilike("receipt_no", q)
+      .maybeSingle();
+    if (byReceiptCi.data) {
+      data = byReceiptCi.data as Record<string, unknown>;
+    }
+  }
   if (!data) return null;
   return {
     id: String(data.receipt_no ?? data.id),
+    receiptNo: data.receipt_no ? String(data.receipt_no) : undefined,
     createdAt: String(data.created_at),
     subtotal: Number(data.subtotal),
     discountTotal: Number(data.discount_total ?? 0),
@@ -254,17 +276,22 @@ export async function findWhatsAppSale(
     total: Number(data.total),
     paymentMethod: "cash",
     isWholesale: false,
-    customerName: data.customer_name ?? null,
-    customerMobile: data.customer_mobile ?? null,
-    employee: data.employee ?? null,
-    cashReceived: data.cash_received != null ? Number(data.cash_received) : null,
+    customerName: (data.customer_name as string) ?? null,
+    customerMobile: (data.customer_mobile as string) ?? null,
+    employee: (data.employee as string) ?? null,
+    cashReceived:
+      data.cash_received != null ? Number(data.cash_received) : null,
     change: data.change_due != null ? Number(data.change_due) : null,
     status: (data.status as Sale["status"]) ?? "completed",
     voidReason: null,
     voidedAt: null,
-    source: "WHATSAPP",
-    fulfillmentStatus: "pending",
-    paymentStatus: "unpaid",
+    source: (data.source as Sale["source"]) ?? "WHATSAPP",
+    fulfillmentStatus: data.fulfillment_status
+      ? String(data.fulfillment_status)
+      : "pending",
+    paymentStatus: data.payment_status
+      ? String(data.payment_status)
+      : "unpaid",
     lines: [],
   };
 }
@@ -414,6 +441,27 @@ export async function attachWhatsAppToOrg(
     const trimmed = patch.phoneNumberId.trim();
     phoneNumberId = trimmed ? normalizeMetaPhoneNumberId(trimmed) : phoneNumberId;
   }
+
+  // One Meta phone_number_id → one merchant org. Never share HQ + client on the same line.
+  if (isValidMetaPhoneNumberId(phoneNumberId)) {
+    const { data: docs } = await db
+      .from("app_documents")
+      .select("org_id, data")
+      .eq("key", "whatsapp");
+    const conflict = (docs ?? []).find((row) => {
+      if ((row.org_id as string) === orgId) return false;
+      const other = readStoredMetaPhoneNumberId(
+        (row.data as { phoneNumberId?: string } | null)?.phoneNumberId,
+      );
+      return other === phoneNumberId;
+    });
+    if (conflict?.org_id) {
+      throw new Error(
+        `Phone number id ${phoneNumberId} is already attached to another org. Detach it there first — each WhatsApp line is org-scoped (HQ uses a separate number).`,
+      );
+    }
+  }
+
   const next = {
     ...cur,
     phoneNumberId,

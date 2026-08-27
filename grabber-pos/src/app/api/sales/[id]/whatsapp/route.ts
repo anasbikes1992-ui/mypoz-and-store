@@ -61,7 +61,7 @@ export async function POST(
       to,
       pdf,
       filename: `invoice-${sale.id}.pdf`,
-      caption: `Invoice ${sale.id} — ${settings.businessName}`,
+      caption: `Invoice ${sale.receiptNo || sale.id} — ${settings.businessName}`,
       token: orgToken,
       phoneNumberId: orgPhoneId,
     });

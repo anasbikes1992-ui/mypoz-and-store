@@ -26,8 +26,12 @@ import {
   buildCustomerDisplayPayload,
 } from "@/lib/sale-totals";
 
-const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
-  { id: "cash", label: "Cash (F1)" },
+const PAYMENT_METHODS: {
+  id: PaymentMethod;
+  label: string;
+  shortcut?: string;
+}[] = [
+  { id: "cash", label: "Cash", shortcut: "F1" },
   { id: "card", label: "Card" },
   { id: "split", label: "Split" },
 ];
@@ -774,8 +778,13 @@ export function BillPanel() {
           ✓
         </motion.div>
         <h2 className="mt-4 font-mono text-lg font-semibold text-text-strong">
-          {done.id}
+          {done.receiptNo || done.id}
         </h2>
+        {done.receiptNo && done.receiptNo !== done.id ? (
+          <p className="mt-1 break-all font-mono text-[10px] text-text-dim">
+            {done.id}
+          </p>
+        ) : null}
         <p className="mt-1 font-mono text-3xl font-bold text-accent">
           {formatMoney(done.total)}
         </p>
@@ -792,7 +801,7 @@ export function BillPanel() {
 
         <div className="mt-6 grid w-full grid-cols-2 gap-2">
           <a
-            href={`/api/sales/${done.id}/invoice`}
+            href={`/api/sales/${encodeURIComponent(done.id)}/invoice`}
             target="_blank"
             rel="noreferrer"
             className="rounded-xl border border-line py-2.5 text-center text-sm text-text-body transition duration-150 hover:border-accent hover:text-accent"
@@ -800,6 +809,7 @@ export function BillPanel() {
             Invoice PDF
           </a>
           <button
+            type="button"
             onClick={() => printReceipt(done)}
             className="rounded-xl border border-line py-2.5 text-sm text-text-body transition duration-150 hover:border-accent hover:text-accent"
           >
@@ -807,6 +817,7 @@ export function BillPanel() {
           </button>
         </div>
         <button
+          type="button"
           onClick={() => sendWhatsApp(done)}
           className="mt-2 w-full rounded-xl border border-line py-2.5 text-sm text-text-body transition duration-150 hover:border-accent hover:text-accent"
         >
@@ -1251,6 +1262,9 @@ export function BillPanel() {
                   }`}
                 >
                   {m.label}
+                  {m.shortcut ? (
+                    <span className="hidden sm:inline"> ({m.shortcut})</span>
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -1336,7 +1350,8 @@ export function BillPanel() {
 
             {method === "cash" && (
               <div>
-                <Field label="Paid (F4)">
+                <Field label="Paid">
+                  <span className="sr-only">Keyboard shortcut F4 on desktop</span>
                   <input
                     ref={paidRef}
                     type="number"
