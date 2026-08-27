@@ -3,7 +3,9 @@ import { isSupabaseEnabled } from "@/lib/supabase/config";
 import { createServiceSupabase } from "@/lib/supabase/server";
 
 /** HQ org — webhook audit is platform-wide when tenant cannot be resolved. */
-const HQ_ORG_ID = "ddb4528b-53a8-4244-81c2-5441b25c0ae3";
+const HQ_ORG_ID =
+  process.env.MYPOZ_HQ_ORG_ID?.trim() ||
+  "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const AUDIT_KEY = "whatsapp_webhook_log";
 const MAX_EVENTS = 40;
 

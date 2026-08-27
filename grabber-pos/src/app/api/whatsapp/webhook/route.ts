@@ -69,36 +69,60 @@ export async function GET(req: NextRequest) {
   );
 }
 
+type WaChangeValue = {
+  messaging_product?: string;
+  metadata?: { phone_number_id?: string; display_phone_number?: string };
+  contacts?: { wa_id?: string; profile?: { name?: string } }[];
+  messages?: {
+    id?: string;
+    from?: string;
+    type?: string;
+    text?: { body?: string };
+    button?: { text?: string; payload?: string };
+    interactive?: {
+      type?: string;
+      button_reply?: { id?: string; title?: string };
+      list_reply?: { id?: string; title?: string };
+    };
+  }[];
+  statuses?: {
+    id?: string;
+    status?: string;
+    timestamp?: string;
+    recipient_id?: string;
+  }[];
+};
+
 type WaPayload = {
+  object?: string;
+  /** Meta “Send to My Server” sometimes posts a bare field sample. */
+  field?: string;
+  value?: WaChangeValue;
   entry?: {
     id?: string;
     changes?: {
       field?: string;
-      value?: {
-        metadata?: { phone_number_id?: string };
-        contacts?: { wa_id?: string; profile?: { name?: string } }[];
-        messages?: {
-          id?: string;
-          from?: string;
-          type?: string;
-          text?: { body?: string };
-          button?: { text?: string; payload?: string };
-          interactive?: {
-            type?: string;
-            button_reply?: { id?: string; title?: string };
-            list_reply?: { id?: string; title?: string };
-          };
-        }[];
-        statuses?: {
-          id?: string;
-          status?: string;
-          timestamp?: string;
-          recipient_id?: string;
-        }[];
-      };
+      value?: WaChangeValue;
     }[];
   }[];
 };
+
+/** Normalize Meta test payloads `{ field, value }` into the real webhook envelope. */
+function normalizeWebhookBody(body: WaPayload): WaPayload {
+  if (Array.isArray(body.entry) && body.entry.length > 0) return body;
+  if (body.field && body.value) {
+    return {
+      object: body.object ?? "whatsapp_business_account",
+      entry: [
+        {
+          id: "meta-sample",
+          changes: [{ field: body.field, value: body.value }],
+        },
+      ],
+    };
+  }
+  return body;
+}
 
 type InboundJob = {
   waId: string;
@@ -201,7 +225,7 @@ export async function POST(req: NextRequest) {
 
   let body: WaPayload;
   try {
-    body = JSON.parse(raw) as WaPayload;
+    body = normalizeWebhookBody(JSON.parse(raw) as WaPayload);
   } catch {
     void appendWebhookAudit({ ok: false, reason: "invalid_json" });
     return NextResponse.json(
