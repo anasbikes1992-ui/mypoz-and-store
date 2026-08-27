@@ -21,5 +21,6 @@ describe("WhatsApp cart handoff", () => {
   it("returns null without a usable number", () => {
     expect(whatsAppLink(null, "hi")).toBeNull();
     expect(whatsAppLink("12", "hi")).toBeNull();
+    expect(whatsAppLink("anazazeez1992@gmail.com", "hi")).toBeNull();
   });
 });

@@ -141,12 +141,33 @@ export default function SettingsPage() {
                             ? "number"
                             : f.type === "email"
                               ? "email"
-                              : "text"
+                              : f.type === "tel"
+                                ? "tel"
+                                : "text"
+                        }
+                        inputMode={f.type === "tel" ? "tel" : undefined}
+                        autoComplete={
+                          f.type === "tel"
+                            ? "tel"
+                            : f.type === "email"
+                              ? "email"
+                              : "off"
+                        }
+                        placeholder={
+                          f.key === "socialWhatsapp"
+                            ? "+94 77 959 2288"
+                            : undefined
                         }
                         value={form[f.key] ?? ""}
                         onChange={(e) => set(f.key, e.target.value)}
                         className={fieldClass}
                       />
+                      {f.key === "socialWhatsapp" ? (
+                        <span className="mt-1 block text-xs text-text-dim">
+                          Used by the storefront “Order via WhatsApp” button.
+                          Do not paste an email here.
+                        </span>
+                      ) : null}
                     )}
                   </label>
                 ))}

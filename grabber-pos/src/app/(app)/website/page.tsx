@@ -375,11 +375,21 @@ export default function WebsiteCmsPage() {
 
       <section className="mt-4 space-y-4 rounded-2xl border border-line bg-surface-1 p-5">
         <h2 className="text-sm font-semibold text-text-strong">WhatsApp</h2>
-        <Field
-          label="Order contact number"
-          value={config.whatsappNumber}
-          onChange={(v) => patch("whatsappNumber", v)}
-        />
+        <label className="block text-xs text-text-dim">
+          Order contact number (07… / +94 7… — not email)
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="+94 77 959 2288"
+            value={config.whatsappNumber}
+            onChange={(e) => patch("whatsappNumber", e.target.value)}
+            className={`mt-1 ${fieldClass}`}
+          />
+        </label>
+        <p className="text-xs text-text-dim">
+          Powers the storefront “Order via WhatsApp” cart button (`wa.me`).
+        </p>
         <label className="block text-xs text-text-dim">
           Order message template
           <textarea

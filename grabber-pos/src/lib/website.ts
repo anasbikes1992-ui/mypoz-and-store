@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalLkWhatsAppContact } from "@/lib/whatsapp/phone";
 
 /** Visual theme presets for the public storefront. */
 export const THEME_PRESETS = ["classic", "minimal", "bold", "local"] as const;
@@ -34,7 +35,7 @@ export const websiteSchema = z.object({
   socialInstagram: z.string().max(200).default(""),
   socialTwitter: z.string().max(200).default(""),
   socialTiktok: z.string().max(200).default(""),
-  whatsappNumber: z.string().max(30).default(""),
+  whatsappNumber: optionalLkWhatsAppContact,
   whatsappOrderTemplate: z
     .string()
     .max(800)

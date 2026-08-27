@@ -25,7 +25,8 @@ export class WhatsAppNotConfiguredError extends Error {
 
 export function isWhatsAppConfigured(): boolean {
   return Boolean(
-    process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID,
+    process.env.WHATSAPP_TOKEN?.trim() &&
+      process.env.WHATSAPP_PHONE_NUMBER_ID?.trim(),
   );
 }
 

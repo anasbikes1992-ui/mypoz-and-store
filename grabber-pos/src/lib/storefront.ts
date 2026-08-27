@@ -125,10 +125,11 @@ export function whatsAppOrderText(
   return parts.join("\n");
 }
 
-/** wa.me deep link. Returns null when the shop has no WhatsApp number set. */
+/** wa.me deep link. Returns null when the shop has no valid WhatsApp mobile set. */
 export function whatsAppLink(number: string | null, text: string): string | null {
-  if (!number) return null;
+  if (!number || number.includes("@")) return null;
   const digits = number.replace(/\D/g, "");
-  if (digits.length < 8) return null;
+  // LK mobiles are 947XXXXXXXX (11 digits) or local 07XXXXXXXX after strip.
+  if (digits.length < 9) return null;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }

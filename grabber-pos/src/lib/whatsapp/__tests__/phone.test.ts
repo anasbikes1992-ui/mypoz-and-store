@@ -17,4 +17,13 @@ describe("normalizeLkPhone", () => {
     expect(normalizeLkPhone("hello")).toBeNull();
     expect(isLkPhone("0771234567")).toBe(true);
   });
+
+  it("optionalLkWhatsAppContact rejects email autofill", async () => {
+    const { optionalLkWhatsAppContact } = await import("../phone");
+    expect(optionalLkWhatsAppContact.safeParse("anazazeez1992@gmail.com").success).toBe(
+      false,
+    );
+    expect(optionalLkWhatsAppContact.parse("0779592288")).toBe("+94779592288");
+    expect(optionalLkWhatsAppContact.parse("")).toBe("");
+  });
 });

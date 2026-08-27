@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { FieldDef } from "./collections";
+import { optionalLkWhatsAppContact } from "@/lib/whatsapp/phone";
 
 export interface SettingsSection {
   label: string;
@@ -139,7 +140,12 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       { key: "storeBanner", label: "Hero Banner Image URL", type: "text", full: true },
       { key: "googleAdsId", label: "Google Ads / GTAG ID (AW-xxx)", type: "text" },
       { key: "metaPixelId", label: "Meta (Facebook) Pixel ID", type: "text" },
-      { key: "socialWhatsapp", label: "WhatsApp Order Contact Number", type: "text" },
+      {
+        key: "socialWhatsapp",
+        label: "WhatsApp Order Contact Number (07… / +94 7… — not email)",
+        type: "tel",
+        full: true,
+      },
     ],
   },
 ];
@@ -174,7 +180,7 @@ export const settingsSchema = z.object({
   storeBanner: z.string().max(500).default(""),
   googleAdsId: z.string().max(60).default(""),
   metaPixelId: z.string().max(60).default(""),
-  socialWhatsapp: z.string().max(30).default(""),
+  socialWhatsapp: optionalLkWhatsAppContact,
   resendFromEmail: z.string().max(200).default(""),
   resendReplyTo: z.string().max(120).default(""),
   jobSlaDays: z.coerce.number().int().min(1).max(90).default(3),

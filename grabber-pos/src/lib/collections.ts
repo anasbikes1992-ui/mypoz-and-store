@@ -6,6 +6,7 @@ export type FieldType =
   | "textarea"
   | "date"
   | "email"
+  | "tel"
   | "select";
 
 export interface FieldDef {

@@ -39,7 +39,7 @@ export function WhatsAppStatusPanel() {
         { label: "App secret", ok: status.envAppSecret },
         {
           label: "Shop number attached",
-          ok: Boolean(status.settings?.phoneNumberId),
+          ok: Boolean(status.settings?.phoneNumberId?.trim()),
         },
       ]
     : [];
@@ -100,7 +100,14 @@ export function WhatsAppStatusPanel() {
           Shop phone number id:{" "}
           <code className="text-text-body">{status.settings.phoneNumberId}</code>
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-3 text-xs text-warn">
+          Shop number Missing: open WhatsApp → paste Meta{" "}
+          <strong>Phone number ID</strong> (digits only) under org override →
+          Save connection. Required so inbound Cloud API messages route to this
+          store.
+        </p>
+      )}
 
       <p className="mt-3 break-all text-xs text-text-dim">
         Webhook:{" "}
@@ -110,7 +117,7 @@ export function WhatsAppStatusPanel() {
         </code>
       </p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Link
           href="/whatsapp"
           className="inline-flex min-h-11 items-center rounded-xl border border-line px-4 text-sm font-medium text-text-strong transition hover:border-accent hover:text-accent"
