@@ -50,6 +50,8 @@ const LABELS: Record<PermissionKey, string> = {
 export default function PermissionsPage() {
   const [managerPin, setManagerPin] = useState("");
   const [idleLockMinutes, setIdleLockMinutes] = useState("10");
+  const [discountThreshold, setDiscountThreshold] = useState("20");
+  const [nearMaxRatio, setNearMaxRatio] = useState("0.95");
   const [hasPin, setHasPin] = useState(false);
   const [roleDefaults, setRoleDefaults] = useState<RoleDefaults>({
     cashier: [],
@@ -72,6 +74,14 @@ export default function PermissionsPage() {
         if (perm.success) {
           setHasPin(!!perm.data.hasPin);
           setIdleLockMinutes(String(perm.data.idleLockMinutes ?? 10));
+          if (perm.data.policy) {
+            setDiscountThreshold(
+              String(perm.data.policy.discountOverridePctThreshold ?? 20),
+            );
+            setNearMaxRatio(
+              String(perm.data.policy.nearMaxDiscountRatio ?? 0.95),
+            );
+          }
           if (perm.data.roleDefaults) {
             setRoleDefaults({
               cashier: perm.data.roleDefaults.cashier ?? [],
@@ -149,10 +159,19 @@ export default function PermissionsPage() {
         managerPin?: string;
         roleDefaults: RoleDefaults;
         userOverrides: UserOverrides;
+        policy: {
+          discountOverridePctThreshold: number;
+          nearMaxDiscountRatio: number;
+        };
       } = {
         idleLockMinutes: Number(idleLockMinutes) || 10,
         roleDefaults,
         userOverrides,
+        policy: {
+          discountOverridePctThreshold:
+            Number(discountThreshold) || 20,
+          nearMaxDiscountRatio: Number(nearMaxRatio) || 0.95,
+        },
       };
       if (managerPin.trim()) body.managerPin = managerPin.trim();
 
@@ -245,6 +264,35 @@ export default function PermissionsPage() {
             className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-text-strong outline-none transition duration-150 focus:border-accent"
           />
         </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm">
+            <span className="mb-1 block text-text-dim">
+              Discount PIN threshold (% of bill)
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={discountThreshold}
+              onChange={(e) => setDiscountThreshold(e.target.value)}
+              className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-text-strong outline-none transition duration-150 focus:border-accent"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block text-text-dim">
+              Near-max line discount ratio (0–1)
+            </span>
+            <input
+              type="number"
+              min={0}
+              max={1}
+              step={0.01}
+              value={nearMaxRatio}
+              onChange={(e) => setNearMaxRatio(e.target.value)}
+              className="w-full rounded-xl border border-line bg-surface-2 px-3 py-2.5 text-text-strong outline-none transition duration-150 focus:border-accent"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-line bg-surface-1">

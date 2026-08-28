@@ -2,6 +2,7 @@ import "server-only";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import type { Sale } from "@/lib/types";
 import type { Settings } from "@/lib/settings";
+import { invoiceStorefrontCta } from "@/lib/server/storefront-cta";
 
 function money(n: number): string {
   return "Rs " + n.toLocaleString("en-LK", { minimumFractionDigits: 2 });
@@ -52,7 +53,7 @@ export async function buildInvoicePdf(
 
   y -= 8;
   text("INVOICE", M, y, 12, bold, ink);
-  right(sale.id, 384, y, 11, bold, accent);
+  right(sale.receiptNo || sale.id, 384, y, 11, bold, accent);
   y -= 14;
   text(new Date(sale.createdAt).toLocaleString("en-GB"), M, y, 8, font, dim);
   if (sale.customerName) right(`Customer: ${sale.customerName}`, 384, y, 8, font, dim);
@@ -101,15 +102,11 @@ export async function buildInvoicePdf(
     if (sale.change != null && sale.change > 0) totalRow("Change", money(sale.change));
   }
 
-  // Footer
-  text(
-    settings.receiptFooter || "Thank you for your business!",
-    M,
-    56,
-    9,
-    font,
-    dim,
-  );
+  const footer =
+    invoiceStorefrontCta(settings) ||
+    settings.receiptFooter ||
+    "Thank you for your business!";
+  text(footer.slice(0, 90), M, 56, 8, font, dim);
   text(`Payment: ${sale.paymentMethod}`, M, 42, 8, font, dim);
 
   return doc.save();

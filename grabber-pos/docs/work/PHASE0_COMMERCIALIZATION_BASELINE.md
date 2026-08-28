@@ -1,42 +1,62 @@
-# Phase 0 — Current-state implementation map
+# Phase 0 — Current-state implementation map (Revision 2)
 
-**Generated for:** MYPOZ Commercialization Master Prompt  
-**Branch tip:** `business-os-cod-first` (Phase A in progress)  
+**Master prompt:** `docs/MYPOZ_COMMERCIALIZATION_MASTER_PROMPT_V2.md`  
+**Branch tip:** `business-os-cod-first`  
 **Host:** https://mypoz-and-store-ui.vercel.app  
 **DB:** `veavfkjgtkbnggukzjds` · Pilot: `anaz-store`
 
-Status legend: `WORKING | PARTIAL | MISSING | BROKEN | DUPLICATED | UNSAFE | UNPROVEN`
+Status: `WORKING | PARTIAL | MISSING | BROKEN | DUPLICATED | UNPROVEN`
 
-| FEATURE | CURRENT IMPLEMENTATION | SOURCE OF TRUTH | STATUS | GAP | REQUIRED CHANGE | TEST/EVIDENCE |
-|---------|------------------------|-----------------|--------|-----|-----------------|---------------|
-| Canonical commerce | `create_sale` / internals | Supabase RPC + `sales` | WORKING | — | Preserve | Gate 4 |
-| Sale sources | POS · ONLINE_STORE · WHATSAPP | `schema.ts` | WORKING | — | Preserve | channel-report tests |
-| POS → stock | BillPanel → create_sale | POS + RPC | WORKING | — | Preserve | Operator POS |
-| Storefront + COD | `/store/anaz-store` | storefront RPCs | WORKING | — | Preserve | GPS / DEL smokes |
-| WhatsApp bot | Cloud API + org resolve | webhook + bot | WORKING | — | Preserve | hi menu works |
-| WA org scoping | `whatsapp_resolve_org` + unique attach | `0031` + durable | WORKING | — | Preserve | Anaz phone only |
-| Invoice PDF / WA send | `getRepository().findSaleById` | sales invoice routes | WORKING | Deploy smoke | Re-test POS → PDF → WA | Tenant-scoped lookup; no local JSON fallback |
-| WA track receipt | hyphen-safe receipt lookup | findWhatsAppSale | WORKING | Deploy smoke | Re-test GPS-MAIN-… | Sale exists Anaz |
-| Owner TODAY strip (A7) | `/dashboard` TodayChannelStrip | channel-report | WORKING | — | Preserve | unit test todayChannelSnapshot |
-| Auth Site URL (A8) | Supabase URL config | Auth dashboard | WORKING | — | Preserve | Site URL = mypoz-and-store-ui |
-| Mobile cart/POS (A9) | sticky CTAs + ticket-first | CartPageView + pos page | PARTIAL | Owner phone COD confirm | Optional polish | Layout shipped |
-| Customers / Loyalty OS | collections | — | PARTIAL | Phase B | After A gate | — |
-| WA inbox depth | `/whatsapp` | — | PARTIAL | Phase C | After A gate | — |
-| Jarvis briefing | tools + KB | — | PARTIAL | Phase D | After A gate | — |
-| WebXPay live | staging / 442 | — | PARTIAL | LAST | Deferred | — |
+## Commerce core (Phase A)
+
+| FEATURE | IMPLEMENTATION | STATUS | EVIDENCE |
+|---------|----------------|--------|----------|
+| Canonical commerce | `create_sale` RPC | WORKING | Gate 4 |
+| POS → stock | BillPanel → repository | WORKING | Anaz pilot |
+| Storefront + COD | `/store/anaz-store` | WORKING | GPS/DEL smokes |
+| WhatsApp bot | org-scoped webhook + bot | WORKING | hi menu |
+| Invoice PDF / WA | tenant `findSaleById` | WORKING | `e69b91c` |
+| Owner TODAY strip | `/dashboard` | WORKING | channel-report test |
+| Phase A gate | loop evidence | PASS | `PHASE-A-GATE.md` |
+
+## Counter & inventory (Phase B)
+
+| FEATURE | IMPLEMENTATION | STATUS | GAP |
+|---------|----------------|--------|-----|
+| Manager PIN (scrypt) | permissions-store | WORKING | Owner must set PIN |
+| Configurable discount policy | `permissions.policy` | WORKING | — |
+| Manager audit trail | `manager-authorization.ts` | WORKING | — |
+| Returns PIN gate | `POST /api/returns` | WORKING | — |
+| Inter-branch transfers | `stock_transfers` + UI | PARTIAL | Operator dispatch/receive smoke |
+| `in_transit` status | migration 0032 | READY | Apply on Supabase |
+
+## Customer experience (Phase C)
+
+| FEATURE | STATUS | GAP |
+|---------|--------|-----|
+| E-receipt PDF footer CTA | PARTIAL | `storefront-url` on invoice |
+| WA invoice caption CTA | PARTIAL | deployed with B/C batch |
+| Referral footer (plan-aware) | PARTIAL | white-label rules |
+| Product share UX | PARTIAL | links exist, no share UI |
+
+## Platform & intelligence (Phases D–M)
+
+| FEATURE | STATUS |
+|---------|--------|
+| Customer profile OS | PARTIAL (collections) |
+| Loyalty ledger | PARTIAL (app_collections) |
+| WA inbox ops | PARTIAL |
+| Webhook DLQ | PARTIAL (`payment_events` schema) |
+| Offline POS | DEFERRED (`NEXT_PUBLIC_ALLOW_OFFLINE_POS`) |
+| Jarvis briefing OS | PARTIAL (tools + approvals) |
+| Monetization / lending | DEFERRED (business strategy only) |
 
 ## Phase status
 
 | Phase | Status |
 |-------|--------|
 | 0 Discovery | PASS |
-| A Core loop | IN PROGRESS → near PASS (A9 phone COD confirm remaining) |
-| B–F | NOT STARTED |
-
-## Loop evidence
-
-```text
-POS → STOCK → WEB → WA → COD SALE → STOCK → DELIVERY → WA STATUS → OWNER CHANNEL VIEW
-```
-
-Owner channel view: `/dashboard` **Today** strip (POS / WEB / WHATSAPP / TOTAL).
+| A Core loop | PASS |
+| B Counter + inventory | IN PROGRESS |
+| C Customer experience | STARTED (receipt CTA) |
+| D–M | NOT STARTED / DEFERRED |

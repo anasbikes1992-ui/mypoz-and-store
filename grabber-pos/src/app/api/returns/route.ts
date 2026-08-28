@@ -3,6 +3,13 @@ import { z } from "zod";
 import { requireRoles, requireTenantSession } from "@/lib/server/auth-session";
 import { businessErrorResponse } from "@/lib/server/business-errors";
 import { createReturn, listReturns } from "@/lib/server/returns-store";
+import {
+  getPermissions,
+  permissionsHasPin,
+  verifyManagerPin,
+} from "@/lib/server/permissions-store";
+import { resolvePermission } from "@/lib/permissions";
+import { recordManagerAuthorization } from "@/lib/server/manager-authorization";
 
 const bodySchema = z.object({
   saleId: z.string().min(1).max(80),
@@ -10,6 +17,7 @@ const bodySchema = z.object({
   note: z.string().trim().max(1000).optional(),
   refundMethod: z.enum(["cash", "original", "store_credit"]).optional(),
   refundNote: z.string().trim().max(1000).optional(),
+  managerPin: z.string().min(1).max(32),
   lines: z
     .array(
       z.object({
@@ -58,8 +66,48 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const cfg = await getPermissions();
+  if (!permissionsHasPin(cfg)) {
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error:
+          "Manager PIN is not configured. Ask an owner to set it in Permissions.",
+      },
+      { status: 403 },
+    );
+  }
+
+  const pinOk = await verifyManagerPin(parsed.data.managerPin);
+  if (!pinOk) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Invalid manager PIN" },
+      { status: 403 },
+    );
+  }
+
+  const allowed = resolvePermission(cfg, "void_sale", {
+    userId: auth.session.userId,
+    role: auth.session.role,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, data: null, error: "Permission denied for returns" },
+      { status: 403 },
+    );
+  }
+
   try {
     const data = await createReturn(parsed.data);
+    await recordManagerAuthorization({
+      actor: auth.session.email ?? auth.session.userId,
+      approver: "manager",
+      action: "process_return",
+      entity: "sale",
+      entityId: parsed.data.saleId,
+      reason: parsed.data.reason,
+    });
     return NextResponse.json({ success: true, data, error: null });
   } catch (error) {
     return businessErrorResponse(error);

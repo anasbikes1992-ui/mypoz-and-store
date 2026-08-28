@@ -17,6 +17,10 @@ import {
   requireRoles,
   requireTenantSession,
 } from "@/lib/server/auth-session";
+import {
+  recordManagerAuthorization,
+  type ManagerAuthAction,
+} from "@/lib/server/manager-authorization";
 
 export async function GET() {
   const gate = await requireTenantSession();
@@ -32,6 +36,7 @@ export async function GET() {
         roleDefaults: cfg.roleDefaults,
         userOverrides: cfg.userOverrides ?? {},
         hasPin: permissionsHasPin(cfg),
+        policy: cfg.policy,
       },
       error: null,
     });
@@ -58,6 +63,11 @@ const permissionKeySchema = z.enum([
   "manage_users",
 ]);
 
+const policySchema = z.object({
+  discountOverridePctThreshold: z.number().min(0).max(100).optional(),
+  nearMaxDiscountRatio: z.number().min(0).max(1).optional(),
+});
+
 const verifySchema = z.object({
   action: z.literal("verify").optional(),
   pin: z.string().min(1).max(32),
@@ -65,6 +75,24 @@ const verifySchema = z.object({
   permission: permissionKeySchema.optional(),
   userId: z.string().max(80).optional(),
   role: z.string().max(40).optional(),
+  audit: z
+    .object({
+      managerAction: z.enum([
+        "discount_override",
+        "price_override",
+        "void_sale",
+        "process_return",
+        "cash_drawer",
+        "transfer_dispatch",
+        "transfer_receive",
+      ]),
+      entity: z.string().max(40).optional(),
+      entityId: z.string().max(80).optional(),
+      amount: z.number().optional(),
+      reason: z.string().max(500).optional(),
+      branchId: z.string().max(80).optional(),
+    })
+    .optional(),
 });
 
 const checkSchema = z.object({
@@ -77,6 +105,7 @@ const checkSchema = z.object({
 const saveSchema = z.object({
   idleLockMinutes: z.number().int().min(1).max(120).optional(),
   managerPin: z.string().min(4).max(32).optional(),
+  policy: policySchema.optional(),
   roleDefaults: z
     .record(z.string(), z.array(permissionKeySchema))
     .optional(),
@@ -90,6 +119,7 @@ const saveSchema = z.object({
 
 function toPatch(
   data: z.infer<typeof saveSchema>,
+  current?: PermissionsConfig,
 ): Partial<PermissionsConfig> {
   const patch: Partial<PermissionsConfig> = {};
   if (data.idleLockMinutes !== undefined) {
@@ -104,6 +134,18 @@ function toPatch(
   if (data.userOverrides !== undefined) {
     patch.userOverrides = data.userOverrides as UserOverrides;
   }
+  if (data.policy !== undefined) {
+    patch.policy = {
+      discountOverridePctThreshold:
+        data.policy.discountOverridePctThreshold ??
+        current?.policy.discountOverridePctThreshold ??
+        20,
+      nearMaxDiscountRatio:
+        data.policy.nearMaxDiscountRatio ??
+        current?.policy.nearMaxDiscountRatio ??
+        0.95,
+    };
+  }
   return patch;
 }
 
@@ -113,6 +155,7 @@ function publicData(cfg: PermissionsConfig) {
     hasPin: permissionsHasPin(cfg),
     roleDefaults: cfg.roleDefaults,
     userOverrides: cfg.userOverrides ?? {},
+    policy: cfg.policy,
   };
 }
 
@@ -192,7 +235,7 @@ export async function POST(req: NextRequest) {
         parsed.data.permission as SharedKey,
         {
           userId: parsed.data.userId,
-          role: parsed.data.role ?? "manager",
+          role: parsed.data.role ?? gate.session.role,
         },
       );
       if (!allowed) {
@@ -202,6 +245,19 @@ export async function POST(req: NextRequest) {
           error: "Permission denied for this action",
         });
       }
+    }
+
+    if (parsed.data.audit) {
+      await recordManagerAuthorization({
+        actor: gate.session.email ?? gate.session.userId,
+        approver: "manager",
+        action: parsed.data.audit.managerAction as ManagerAuthAction,
+        entity: parsed.data.audit.entity,
+        entityId: parsed.data.audit.entityId,
+        amount: parsed.data.audit.amount ?? null,
+        reason: parsed.data.audit.reason ?? null,
+        branchId: parsed.data.audit.branchId ?? null,
+      });
     }
 
     return NextResponse.json({
@@ -226,7 +282,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const cfg = await savePermissions(toPatch(parsed.data));
+  const current = await getPermissions();
+  const patch = toPatch(parsed.data, current);
+  const cfg = await savePermissions(patch);
   return NextResponse.json({
     success: true,
     data: publicData(cfg),
@@ -262,7 +320,8 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const patch = toPatch(parsed.data);
+  const current = await getPermissions();
+  const patch = toPatch(parsed.data, current);
   // Empty PIN string means "keep existing"
   if (patch.managerPin !== undefined && !patch.managerPin.trim()) {
     delete patch.managerPin;

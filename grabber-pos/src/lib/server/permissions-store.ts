@@ -13,6 +13,13 @@ import {
 
 export type { PermissionKey, UserOverrides };
 
+export interface AuthorizationPolicy {
+  /** Final bill discount % above which manager PIN is required. */
+  discountOverridePctThreshold: number;
+  /** Line discount at or above this fraction of maxDiscount requires PIN (0–1). */
+  nearMaxDiscountRatio: number;
+}
+
 export interface PermissionsConfig {
   /**
    * Stored manager PIN. Prefer scrypt hash (`scrypt$salt$hash`).
@@ -24,13 +31,20 @@ export interface PermissionsConfig {
   /** Per-user allow/deny on top of roleDefaults. */
   userOverrides: UserOverrides;
   idleLockMinutes: number;
+  policy: AuthorizationPolicy;
 }
+
+const DEFAULT_POLICY: AuthorizationPolicy = {
+  discountOverridePctThreshold: 20,
+  nearMaxDiscountRatio: 0.95,
+};
 
 const DEFAULTS: PermissionsConfig = {
   // Empty — never default to a known PIN like "1234".
   managerPin: "",
   idleLockMinutes: 10,
   userOverrides: {},
+  policy: DEFAULT_POLICY,
   roleDefaults: {
     cashier: [],
     manager: [
@@ -84,7 +98,29 @@ export async function getPermissions(): Promise<PermissionsConfig> {
     managerPin: pin,
     roleDefaults: { ...DEFAULTS.roleDefaults, ...current.roleDefaults },
     userOverrides: { ...(current.userOverrides ?? {}) },
+    policy: {
+      ...DEFAULT_POLICY,
+      ...(current.policy ?? {}),
+      discountOverridePctThreshold: clampPct(
+        current.policy?.discountOverridePctThreshold ??
+          DEFAULT_POLICY.discountOverridePctThreshold,
+      ),
+      nearMaxDiscountRatio: clampRatio(
+        current.policy?.nearMaxDiscountRatio ??
+          DEFAULT_POLICY.nearMaxDiscountRatio,
+      ),
+    },
   };
+}
+
+function clampPct(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_POLICY.discountOverridePctThreshold;
+  return Math.min(100, Math.max(0, Math.round(n)));
+}
+
+function clampRatio(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_POLICY.nearMaxDiscountRatio;
+  return Math.min(1, Math.max(0, n));
 }
 
 export function permissionsHasPin(cfg: PermissionsConfig): boolean {
@@ -119,6 +155,18 @@ export async function savePermissions(
       patch.userOverrides !== undefined
         ? patch.userOverrides
         : current.userOverrides,
+    policy: patch.policy
+      ? {
+          discountOverridePctThreshold: clampPct(
+            patch.policy.discountOverridePctThreshold ??
+              current.policy.discountOverridePctThreshold,
+          ),
+          nearMaxDiscountRatio: clampRatio(
+            patch.policy.nearMaxDiscountRatio ??
+              current.policy.nearMaxDiscountRatio,
+          ),
+        }
+      : current.policy,
   };
   await store.write(next);
   return next;

@@ -1,5 +1,5 @@
 # MYPOZ — COMMERCIALIZATION MASTER PROMPT
-## Paste this entire document into a coding agent session
+## Superseded by `docs/MYPOZ_COMMERCIALIZATION_MASTER_PROMPT_V2.md`
 
 **Source of truth:** Operator revision `MYPOZ — COMMERCIALIZATION & SUCCESS BLUEPRINT.md` (foundation-preserving).  
 **Codebase:** `grabber-pos` (package `mypoz-commerce-cloud`)  

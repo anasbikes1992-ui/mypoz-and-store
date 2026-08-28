@@ -3,6 +3,7 @@ import { requireTenantSession } from "@/lib/server/auth-session";
 import { getRepository } from "@/lib/server/repositories";
 import { readSettings } from "@/lib/server/settings-store";
 import { buildInvoicePdf } from "@/lib/server/invoice-pdf";
+import { invoiceStorefrontCta } from "@/lib/server/storefront-cta";
 import { readWhatsAppSettings } from "@/lib/server/whatsapp-inbox-store";
 import { resolveMetaAccessToken } from "@/lib/whatsapp/phone-number-id";
 import {
@@ -62,11 +63,17 @@ export async function POST(
     const settings = await readSettings();
     const pdf = await buildInvoicePdf(sale, settings);
     const to = normalizeMobile(mobile, settings.whatsappCountryCode);
+    const shopCta = invoiceStorefrontCta(settings);
     const result = await sendInvoiceViaWhatsApp({
       to,
       pdf,
       filename: `invoice-${sale.receiptNo || sale.id}.pdf`,
-      caption: `Invoice ${sale.receiptNo || sale.id} — ${settings.businessName}`,
+      caption: [
+        `Invoice ${sale.receiptNo || sale.id} — ${settings.businessName}`,
+        shopCta,
+      ]
+        .filter(Boolean)
+        .join("\n"),
       token: orgToken,
       phoneNumberId: orgPhoneId,
     });

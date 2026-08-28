@@ -1,6 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { getStorefrontInfo } from "./storefront-repo";
+export { buildStorefrontUrl, invoiceStorefrontCta } from "./storefront-cta";
 
 /**
  * Absolute URLs for a storefront.
@@ -13,7 +14,8 @@ import { getStorefrontInfo } from "./storefront-repo";
 export async function storeOrigin(): Promise<string> {
   const h = await headers();
   const host = h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const proto =
+    h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   return `${proto}://${host}`;
 }
 
@@ -24,7 +26,6 @@ export async function storeBaseUrl(slug: string): Promise<string> {
   const info = await getStorefrontInfo({ host, slug });
   const proto = h.get("x-forwarded-proto") ?? "https";
 
-  // On the client's own domain the shop is the site root.
   if (info?.domain && host && info.domain.toLowerCase() === host.toLowerCase()) {
     return `${proto}://${info.domain}`;
   }
@@ -38,7 +39,6 @@ export async function canonicalFor(
 ): Promise<string> {
   const base = await storeBaseUrl(slug);
   const sp = new URLSearchParams();
-  // Search results are noise in the index; category and page are not.
   if (query.category) sp.set("category", query.category);
   if (query.page && Number(query.page) > 1) sp.set("page", query.page);
   const qs = sp.toString();

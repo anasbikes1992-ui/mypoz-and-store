@@ -96,6 +96,71 @@ export async function createTransferRequest(input: {
   return request;
 }
 
+export async function dispatchTransfer(
+  transferId: string,
+  dispatchedBy: string,
+): Promise<StockTransferRequest> {
+  const db = await resolveDb();
+  if (!db) {
+    throw new Error("Dispatch requires the durable inventory backend");
+  }
+
+  const typed = db as any;
+  const { data: header, error: headerError } = await typed
+    .from("stock_transfers")
+    .select(
+      "id, source_branch_id, target_branch_id, status, dispatched_by, dispatched_at, received_by, received_at, notes",
+    )
+    .eq("id", transferId)
+    .maybeSingle();
+  if (headerError) throw new Error(headerError.message);
+  if (!header) throw new Error("Transfer request not found");
+  if (header.status === "in_transit" || header.status === "received_approved") {
+    return mapTransferRow(header, await loadFirstLine(typed, transferId));
+  }
+  if (header.status !== "pending_dispatch") {
+    throw new Error(`Transfer cannot be dispatched from status ${header.status}`);
+  }
+
+  const lines = await loadTransferLines(typed, transferId);
+  for (const line of lines) {
+    const quantity = Number(line.quantity ?? 0);
+    const { error: sourceError } = await typed.rpc("adjust_stock", {
+      p_branch: header.source_branch_id,
+      p_product: line.product_id,
+      p_delta: -quantity,
+      p_note: `transfer_out:${transferId}`,
+      p_reason: "transfer_out",
+      p_reference_id: transferId,
+    });
+    if (sourceError) throw new Error(sourceError.message);
+  }
+
+  const { error: updateError } = await typed
+    .from("stock_transfers")
+    .update({
+      status: "in_transit",
+      dispatched_by: dispatchedBy,
+      dispatched_at: new Date().toISOString(),
+    })
+    .eq("id", transferId);
+  if (updateError) throw new Error(updateError.message);
+
+  const first = lines[0];
+  return {
+    id: header.id,
+    sourceBranch: header.source_branch_id,
+    targetBranch: header.target_branch_id,
+    productId: first?.product_id ?? "",
+    productName: first?.product_name ?? "",
+    quantity: Number(first?.quantity ?? 0),
+    status: "in_transit",
+    dispatchedBy,
+    dispatchedAt: new Date().toISOString(),
+    notes: header.notes ?? undefined,
+  };
+}
+
 export async function approveTransferReceipt(
   transferId: string,
   receivedBy: string,
@@ -111,45 +176,30 @@ export async function approveTransferReceipt(
     if (headerError) throw new Error(headerError.message);
     if (!header) throw new Error("Transfer request not found");
     if (header.status === "received_approved") {
-      const { data: line } = await typed
-        .from("stock_transfer_lines")
-        .select("product_id, product_name, quantity")
-        .eq("transfer_id", transferId)
-        .limit(1)
-        .maybeSingle();
-      return {
-        id: header.id,
-        sourceBranch: header.source_branch_id,
-        targetBranch: header.target_branch_id,
-        productId: line?.product_id ?? "",
-        productName: line?.product_name ?? "",
-        quantity: Number(line?.quantity ?? 0),
-        status: "received_approved",
-        dispatchedBy: header.dispatched_by,
-        dispatchedAt: header.dispatched_at,
-        receivedBy: header.received_by ?? undefined,
-        receivedAt: header.received_at ?? undefined,
-        notes: header.notes ?? undefined,
-      };
+      const line = await loadFirstLine(typed, transferId);
+      return mapTransferRow(header, line, "received_approved");
     }
 
-    const { data: lines, error: lineError } = await typed
-      .from("stock_transfer_lines")
-      .select("product_id, product_name, quantity")
-      .eq("transfer_id", transferId);
-    if (lineError) throw new Error(lineError.message);
+    const lines = await loadTransferLines(typed, transferId);
+    const oneStep = header.status === "pending_dispatch";
 
-    for (const line of (lines ?? []) as any[]) {
+    if (header.status !== "in_transit" && !oneStep) {
+      throw new Error(`Transfer cannot be received from status ${header.status}`);
+    }
+
+    for (const line of lines) {
       const quantity = Number(line.quantity ?? 0);
-      const { error: sourceError } = await typed.rpc("adjust_stock", {
-        p_branch: header.source_branch_id,
-        p_product: line.product_id,
-        p_delta: -quantity,
-        p_note: `transfer_out:${transferId}`,
-        p_reason: "transfer_out",
-        p_reference_id: transferId,
-      });
-      if (sourceError) throw new Error(sourceError.message);
+      if (oneStep) {
+        const { error: sourceError } = await typed.rpc("adjust_stock", {
+          p_branch: header.source_branch_id,
+          p_product: line.product_id,
+          p_delta: -quantity,
+          p_note: `transfer_out:${transferId}`,
+          p_reason: "transfer_out",
+          p_reference_id: transferId,
+        });
+        if (sourceError) throw new Error(sourceError.message);
+      }
       const { error: targetError } = await typed.rpc("adjust_stock", {
         p_branch: header.target_branch_id,
         p_product: line.product_id,
@@ -172,7 +222,7 @@ export async function approveTransferReceipt(
       .eq("id", transferId);
     if (updateError) throw new Error(updateError.message);
 
-    const first = ((lines ?? []) as any[])[0];
+    const first = lines[0];
     return {
       id: header.id,
       sourceBranch: header.source_branch_id,
@@ -238,4 +288,50 @@ export async function listTransfers(): Promise<StockTransferRequest[]> {
   }
 
   return store.read([]);
+}
+
+async function loadTransferLines(db: any, transferId: string) {
+  const { data: lines, error: lineError } = await db
+    .from("stock_transfer_lines")
+    .select("product_id, product_name, quantity")
+    .eq("transfer_id", transferId);
+  if (lineError) throw new Error(lineError.message);
+  return (lines ?? []) as Array<{
+    product_id: string;
+    product_name: string;
+    quantity: number;
+  }>;
+}
+
+async function loadFirstLine(db: any, transferId: string) {
+  const { data: line } = await db
+    .from("stock_transfer_lines")
+    .select("product_id, product_name, quantity")
+    .eq("transfer_id", transferId)
+    .limit(1)
+    .maybeSingle();
+  return line as
+    | { product_id: string; product_name: string; quantity: number }
+    | null;
+}
+
+function mapTransferRow(
+  header: Record<string, unknown>,
+  line: { product_id: string; product_name: string; quantity: number } | null,
+  status?: StockTransferRequest["status"],
+): StockTransferRequest {
+  return {
+    id: String(header.id),
+    sourceBranch: String(header.source_branch_id),
+    targetBranch: String(header.target_branch_id),
+    productId: line?.product_id ?? "",
+    productName: line?.product_name ?? "",
+    quantity: Number(line?.quantity ?? 0),
+    status: (status ?? header.status) as StockTransferRequest["status"],
+    dispatchedBy: String(header.dispatched_by ?? ""),
+    dispatchedAt: String(header.dispatched_at ?? ""),
+    receivedBy: header.received_by ? String(header.received_by) : undefined,
+    receivedAt: header.received_at ? String(header.received_at) : undefined,
+    notes: header.notes ? String(header.notes) : undefined,
+  };
 }

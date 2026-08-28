@@ -7,6 +7,12 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { Button } from "@/components/ui/Button";
 
+interface Branch {
+  id: string;
+  name: string;
+  code: string;
+}
+
 interface Transfer {
   id: string;
   sourceBranch: string;
@@ -23,7 +29,8 @@ interface Transfer {
 }
 
 export default function TransfersPage() {
-  const [sourceBranch, setSourceBranch] = useState("Main");
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [sourceBranch, setSourceBranch] = useState("");
   const [targetBranch, setTargetBranch] = useState("");
   const [product, setProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState("1");
@@ -33,17 +40,45 @@ export default function TransfersPage() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, setPending] = useState(false);
 
+  const branchLabel = useCallback(
+    (id: string) => {
+      const b = branches.find((x) => x.id === id);
+      return b ? `${b.name} (${b.code})` : id;
+    },
+    [branches],
+  );
+
   const load = useCallback(() => {
     fetch("/api/transfers")
       .then((r) => r.json())
       .then((j) => j.success && setList(j.data))
       .catch(() => undefined);
   }, []);
-  useEffect(load, [load]);
+
+  useEffect(() => {
+    fetch("/api/branches")
+      .then((r) => r.json())
+      .then((j) => {
+        if (!j.success || !Array.isArray(j.data) || j.data.length === 0) return;
+        setBranches(j.data);
+        setSourceBranch(j.data[0].id);
+        if (j.data[1]) setTargetBranch(j.data[1].id);
+      })
+      .catch(() => undefined);
+    load();
+  }, [load]);
 
   async function create() {
     if (!product) {
       setMsg({ ok: false, text: "Pick a product first" });
+      return;
+    }
+    if (!sourceBranch || !targetBranch) {
+      setMsg({ ok: false, text: "Select source and target branches" });
+      return;
+    }
+    if (sourceBranch === targetBranch) {
+      setMsg({ ok: false, text: "Source and target must differ" });
       return;
     }
     setPending(true);
@@ -69,7 +104,6 @@ export default function TransfersPage() {
       }
       setMsg({ ok: true, text: `${j.data.id} created.` });
       setProduct(null);
-      setTargetBranch("");
       setQuantity("1");
       setNotes("");
       load();
@@ -78,7 +112,22 @@ export default function TransfersPage() {
     }
   }
 
-  async function approve(id: string) {
+  async function dispatch(id: string) {
+    const res = await fetch(`/api/transfers/${id}/dispatch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dispatchedBy }),
+    });
+    const j = await res.json();
+    setMsg(
+      j.success
+        ? { ok: true, text: `${id} dispatched — stock left source branch.` }
+        : { ok: false, text: j.error ?? "Dispatch failed" },
+    );
+    load();
+  }
+
+  async function receive(id: string) {
     const res = await fetch(`/api/transfers/${id}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,8 +136,8 @@ export default function TransfersPage() {
     const j = await res.json();
     setMsg(
       j.success
-        ? { ok: true, text: `${id} approved.` }
-        : { ok: false, text: j.error ?? "Failed" },
+        ? { ok: true, text: `${id} received at target branch.` }
+        : { ok: false, text: j.error ?? "Receive failed" },
     );
     load();
   }
@@ -97,20 +146,27 @@ export default function TransfersPage() {
     <div className="mx-auto max-w-3xl px-6 py-8">
       <ModuleHeader
         title="Transfers"
-        subtitle="Move stock between branches"
+        subtitle="Request → dispatch (source) → receive (target)"
       />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <Field label="Source branch" value={sourceBranch} onChange={setSourceBranch} />
-        <Field label="Target branch" value={targetBranch} onChange={setTargetBranch} />
+        <BranchSelect
+          label="Source branch"
+          value={sourceBranch}
+          branches={branches}
+          onChange={setSourceBranch}
+        />
+        <BranchSelect
+          label="Target branch"
+          value={targetBranch}
+          branches={branches}
+          onChange={setTargetBranch}
+        />
         <Field label="Dispatched by" value={dispatchedBy} onChange={setDispatchedBy} />
         <Field label="Quantity" value={quantity} onChange={setQuantity} type="number" />
       </div>
 
-      <ProductPicker
-        selected={product}
-        onPick={setProduct}
-      />
+      <ProductPicker selected={product} onPick={setProduct} />
 
       <label className="mt-4 block text-sm">
         <span className="mb-1 block text-text-dim">Notes</span>
@@ -135,10 +191,10 @@ export default function TransfersPage() {
 
       <div className="mt-4 flex justify-end">
         <Button
-          disabled={pending || !product || !targetBranch.trim()}
+          disabled={pending || !product || !targetBranch || !sourceBranch}
           onClick={create}
         >
-          {pending ? "Saving…" : "Create transfer"}
+          {pending ? "Saving…" : "Create transfer request"}
         </Button>
       </div>
 
@@ -155,34 +211,67 @@ export default function TransfersPage() {
               >
                 <div>
                   <p className="font-medium text-text-strong">
-                    {t.id}
+                    {t.id.slice(0, 8)}
                     <span className="ml-2 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-text-dim">
                       {t.status}
                     </span>
                   </p>
                   <p className="text-xs text-text-dim">
-                    {t.productName} × {t.quantity} · {t.sourceBranch} →{" "}
-                    {t.targetBranch}
+                    {t.productName} × {t.quantity} · {branchLabel(t.sourceBranch)}{" "}
+                    → {branchLabel(t.targetBranch)}
                   </p>
                   <p className="text-xs text-text-dim">
                     {formatDateTime(t.dispatchedAt)} · {t.dispatchedBy}
                   </p>
                 </div>
-                {t.status !== "received_approved" && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => approve(t.id)}
-                  >
-                    Approve
-                  </Button>
-                )}
+                <div className="flex shrink-0 gap-2">
+                  {t.status === "pending_dispatch" && (
+                    <Button size="sm" variant="secondary" onClick={() => dispatch(t.id)}>
+                      Dispatch
+                    </Button>
+                  )}
+                  {(t.status === "in_transit" || t.status === "pending_dispatch") && (
+                    <Button size="sm" onClick={() => receive(t.id)}>
+                      Receive
+                    </Button>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         </section>
       )}
     </div>
+  );
+}
+
+function BranchSelect({
+  label,
+  value,
+  branches,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  branches: Branch[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="text-sm">
+      <span className="mb-1 block text-text-dim">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-text-strong outline-none focus:border-accent"
+      >
+        <option value="">Select branch…</option>
+        {branches.map((b) => (
+          <option key={b.id} value={b.id}>
+            {b.name} ({b.code})
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -251,6 +340,7 @@ function ProductPicker({
           {results.map((p) => (
             <li key={p.id}>
               <button
+                type="button"
                 onClick={() => {
                   onPick(p);
                   setQ("");

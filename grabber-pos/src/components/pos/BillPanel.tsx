@@ -36,7 +36,11 @@ const PAYMENT_METHODS: {
   { id: "split", label: "Split" },
 ];
 
-const MANAGER_DISCOUNT_PCT = 20;
+const DEFAULT_AUTH_POLICY = {
+  discountOverridePctThreshold: 20,
+  nearMaxDiscountRatio: 0.95,
+};
+
 interface CurrencyRate {
   id: string;
   code: string;
@@ -47,6 +51,18 @@ interface CurrencyRate {
 async function verifyManagerPin(
   promptMsg: string,
   permission?: "price_override" | "discount_override" | "void_sale",
+  audit?: {
+    managerAction:
+      | "discount_override"
+      | "price_override"
+      | "void_sale"
+      | "process_return"
+      | "cash_drawer";
+    entity?: string;
+    entityId?: string;
+    amount?: number;
+    reason?: string;
+  },
 ): Promise<boolean> {
   const pin = window.prompt(promptMsg);
   if (!pin) return false;
@@ -58,6 +74,7 @@ async function verifyManagerPin(
       action: "verify",
       permission,
       role: "manager",
+      audit,
     }),
   });
   const json = await res.json();
@@ -142,6 +159,7 @@ export function BillPanel() {
   const [licenceExpired, setLicenceExpired] = useState(false);
   const [registerOpen, setRegisterOpen] = useState<boolean | null>(null);
   const [shiftId, setShiftId] = useState<string | null>(null);
+  const [authPolicy, setAuthPolicy] = useState(DEFAULT_AUTH_POLICY);
 
   const customerNameRef = useRef<HTMLInputElement>(null);
   const employeeRef = useRef<HTMLInputElement>(null);
@@ -180,6 +198,21 @@ export function BillPanel() {
         if (j.success) {
           setRegisterOpen(Boolean(j.data?.open));
           setShiftId(j.data?.open?.id ? String(j.data.open.id) : null);
+        }
+      })
+      .catch(() => undefined);
+    fetch("/api/permissions")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.success && j.data?.policy) {
+          setAuthPolicy({
+            discountOverridePctThreshold:
+              Number(j.data.policy.discountOverridePctThreshold) ||
+              DEFAULT_AUTH_POLICY.discountOverridePctThreshold,
+            nearMaxDiscountRatio:
+              Number(j.data.policy.nearMaxDiscountRatio) ||
+              DEFAULT_AUTH_POLICY.nearMaxDiscountRatio,
+          });
         }
       })
       .catch(() => undefined);
@@ -414,6 +447,13 @@ export function BillPanel() {
         const ok = await verifyManagerPin(
           "Manager PIN required for price override",
           "price_override",
+          {
+            managerAction: "price_override",
+            entity: "product",
+            entityId: productId,
+            amount: next,
+            reason: `${line.name}: ${catalog} → ${next}`,
+          },
         );
         if (!ok) {
           setError("Invalid manager PIN — price not changed");
@@ -428,11 +468,11 @@ export function BillPanel() {
 
   async function verifyManagerPinIfNeeded(): Promise<boolean> {
     const needsDiscountPin =
-      finalPct > MANAGER_DISCOUNT_PCT ||
+      finalPct > authPolicy.discountOverridePctThreshold ||
       store.lines.some(
         (l) =>
           l.maxDiscount > 0 &&
-          l.discount >= l.maxDiscount * 0.95 &&
+          l.discount >= l.maxDiscount * authPolicy.nearMaxDiscountRatio &&
           l.discount > 0,
       );
     const needsPricePin = store.lines.some((l) =>
@@ -453,6 +493,12 @@ export function BillPanel() {
     const ok = await verifyManagerPin(
       `Manager PIN required (${reason})`,
       permission,
+      {
+        managerAction: permission ?? "discount_override",
+        entity: "sale",
+        amount: totals.total,
+        reason,
+      },
     );
     if (!ok) {
       setError("Invalid manager PIN or permission denied");
