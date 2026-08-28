@@ -49,7 +49,7 @@ export const PRODUCT_PAGE_BLOCKS: {
   { type: "shipping_info", label: "Shipping info", defaultEnabled: false },
   { type: "related_products", label: "Related products", defaultEnabled: true },
   { type: "reviews", label: "Reviews", defaultEnabled: false },
-  { type: "share_buttons", label: "Share buttons", defaultEnabled: false },
+  { type: "share_buttons", label: "Share buttons", defaultEnabled: true },
 ];
 
 export function defaultProductBlocks(): StoreBlock[] {

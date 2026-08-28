@@ -7,6 +7,8 @@ import { storeTokenStyle, themeClass } from "@/lib/commerce/themes";
 import { storeCopy } from "@/lib/commerce/i18n";
 import { StorefrontAnalytics } from "@/components/storefront/Analytics";
 import { StoreChrome } from "@/components/commerce/storefront/StoreChrome";
+import { shouldShowPlatformBranding } from "@/lib/commerce/plan-branding";
+import { readTenant } from "@/lib/server/tenant-store";
 import {
   resolveStoreSlugAlias,
   rewriteStorePath,
@@ -51,10 +53,12 @@ export default async function StoreLayout({
 
   if (!direct) notFound();
 
-  const [website, store] = await Promise.all([
+  const [website, store, tenant] = await Promise.all([
     readWebsiteForStorefront({ host, slug }),
     readPublishedStore(),
+    readTenant(),
   ]);
+  const showPlatformBranding = shouldShowPlatformBranding(tenant.license.plan);
   const t = storeCopy(store.locale);
   const theme = themeClass(store.themeId);
   const tokenStyle = storeTokenStyle(store.tokens || {});
@@ -79,7 +83,12 @@ export default async function StoreLayout({
         <a href="#main" className="skip-link">
           {t.skipToContent}
         </a>
-        <StoreChrome slug={slug} store={store} businessName={direct.businessName}>
+        <StoreChrome
+          slug={slug}
+          store={store}
+          businessName={direct.businessName}
+          showPlatformBranding={showPlatformBranding}
+        >
           {children}
         </StoreChrome>
       </CartProvider>

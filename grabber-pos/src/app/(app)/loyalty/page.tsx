@@ -62,9 +62,12 @@ export default function LoyaltyPage() {
               <div>
                 <p className="font-medium capitalize text-text-strong">
                   {e.kind}
-                  <span className="ml-2 font-normal text-text-dim">
+                  <Link
+                    href={`/customers/${e.customerId}`}
+                    className="ml-2 font-normal text-accent hover:underline"
+                  >
                     {e.customerId}
-                  </span>
+                  </Link>
                 </p>
                 <p className="mt-0.5 text-text-dim">
                   {e.note || "—"}

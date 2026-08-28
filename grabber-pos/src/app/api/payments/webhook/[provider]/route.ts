@@ -34,6 +34,13 @@ export async function POST(
     return NextResponse.json({ received: true, verified: false }, { status: 202 });
   }
 
+  let rawPayload: Record<string, unknown> = {};
+  try {
+    rawPayload = JSON.parse(rawBody) as Record<string, unknown>;
+  } catch {
+    rawPayload = { raw: rawBody.slice(0, 4000) };
+  }
+
   const applied = await applyGatewayWebhook({
     reference: result.reference,
     status: result.status,
@@ -43,6 +50,7 @@ export async function POST(
     providerEventId: result.providerRef
       ? `${provider}:${result.providerRef}:${result.status}`
       : undefined,
+    rawPayload,
   });
 
   if (!applied.ok) {

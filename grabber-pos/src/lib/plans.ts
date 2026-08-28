@@ -58,7 +58,6 @@ export const QUARANTINED_VERTICAL_KEYS = [
   "rooms",
   "rent",
   "hire",
-  "repair",
 ] as const;
 
 /**

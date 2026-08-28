@@ -120,6 +120,7 @@ export default function WhatsAppPage() {
       })
       .catch(() => undefined);
     loadInbox();
+    const poll = window.setInterval(loadInbox, 30_000);
     fetch("/api/collections/employees")
       .then((r) => r.json())
       .then((j) => {
@@ -137,6 +138,7 @@ export default function WhatsAppPage() {
         if (typeof name === "string" && name.trim()) setOrgName(name.trim());
       })
       .catch(() => undefined);
+    return () => window.clearInterval(poll);
   }, []);
 
   // Re-apply server value if the browser autofill injects an email address.
@@ -586,6 +588,17 @@ export default function WhatsAppPage() {
             />
           ) : (
             <>
+              {active.lastSaleId ? (
+                <div className="border-b border-line px-4 py-2 text-xs text-text-dim">
+                  Last order{" "}
+                  <a
+                    href="/commerce/orders"
+                    className="font-mono text-accent hover:underline"
+                  >
+                    {active.lastSaleId}
+                  </a>
+                </div>
+              ) : null}
               {active.needsStaffReply ? (
                 <div className="border-b border-line px-4 py-3">
                   {active.assignedTo ? (

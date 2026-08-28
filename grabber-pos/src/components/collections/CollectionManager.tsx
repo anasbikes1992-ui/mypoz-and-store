@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { COLLECTIONS, type FieldDef } from "@/lib/collections";
 import { formatMoney } from "@/lib/format";
@@ -10,7 +11,13 @@ import { EmptyState, SkeletonRows } from "@/components/ui/EmptyState";
 
 type Row = Record<string, unknown> & { id: string };
 
-export function CollectionManager({ name }: { name: string }) {
+export function CollectionManager({
+  name,
+  detailHref,
+}: {
+  name: string;
+  detailHref?: (row: Row) => string;
+}) {
   const config = COLLECTIONS[name];
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -124,6 +131,14 @@ export function CollectionManager({ name }: { name: string }) {
                   ))}
                   <td className="px-5 py-3 text-right">
                     <div className="flex justify-end gap-1.5">
+                      {detailHref ? (
+                        <Link
+                          href={detailHref(row)}
+                          className="inline-flex h-8 items-center rounded-lg px-2.5 text-sm text-accent transition hover:bg-surface-2"
+                        >
+                          Profile
+                        </Link>
+                      ) : null}
                       <Button
                         type="button"
                         variant="ghost"

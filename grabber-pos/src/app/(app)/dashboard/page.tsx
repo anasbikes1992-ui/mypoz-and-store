@@ -3,17 +3,21 @@ import { formatMoney, formatMoneyCompact, formatDateTime } from "@/lib/format";
 import { StatCard } from "@/components/ui/StatCard";
 import { ModuleHeader } from "@/components/shell/ModuleHeader";
 import { TodayChannelStrip } from "@/components/dashboard/TodayChannelStrip";
+import { OwnerAttentionCard } from "@/components/dashboard/OwnerAttentionCard";
+import { JarvisQuickPrompts } from "@/components/dashboard/JarvisQuickPrompts";
 import { todayChannelSnapshot } from "@/lib/commerce/channel-report";
+import { getOwnerAttentionSnapshot } from "@/lib/server/owner-attention";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const repo = await getRepository();
-  const [inv, sales, recent, channelSales] = await Promise.all([
+  const [inv, sales, recent, channelSales, attention] = await Promise.all([
     repo.inventoryStats(),
     repo.salesStats(),
     repo.listSales(8),
     repo.listSales(400),
+    getOwnerAttentionSnapshot(),
   ]);
   const todayChannels = todayChannelSnapshot(channelSales);
 
@@ -23,6 +27,11 @@ export default async function DashboardPage() {
 
       <div className="mt-6">
         <TodayChannelStrip snapshot={todayChannels} />
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <OwnerAttentionCard snapshot={attention} />
+        <JarvisQuickPrompts />
       </div>
 
       <div className="mt-8 grid grid-cols-2 gap-4 xl:grid-cols-4">

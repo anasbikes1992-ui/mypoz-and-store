@@ -669,7 +669,7 @@ export function BillPanel() {
       setSplitCash("");
       setSplitCard("");
     } catch {
-      const queued = enqueueFailedSale(saleBody);
+      const queued = await enqueueFailedSale(saleBody);
       setError(
         queued
           ? "Offline — sale queued; will sync when online"

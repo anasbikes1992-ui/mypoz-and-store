@@ -12,11 +12,14 @@ export function StoreChrome({
   slug,
   store,
   businessName,
+  showPlatformBranding = true,
   children,
 }: {
   slug: string;
   store: StoreConfig;
   businessName: string;
+  /** When false (Business+), hide "Powered by MyPoz" footer line. */
+  showPlatformBranding?: boolean;
   children: React.ReactNode;
 }) {
   const t = storeCopy(store.locale);
@@ -265,7 +268,8 @@ export function StoreChrome({
           </div>
         </div>
         <p className="mx-auto mt-10 text-center text-[11px]" style={{ maxWidth: "var(--mp-max)" }}>
-          © {new Date().getFullYear()} {name}. {t.poweredBy}
+          © {new Date().getFullYear()} {name}
+          {showPlatformBranding ? `. ${t.poweredBy}` : "."}
         </p>
       </footer>
     </>

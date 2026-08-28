@@ -49,8 +49,18 @@ DEFERRED: NLP, campaigns, health score, lending, offline (until Phase G), WebXPa
 |-------|-----|--------|
 | 0 | `docs/work/PHASE0_COMMERCIALIZATION_BASELINE.md` | PASS |
 | A | `docs/work/PHASE-A-GATE.md` | PASS |
-| B | `docs/work/PHASE-B-COUNTER-INVENTORY.md` | IN PROGRESS |
-| C–M | — | NOT STARTED |
+| B | `docs/work/PHASE-B-COUNTER-INVENTORY.md` | PASS (code) |
+| C | `docs/work/PHASE-C-CUSTOMER-EXPERIENCE.md` | PASS (code) |
+| D | `docs/work/PHASE-D-CUSTOMER-LOYALTY.md` | PASS (code) |
+| E | `docs/work/PHASE-E-WHATSAPP-OPS.md` | PASS (code) |
+| F | `docs/work/PHASE-F-WEBHOOK-DLQ.md` | PASS (code) |
+| G | `docs/work/PHASE-G-OFFLINE-POS.md` | PASS (flagged) |
+| H | `docs/work/PHASE-H-JARVIS.md` | PASS (code) |
+| I | `docs/work/PHASE-I-OWNER-SURFACE.md` | PASS (code) |
+| J | `docs/work/PHASE-J-VERTICALS.md` | PASS (repair) |
+| K | `docs/work/PHASE-K-GTM.md` | DOCS |
+| L | `docs/work/PHASE-L-MONETIZATION.md` | PASS |
+| M | `docs/work/PHASE-M-FINANCIAL.md` | DEFERRED |
 
 ## Phase A gate (complete before B)
 

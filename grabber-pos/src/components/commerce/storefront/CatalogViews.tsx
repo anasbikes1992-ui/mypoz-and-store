@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatMoney } from "@/lib/format";
 import type { StoreProduct, StoreProductVariant } from "@/lib/storefront";
 import { storePath, type StoreConfig } from "@/lib/commerce/schema";
@@ -11,6 +11,7 @@ import { findVariantByOptions, groupVariantOptions } from "@/lib/commerce/line-i
 import { isProductBlockOn, productTemplateBlocks } from "@/lib/commerce/blocks";
 import { ProductCard } from "./HomeSections";
 import { AddToCartButton, useCart } from "@/app/store/[slug]/cart";
+import { ProductShareButtons } from "./ProductShareButtons";
 
 export function CatalogView({
   slug,
@@ -168,6 +169,10 @@ export function ProductView({
   const waText = `Hi, I want to order ${displayName}\n${typeof window === "undefined" ? "" : window.location.href}`;
   const blocks = productTemplateBlocks(store);
   const show = (type: string) => isProductBlockOn(blocks, type);
+  const [pageUrl, setPageUrl] = useState("");
+  useEffect(() => {
+    setPageUrl(window.location.href);
+  }, []);
 
   return (
     <div className="mx-auto w-full px-4 py-8 lg:px-8" style={{ maxWidth: "var(--mp-max)" }}>
@@ -244,6 +249,13 @@ export function ProductView({
           ) : null}
           {show("trust_badges") ? (
             <p className="mt-2 text-xs text-text-dim">Live POS stock · Pickup or delivery · Cash on delivery available</p>
+          ) : null}
+          {show("share_buttons") && pageUrl ? (
+            <ProductShareButtons
+              title={product.name}
+              url={pageUrl}
+              whatsappNumber={store.social.whatsapp}
+            />
           ) : null}
           <div className="mt-6 flex flex-wrap gap-2">
             {show("add_to_cart") ? (

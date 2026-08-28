@@ -26,7 +26,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
       { key: "restaurant", title: "Restaurant", subtitle: "Tables · KOT / BOT", icon: "🍽️", href: "/restaurant", status: "active" },
       { key: "kds", title: "Kitchen display", subtitle: "Live KOT tickets", icon: "🍳", href: "/kds", status: "active" },
       { key: "delivery", title: "Delivery", subtitle: "Orders + drivers", icon: "🛵", href: "/delivery", status: "active" },
-      { key: "repair", title: "Repair", subtitle: "Item repair jobs", icon: "🔧", href: "/repair", status: "soon" },
+      { key: "repair", title: "Repair", subtitle: "Item repair jobs", icon: "🔧", href: "/repair", status: "active" },
       { key: "service", title: "Vehicle service", subtitle: "Parts + labour", icon: "🚗", href: "/service", status: "active" },
       { key: "reloads", title: "Reloads", subtitle: "Mobile top-ups", icon: "📱", href: "/reloads", status: "active" },
       { key: "rooms", title: "Rooms", subtitle: "Hotel booking", icon: "🏨", href: "/rooms", status: "soon" },

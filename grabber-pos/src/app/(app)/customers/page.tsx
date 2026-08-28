@@ -3,5 +3,10 @@
 import { CollectionManager } from "@/components/collections/CollectionManager";
 
 export default function CustomersPage() {
-  return <CollectionManager name="customers" />;
+  return (
+    <CollectionManager
+      name="customers"
+      detailHref={(row) => `/customers/${row.id}`}
+    />
+  );
 }

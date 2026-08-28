@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface AgentOpt {
   id: string;
@@ -16,6 +17,23 @@ export function AgentChat({
   agents: AgentOpt[];
   emptyHint: string;
 }) {
+  return (
+    <Suspense fallback={<p className="mt-6 text-sm text-text-dim">Loading assistant…</p>}>
+      <AgentChatInner endpoint={endpoint} agents={agents} emptyHint={emptyHint} />
+    </Suspense>
+  );
+}
+
+function AgentChatInner({
+  endpoint,
+  agents,
+  emptyHint,
+}: {
+  endpoint: string;
+  agents: AgentOpt[];
+  emptyHint: string;
+}) {
+  const search = useSearchParams();
   const [agentId, setAgentId] = useState(agents[0]?.id ?? "");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,6 +41,13 @@ export function AgentChat({
   const [log, setLog] = useState<{ role: "user" | "assistant"; content: string }[]>(
     [],
   );
+
+  useEffect(() => {
+    const q = search.get("q");
+    const agent = search.get("agent");
+    if (agent && agents.some((a) => a.id === agent)) setAgentId(agent);
+    if (q) setInput(q);
+  }, [search, agents]);
 
   async function send() {
     const text = input.trim();

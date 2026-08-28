@@ -111,6 +111,18 @@ export default function BillingPage() {
           {data.license.expiry ? ` · expires ${data.license.expiry}` : " · no expiry set"}
         </p>
       ) : null}
+      {data?.license.expiry ? (() => {
+        const end = new Date(data.license.expiry);
+        const days = Math.ceil((end.getTime() - Date.now()) / 86_400_000);
+        if (Number.isNaN(end.getTime()) || days > 7) return null;
+        return (
+          <p className="mt-3 rounded-xl border border-warn/50 bg-warn/10 px-4 py-3 text-sm text-text-strong">
+            {days <= 0
+              ? "Your licence has expired — renew to avoid service interruption."
+              : `Licence expires in ${days} day${days === 1 ? "" : "s"} — renew on this page.`}
+          </p>
+        );
+      })() : null}
       {msg ? <p className="mt-3 text-sm text-accent">{msg}</p> : null}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         {(data?.plans ?? []).map((plan) => (
