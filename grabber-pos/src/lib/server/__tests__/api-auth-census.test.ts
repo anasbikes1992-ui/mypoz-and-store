@@ -35,7 +35,9 @@ const PUBLIC_PREFIXES = [
 ];
 
 /** Documented residuals — expand only when intentional; prefer adding auth. */
-const KNOWN_RESIDUAL: string[] = [];
+const KNOWN_RESIDUAL: string[] = [
+  "payments/status/route.ts", // non-secret staging ops probe (no keys)
+];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

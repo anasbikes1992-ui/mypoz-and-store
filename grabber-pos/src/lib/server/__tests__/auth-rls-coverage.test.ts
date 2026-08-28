@@ -55,7 +55,7 @@ describe("auth + RLS coverage for transformed domains", () => {
   it("docs cover authorization and RLS matrices", () => {
     const docs = path.join(process.cwd(), "docs");
     for (const name of [
-      "CURRENT_CODEBASE_MAP.md",
+      "FINAL_ARCHITECTURE_INVENTORY.md",
       "AUTHORIZATION_COVERAGE.md",
       "RLS_MATRIX.md",
     ]) {

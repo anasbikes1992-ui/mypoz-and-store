@@ -19,7 +19,7 @@ describe("planEnabledKeys", () => {
     const keys = planEnabledKeys("enterprise", ALL);
     expect(keys.has("restaurant")).toBe(true);
     expect(keys.has("rooms")).toBe(false);
-    expect(keys.has("repair")).toBe(false);
+    expect(keys.has("repair")).toBe(true);
     expect(keys.has("hire")).toBe(false);
   });
 

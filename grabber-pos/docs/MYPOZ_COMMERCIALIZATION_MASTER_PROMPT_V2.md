@@ -61,6 +61,7 @@ DEFERRED: NLP, campaigns, health score, lending, offline (until Phase G), WebXPa
 | K | `docs/work/PHASE-K-GTM.md` | DOCS |
 | L | `docs/work/PHASE-L-MONETIZATION.md` | PASS |
 | M | `docs/work/PHASE-M-FINANCIAL.md` | DEFERRED |
+| — | `docs/work/LAUNCH_READINESS.md` | **READY (Anaz COD)** |
 
 ## Phase A gate (complete before B)
 
